@@ -12,6 +12,15 @@ class DatabaseService {
     return null;
   }
 
+  Stream<TempleInfoModel?> getTempleInfoStream() {
+    return _db.collection('templeInfo').doc('main').snapshots().map((doc) {
+      if (doc.exists) {
+        return TempleInfoModel.fromFirestore(doc);
+      }
+      return null;
+    });
+  }
+
   Stream<List<BannerModel>> getActiveBanners() {
     return _db
         .collection('banners')

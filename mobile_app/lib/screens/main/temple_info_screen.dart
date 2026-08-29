@@ -18,8 +18,8 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder<TempleInfoModel?>(
-        future: DatabaseService().getTempleInfo(),
+      body: StreamBuilder<TempleInfoModel?>(
+        stream: DatabaseService().getTempleInfoStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(

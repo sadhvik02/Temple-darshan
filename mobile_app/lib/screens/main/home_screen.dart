@@ -171,36 +171,44 @@ class _HomeScreenState extends State<HomeScreen> {
   // 2. TTD Style Quick Services Row
   Widget _buildTTDQuickServicesGrid() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildTTDServiceItem(
-            icon: Icons.volunteer_activism_rounded,
-            label: 'Arjitha Sevas',
-            gradient: const [Color(0xFFE65100), Color(0xFFFF8F00)],
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ServicesScreen()),
-              );
-            },
+          Expanded(
+            child: _buildTTDServiceItem(
+              icon: Icons.spa_rounded,
+              iconColor: const Color(0xFFE65100),
+              bgColor: const Color(0xFFFFEDE5),
+              label: 'Arjitha Sevas',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ServicesScreen()),
+                );
+              },
+            ),
           ),
-          _buildTTDServiceItem(
-            icon: Icons.temple_hindu_rounded,
-            label: 'Temple Info',
-            gradient: const [Color(0xFFC2185B), Color(0xFFE91E63)],
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const TempleInfoScreen()),
-              );
-            },
+          Expanded(
+            child: _buildTTDServiceItem(
+              icon: Icons.temple_hindu_rounded,
+              iconColor: const Color(0xFFC2185B),
+              bgColor: const Color(0xFFFDE8EF),
+              label: 'Temple Info',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TempleInfoScreen()),
+                );
+              },
+            ),
           ),
-            _buildActionItem(
-              icon: Icons.newspaper_rounded,
-              label: 'News',
-              color: const Color(0xFF0288D1),
+          Expanded(
+            child: _buildTTDServiceItem(
+              icon: Icons.menu_book_rounded,
+              iconColor: const Color(0xFF0288D1),
+              bgColor: const Color(0xFFE1F5FE),
+              label: 'Announcements',
               onTap: () {
                 Navigator.push(
                   context,
@@ -208,38 +216,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
-            _buildActionItem(
-              icon: Icons.volunteer_activism_rounded,
-              label: 'Donate',
-              color: const Color(0xFF7B1FA2),
+          ),
+          Expanded(
+            child: _buildTTDServiceItem(
+              icon: Icons.celebration_rounded,
+              iconColor: const Color(0xFF7B1FA2),
+              bgColor: const Color(0xFFF3E5F5),
+              label: 'Utsavams',
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const DonationsScreen()),
+                  MaterialPageRoute(builder: (_) => const EventsScreen()),
                 );
               },
             ),
-          _buildTTDServiceItem(
-            icon: Icons.menu_book_rounded,
-            label: 'Publications',
-            gradient: const [Color(0xFF0277BD), Color(0xFF00ACC1)],
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NewsScreen()),
-              );
-            },
-          ),
-          _buildTTDServiceItem(
-            icon: Icons.celebration_rounded,
-            label: 'Utsavams',
-            gradient: const [Color(0xFF6A1B9A), Color(0xFF8E24AA)],
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const EventsScreen()),
-              );
-            },
           ),
         ],
       ),
@@ -248,49 +238,46 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTTDServiceItem({
     required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
     required String label,
-    required List<Color> gradient,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 78,
-        padding: const EdgeInsets.symmetric(vertical: 6),
+      borderRadius: BorderRadius.circular(18),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 4.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: 54,
-              height: 54,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: gradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: gradient.first.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+                color: bgColor,
+                borderRadius: BorderRadius.circular(18),
               ),
-              child: Icon(icon, color: Colors.white, size: 26),
+              child: Icon(icon, color: iconColor, size: 28),
             ),
             const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-                letterSpacing: -0.1,
+            SizedBox(
+              height: 20,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.1,
+                  ),
+                ),
               ),
             ),
           ],
@@ -301,8 +288,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 3. TTD Style Today's Darshan Timings Card
   Widget _buildTimingsCard() {
-    return FutureBuilder<TempleInfoModel?>(
-      future: _db.getTempleInfo(),
+    return StreamBuilder<TempleInfoModel?>(
+      stream: _db.getTempleInfoStream(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data == null) {
           return const SizedBox.shrink();
@@ -836,8 +823,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-}
-
 }
 
 // Dedicated Stateful Banner Carousel with guaranteed timer execution
