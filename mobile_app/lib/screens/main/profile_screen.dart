@@ -150,7 +150,7 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               children: [
                 ListTile(
-                  leading: const Icon(Icons.temple_hindu_outlined, color: AppColors.primary),
+                  leading: const Icon(Icons.temple_hindu_rounded, color: AppColors.primary),
                   title: const Text('About Temple & Timings', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                   onTap: () {
@@ -162,7 +162,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.newspaper_outlined, color: AppColors.primary),
+                  leading: const Icon(Icons.menu_book_rounded, color: AppColors.primary),
                   title: const Text('News & Announcements', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                   onTap: () {
@@ -174,7 +174,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.festival_outlined, color: AppColors.primary),
+                  leading: const Icon(Icons.celebration_rounded, color: AppColors.primary),
                   title: const Text('Temple Festivals & Events', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                   onTap: () {

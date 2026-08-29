@@ -72,7 +72,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return EmptyStateWidget(
-                    icon: Icons.receipt_long_outlined,
+                    icon: Icons.confirmation_number_outlined,
                     title: 'No Bookings Yet',
                     description: 'You have not booked any temple sevas or darshan slots yet.',
                     actionText: 'Explore Sevas',
@@ -145,7 +145,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                               const Divider(height: 20),
                               Row(
                                 children: [
-                                  const Icon(Icons.event, size: 16, color: AppColors.textSecondary),
+                                  const Icon(Icons.event_available_rounded, size: 16, color: AppColors.primary),
                                   const SizedBox(width: 6),
                                   Text(
                                     'Darshan Date: ${booking.bookingDate}',
@@ -165,7 +165,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                               const SizedBox(height: 6),
                               Row(
                                 children: [
-                                  const Icon(Icons.people_outline, size: 16, color: AppColors.textSecondary),
+                                  const Icon(Icons.groups_2_rounded, size: 16, color: AppColors.textSecondary),
                                   const SizedBox(width: 6),
                                   Text(
                                     '${booking.quantity} Devotee(s)',

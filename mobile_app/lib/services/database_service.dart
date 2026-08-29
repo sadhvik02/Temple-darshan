@@ -89,31 +89,30 @@ class DatabaseService {
     required SlotModel? slot, // null if service is not slot-based
     required int quantity,
     required String date,
+    List<Map<String, dynamic>>? devotees,
   }) async {
     final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
     final refCode = 'BK-${timestamp.substring(timestamp.length - 6)}';
 
     await _db.runTransaction((transaction) async {
       // 1. If slot-based, safely increment bookedCount
-      if (slot != null) {
+      if (slot != null && !slot.id.startsWith('auto_')) {
         final slotRef = _db.collection('slots').doc(slot.id);
         final slotDoc = await transaction.get(slotRef);
         
-        if (!slotDoc.exists) {
-          throw Exception("The selected slot is no longer available.");
+        if (slotDoc.exists) {
+          final currentBooked = (slotDoc.data()?['bookedCount'] as num?)?.toInt() ?? 0;
+          final capacity = (slotDoc.data()?['capacity'] as num?)?.toInt() ?? 0;
+
+          if (currentBooked + quantity > capacity) {
+            throw Exception("Capacity exceeded. Only ${capacity - currentBooked} spots remain.");
+          }
+
+          transaction.update(slotRef, {
+            'bookedCount': currentBooked + quantity,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
         }
-
-        final currentBooked = (slotDoc.data()?['bookedCount'] as num?)?.toInt() ?? 0;
-        final capacity = (slotDoc.data()?['capacity'] as num?)?.toInt() ?? 0;
-
-        if (currentBooked + quantity > capacity) {
-          throw Exception("Capacity exceeded. Only ${capacity - currentBooked} spots remain.");
-        }
-
-        transaction.update(slotRef, {
-          'bookedCount': currentBooked + quantity,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
       }
 
       // 2. Derive total amount from SERVER-SIDE/fetched service data. 
@@ -122,7 +121,7 @@ class DatabaseService {
 
       // 3. Save booking document
       final bookingRef = _db.collection('bookings').doc();
-      transaction.set(bookingRef, {
+      final Map<String, dynamic> bookingData = {
         'userId': userId,
         'serviceId': service.id,
         'serviceName': service.name,
@@ -135,7 +134,13 @@ class DatabaseService {
         'totalAmount': totalAmount,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      if (devotees != null && devotees.isNotEmpty) {
+        bookingData['devotees'] = devotees;
+      }
+
+      transaction.set(bookingRef, bookingData);
     });
 
     return refCode;

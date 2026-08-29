@@ -36,8 +36,8 @@ class _EventsScreenState extends State<EventsScreen> {
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const EmptyStateWidget(
-              icon: Icons.event_available_outlined,
-              title: 'No Upcoming Events',
+              icon: Icons.celebration_rounded,
+              title: 'No Upcoming Utsavams',
               description: 'There are no scheduled temple festivals or events right now.',
             );
           }
@@ -58,7 +58,7 @@ class _EventsScreenState extends State<EventsScreen> {
                         imageUrl: event.imageUrl,
                         height: 160,
                         fit: BoxFit.cover,
-                        fallbackIcon: Icons.festival_outlined,
+                        fallbackIcon: Icons.celebration_rounded,
                       ),
                     Padding(
                       padding: const EdgeInsets.all(16.0),

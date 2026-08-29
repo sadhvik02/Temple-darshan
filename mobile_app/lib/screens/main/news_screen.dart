@@ -36,7 +36,7 @@ class _NewsScreenState extends State<NewsScreen> {
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const EmptyStateWidget(
-              icon: Icons.newspaper_outlined,
+              icon: Icons.menu_book_rounded,
               title: 'No Announcements',
               description: 'There are no active news or announcements at this time.',
             );
@@ -61,7 +61,7 @@ class _NewsScreenState extends State<NewsScreen> {
                           imageUrl: news.imageUrl,
                           height: 180,
                           fit: BoxFit.cover,
-                          fallbackIcon: Icons.newspaper,
+                          fallbackIcon: Icons.menu_book_rounded,
                         ),
                       Padding(
                         padding: const EdgeInsets.all(16.0),

@@ -82,9 +82,9 @@ class _MainNavigatorState extends State<MainNavigator> {
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
+            icon: Icon(Icons.temple_hindu_outlined),
+            selectedIcon: Icon(Icons.temple_hindu),
+            label: 'Darshan',
           ),
           NavigationDestination(
             icon: Icon(Icons.volunteer_activism_outlined),
@@ -92,14 +92,14 @@ class _MainNavigatorState extends State<MainNavigator> {
             label: 'Sevas',
           ),
           NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long_rounded),
+            icon: Icon(Icons.confirmation_number_outlined),
+            selectedIcon: Icon(Icons.confirmation_number_rounded),
             label: 'Bookings',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
+            icon: Icon(Icons.person_pin_circle_outlined),
+            selectedIcon: Icon(Icons.person_pin_circle_rounded),
+            label: 'Devotee',
           ),
         ],
       ),
