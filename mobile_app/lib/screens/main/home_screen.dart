@@ -197,28 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-            _buildActionItem(
-              icon: Icons.newspaper_rounded,
-              label: 'News',
-              color: const Color(0xFF0288D1),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NewsScreen()),
-                );
-              },
-            ),
-            _buildActionItem(
-              icon: Icons.volunteer_activism_rounded,
-              label: 'Donate',
-              color: const Color(0xFF7B1FA2),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DonationsScreen()),
-                );
-              },
-            ),
+
           _buildTTDServiceItem(
             icon: Icons.menu_book_rounded,
             label: 'Publications',
@@ -836,8 +815,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-}
-
 }
 
 // Dedicated Stateful Banner Carousel with guaranteed timer execution
