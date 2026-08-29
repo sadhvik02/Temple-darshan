@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../theme/app_colors.dart';
 import 'auth/login_screen.dart';
 import 'main/home_screen.dart';
+import 'main/darshan_screen.dart';
 import 'main/my_bookings_screen.dart';
 import 'main/profile_screen.dart';
 import 'main/services_screen.dart';
@@ -65,6 +66,7 @@ class _MainNavigatorState extends State<MainNavigator> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
+    DarshanScreen(),
     ServicesScreen(),
     MyBookingsScreen(),
     ProfileScreen(),
@@ -87,6 +89,11 @@ class _MainNavigatorState extends State<MainNavigator> {
             label: 'Darshan',
           ),
           NavigationDestination(
+            icon: Icon(Icons.temple_hindu_outlined),
+            selectedIcon: Icon(Icons.temple_hindu_rounded),
+            label: 'Darshan',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.volunteer_activism_outlined),
             selectedIcon: Icon(Icons.volunteer_activism_rounded),
             label: 'Sevas',
@@ -106,3 +113,4 @@ class _MainNavigatorState extends State<MainNavigator> {
     );
   }
 }
+

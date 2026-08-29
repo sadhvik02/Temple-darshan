@@ -14,8 +14,10 @@ interface StatCard {
 export default function DashboardPage() {
   const [stats, setStats] = useState<StatCard[]>([
     { label: "Services", value: null, icon: "🪔", loading: true },
+    { label: "Darshans", value: null, icon: "🙏", loading: true },
     { label: "Bookings", value: null, icon: "📋", loading: true },
     { label: "Users", value: null, icon: "👥", loading: true },
+    { label: "Donation Types", value: null, icon: "💰", loading: true },
     { label: "Events", value: null, icon: "🎉", loading: true },
   ]);
 
@@ -24,7 +26,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function fetchCounts() {
-      const collections = ["services", "bookings", "users", "events"];
+      const collections = ["services", "darshans", "bookings", "users", "donationTypes", "events"];
       const results = await Promise.allSettled(
         collections.map(async (col) => {
           const snapshot = await getCountFromServer(collection(db, col));

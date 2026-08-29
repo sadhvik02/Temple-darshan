@@ -12,6 +12,7 @@ import 'news_screen.dart';
 import 'service_details_screen.dart';
 import 'services_screen.dart';
 import 'temple_info_screen.dart';
+import 'donations_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -156,6 +157,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // 6. Upcoming Festivals & Utsavams
             _buildEventsSection(),
+            const SizedBox(height: 24),
+
+            // 7. Donations
+            _buildDonationsSection(),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -191,6 +197,28 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
+            _buildActionItem(
+              icon: Icons.newspaper_rounded,
+              label: 'News',
+              color: const Color(0xFF0288D1),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NewsScreen()),
+                );
+              },
+            ),
+            _buildActionItem(
+              icon: Icons.volunteer_activism_rounded,
+              label: 'Donate',
+              color: const Color(0xFF7B1FA2),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DonationsScreen()),
+                );
+              },
+            ),
           _buildTTDServiceItem(
             icon: Icons.menu_book_rounded,
             label: 'Publications',
@@ -737,6 +765,79 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
+
+  // 7. Donations Section
+  Widget _buildDonationsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DonationsScreen()),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Make a Donation',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Support temple activities & annadanam',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 }
 
 // Dedicated Stateful Banner Carousel with guaranteed timer execution

@@ -289,3 +289,75 @@ class TempleInfoModel {
   String get eveningTimings => timings['evening']?.toString() ?? '4:00 PM - 9:00 PM';
   String get fullAddress => '$address, $city, $state${pincode.isNotEmpty ? ' - $pincode' : ''}';
 }
+
+class DarshanModel {
+  final String id;
+  final String name;
+  final String description;
+  final num price;
+  final String? imageUrl;
+  final bool bookingEnabled;
+  final bool isActive;
+
+  DarshanModel({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.price,
+    this.imageUrl,
+    required this.bookingEnabled,
+    required this.isActive,
+  });
+
+  factory DarshanModel.fromFirestore(DocumentSnapshot doc) {
+    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
+    return DarshanModel(
+      id: doc.id,
+      name: data['name'] ?? '',
+      description: data['description'] ?? '',
+      price: data['price'] ?? 0,
+      imageUrl: data['imageUrl'],
+      bookingEnabled: data['bookingEnabled'] ?? false,
+      isActive: data['isActive'] ?? false,
+    );
+  }
+
+  String get formattedPrice => price > 0 ? '₹$price' : 'Free';
+}
+
+class DonationTypeModel {
+  final String id;
+  final String title;
+  final String description;
+  final String? imageUrl;
+  final String category;
+  final List<num> suggestedAmounts;
+  final bool isActive;
+
+  DonationTypeModel({
+    required this.id,
+    required this.title,
+    required this.description,
+    this.imageUrl,
+    required this.category,
+    required this.suggestedAmounts,
+    required this.isActive,
+  });
+
+  factory DonationTypeModel.fromFirestore(DocumentSnapshot doc) {
+    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
+    return DonationTypeModel(
+      id: doc.id,
+      title: data['title'] ?? '',
+      description: data['description'] ?? '',
+      imageUrl: data['imageUrl'],
+      category: data['category'] ?? 'general',
+      suggestedAmounts: (data['suggestedAmounts'] as List<dynamic>?)
+              ?.map((e) => e as num)
+              .toList() ??
+          [],
+      isActive: data['isActive'] ?? false,
+    );
+  }
+}
+

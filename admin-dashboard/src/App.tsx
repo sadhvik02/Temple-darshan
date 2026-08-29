@@ -12,6 +12,8 @@ import BookingsPage from "./pages/BookingsPage";
 import NewsPage from "./pages/NewsPage";
 import EventsPage from "./pages/EventsPage";
 import UsersPage from "./pages/UsersPage";
+import DarshansPage from "./pages/DarshansPage";
+import DonationsPage from "./pages/DonationsPage";
 
 export default function App() {
   return (
@@ -39,6 +41,8 @@ export default function App() {
             <Route path="/news" element={<NewsPage />} />
             <Route path="/events" element={<EventsPage />} />
             <Route path="/users" element={<UsersPage />} />
+            <Route path="/darshans" element={<DarshansPage />} />
+            <Route path="/donations" element={<DonationsPage />} />
           </Route>
 
           {/* Catch-all → redirect to dashboard */}

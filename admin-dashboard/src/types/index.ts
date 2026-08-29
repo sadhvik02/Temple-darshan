@@ -141,3 +141,32 @@ export interface User {
   createdAt: any;
   updatedAt: any;
 }
+
+/** Darshan Offering */
+export interface Darshan {
+  id?: string;
+  name: string;
+  description: string;
+  imageUrl?: string;
+  price: number;
+  bookingEnabled: boolean;
+  isActive: boolean;
+  displayOrder: number;
+  createdAt: any;
+  updatedAt: any;
+}
+
+/** Donation Type / Category */
+export interface DonationType {
+  id?: string;
+  title: string;
+  description: string;
+  imageUrl?: string;
+  category: string;
+  suggestedAmounts: number[];
+  isActive: boolean;
+  displayOrder: number;
+  createdAt: any;
+  updatedAt: any;
+}
+

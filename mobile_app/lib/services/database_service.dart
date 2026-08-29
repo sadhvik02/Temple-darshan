@@ -81,12 +81,37 @@ class DatabaseService {
         });
   }
 
+  Stream<List<DarshanModel>> getActiveDarshans() {
+    return _db
+        .collection('darshans')
+        .where('isActive', isEqualTo: true)
+        .orderBy('displayOrder')
+        .snapshots()
+        .map((snap) =>
+            snap.docs.map((doc) => DarshanModel.fromFirestore(doc)).toList());
+  }
+
+  Stream<List<DonationTypeModel>> getActiveDonationTypes() {
+    return _db
+        .collection('donationTypes')
+        .where('isActive', isEqualTo: true)
+        .orderBy('displayOrder')
+        .snapshots()
+        .map((snap) =>
+            snap.docs.map((doc) => DonationTypeModel.fromFirestore(doc)).toList());
+  }
+
   /// CRITICAL: Atomic Booking Transaction
+  /// The sourceType field ('seva' or 'darshan') determines which collection
+  /// the serviceId references. Price is validated server-side via firestore.rules.
   /// Returns the unique booking reference code (refCode)
   Future<String> createBooking({
     required String userId,
-    required ServiceModel service,
-    required SlotModel? slot, // null if service is not slot-based
+    required String offeringId,
+    required String offeringName,
+    required num offeringPrice,
+    required String sourceType, // 'seva' or 'darshan'
+    required SlotModel? slot,
     required int quantity,
     required String date,
     List<Map<String, dynamic>>? devotees,
@@ -115,16 +140,16 @@ class DatabaseService {
         }
       }
 
-      // 2. Derive total amount from SERVER-SIDE/fetched service data. 
-      // Security rules require totalAmount == service.price * quantity
-      final totalAmount = service.price * quantity;
+      // 2. Derive total amount from the offering price.
+      // Security rules validate totalAmount == price * quantity against the correct collection.
+      final totalAmount = offeringPrice * quantity;
 
-      // 3. Save booking document
+      // 3. Save booking document with sourceType discriminator
       final bookingRef = _db.collection('bookings').doc();
       final Map<String, dynamic> bookingData = {
         'userId': userId,
-        'serviceId': service.id,
-        'serviceName': service.name,
+        'serviceId': offeringId,
+        'serviceName': offeringName,
         'slotId': slot?.id,
         'bookingRef': refCode,
         'bookingDate': date,
@@ -132,6 +157,7 @@ class DatabaseService {
         'status': 'pending',
         'paymentStatus': 'pending',
         'totalAmount': totalAmount,
+        'sourceType': sourceType,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -146,3 +172,4 @@ class DatabaseService {
     return refCode;
   }
 }
+

@@ -154,6 +154,12 @@ service cloud.firestore {
     // Users can read only their own bookings.
     // Users can create a booking only for themselves.
     // Only admins can update or delete bookings.
+    //
+    // MULTI-SOURCE SUPPORT:
+    // The sourceType field determines whether the booking is for
+    // a seva (services collection) or darshan (darshans collection).
+    // Existing bookings without sourceType default to 'seva'.
+    // totalAmount is validated against the correct collection.
     // =========================================================
     match /bookings/{bookingId} {
       // Users read their own bookings; admins read all
@@ -166,7 +172,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasAll([
             'userId', 'serviceId', 'serviceName', 'bookingRef',
             'bookingDate', 'quantity', 'status', 'paymentStatus',
-            'totalAmount', 'createdAt', 'updatedAt'
+            'totalAmount', 'sourceType', 'createdAt', 'updatedAt'
           ])
         && request.resource.data.userId is string
         && request.resource.data.serviceId is string
@@ -178,11 +184,26 @@ service cloud.firestore {
         && request.resource.data.status == 'pending'
         && request.resource.data.paymentStatus == 'pending'
         && request.resource.data.totalAmount is number
-        // CRITICAL SECURITY FIX: Enforce that totalAmount exactly matches the actual service price
-        && request.resource.data.totalAmount == (
-             get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.price 
-             * request.resource.data.quantity
-           )
+        && request.resource.data.sourceType is string
+        && request.resource.data.sourceType in ['seva', 'darshan']
+        // CRITICAL: sourceType-aware price validation
+        // Seva bookings validate against services collection
+        // Darshan bookings validate against darshans collection
+        && (
+          (request.resource.data.sourceType == 'seva'
+            && request.resource.data.totalAmount == (
+                 get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.price
+                 * request.resource.data.quantity
+               )
+          )
+          ||
+          (request.resource.data.sourceType == 'darshan'
+            && request.resource.data.totalAmount == (
+                 get(/databases/$(database)/documents/darshans/$(request.resource.data.serviceId)).data.price
+                 * request.resource.data.quantity
+               )
+          )
+        )
         && isValidTimestamp(request.resource.data.createdAt)
         && isValidTimestamp(request.resource.data.updatedAt);
 
@@ -191,6 +212,26 @@ service cloud.firestore {
 
       // Only admins can delete bookings
       allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // DARSHANS COLLECTION
+    // =========================================================
+    // Public can read active darshans. Only admins can write.
+    match /darshans/{darshanId} {
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // =========================================================
+    // DONATION TYPES COLLECTION
+    // =========================================================
+    // Public can read active donation types. Only admins can write.
+    // This collection stores ONLY admin-managed donation categories.
+    // Actual donation transactions are NOT created from this collection.
+    match /donationTypes/{donationTypeId} {
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     // =========================================================
@@ -227,3 +268,4 @@ service cloud.firestore {
 
   }
 }
+

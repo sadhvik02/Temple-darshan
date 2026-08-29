@@ -294,3 +294,68 @@ bookings.slotId      → slots/{slotId}  (optional)
 ```
 
 All folders: public read, admin-only write, max 5 MB images.
+
+---
+
+## Collection: `darshans`
+
+**Path**: `darshans/{darshanId}`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | ✅ | Darshan name (e.g., "VIP Darshan") |
+| `description` | string | ✅ | Darshan description |
+| `imageUrl` | string | ❌ | Image URL |
+| `price` | number | ✅ | Price in ₹ (0 if free) |
+| `bookingEnabled` | boolean | ✅ | Whether online booking is available |
+| `isActive` | boolean | ✅ | Whether to display |
+| `displayOrder` | number | ✅ | Sort order (ascending) |
+| `createdAt` | timestamp | ✅ | Creation time |
+| `updatedAt` | timestamp | ✅ | Last update time |
+
+> Mirrors the `services` collection structure for consistency.
+
+---
+
+## Collection: `donationTypes`
+
+**Path**: `donationTypes/{donationTypeId}`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `title` | string | ✅ | Donation title (e.g., "Temple Renovation Fund") |
+| `description` | string | ✅ | Description of the donation purpose |
+| `imageUrl` | string | ❌ | Image URL |
+| `category` | string | ✅ | Category (e.g., "general", "festival", "renovation") |
+| `suggestedAmounts` | array\<number\> | ✅ | Suggested donation amounts (e.g., [101, 501, 1001]) |
+| `isActive` | boolean | ✅ | Whether to display |
+| `displayOrder` | number | ✅ | Sort order (ascending) |
+| `createdAt` | timestamp | ✅ | Creation time |
+| `updatedAt` | timestamp | ✅ | Last update time |
+
+> `donationTypes` stores only admin-managed donation categories/content.
+> Actual donation transaction records will be introduced during the payment integration phase.
+
+---
+
+## Multi-Source Booking: `sourceType` field
+
+The `slots` and `bookings` collections support both Seva and Darshan offerings via a `sourceType` discriminator field:
+
+### `slots.sourceType`
+| Value | Meaning |
+|---|---|
+| `seva` (default) | Slot belongs to a service in `services/{serviceId}` |
+| `darshan` | Slot belongs to a darshan in `darshans/{serviceId}` |
+
+> The `serviceId` field in `slots` acts as the **offering ID**. The `sourceType` field determines whether it references `services` or `darshans`.
+
+### `bookings.sourceType`
+| Value | Meaning |
+|---|---|
+| `seva` (default) | Booking is for a service. `serviceId` → `services/{serviceId}` |
+| `darshan` | Booking is for a darshan. `serviceId` → `darshans/{serviceId}` |
+
+> Existing bookings without `sourceType` are interpreted as `seva` bookings.
+> The `totalAmount` security rule validates price against the correct collection based on `sourceType`.
+

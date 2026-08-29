@@ -135,7 +135,10 @@ class _BookingScreenState extends State<BookingScreen> {
 
       final refCode = await DatabaseService().createBooking(
         userId: user.id,
-        service: widget.service,
+        offeringId: widget.service.id,
+        offeringName: widget.service.name,
+        offeringPrice: widget.service.price,
+        sourceType: 'seva',
         slot: widget.slot,
         quantity: _quantity,
         date: widget.slot.date,
