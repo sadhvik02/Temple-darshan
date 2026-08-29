@@ -14,7 +14,7 @@ class UserModel {
   });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
+    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
     return UserModel(
       id: doc.id,
       name: data['name'] ?? '',
@@ -29,21 +29,24 @@ class BannerModel {
   final String title;
   final String imageUrl;
   final String? actionUrl;
+  final int displayOrder;
 
   BannerModel({
     required this.id,
     required this.title,
     required this.imageUrl,
     this.actionUrl,
+    this.displayOrder = 0,
   });
 
   factory BannerModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
     return BannerModel(
       id: doc.id,
       title: data['title'] ?? '',
       imageUrl: data['imageUrl'] ?? '',
       actionUrl: data['actionUrl'],
+      displayOrder: (data['displayOrder'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -66,7 +69,7 @@ class ServiceModel {
   });
 
   factory ServiceModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
     return ServiceModel(
       id: doc.id,
       name: data['name'] ?? '',
@@ -76,6 +79,8 @@ class ServiceModel {
       bookingEnabled: data['bookingEnabled'] ?? false,
     );
   }
+
+  String get formattedPrice => price > 0 ? '₹$price' : 'Free';
 }
 
 class SlotModel {
@@ -100,56 +105,72 @@ class SlotModel {
   });
 
   factory SlotModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
     return SlotModel(
       id: doc.id,
       serviceId: data['serviceId'] ?? '',
       date: data['date'] ?? '',
       startTime: data['startTime'] ?? '',
       endTime: data['endTime'] ?? '',
-      capacity: data['capacity']?.toInt() ?? 0,
-      bookedCount: data['bookedCount']?.toInt() ?? 0,
+      capacity: (data['capacity'] as num?)?.toInt() ?? 0,
+      bookedCount: (data['bookedCount'] as num?)?.toInt() ?? 0,
       isActive: data['isActive'] ?? false,
     );
   }
 
-  int get available => capacity - bookedCount;
+  int get available => (capacity - bookedCount).clamp(0, capacity);
+  bool get isFull => available <= 0;
+  String get timeRange => '$startTime - $endTime';
 }
 
 class BookingModel {
   final String id;
+  final String userId;
+  final String serviceId;
   final String serviceName;
+  final String? slotId;
   final String bookingRef;
   final String bookingDate;
   final int quantity;
   final String status;
   final num totalAmount;
   final String paymentStatus;
+  final DateTime? createdAt;
   
   BookingModel({
     required this.id,
+    required this.userId,
+    required this.serviceId,
     required this.serviceName,
+    this.slotId,
     required this.bookingRef,
     required this.bookingDate,
     required this.quantity,
     required this.status,
     required this.totalAmount,
     required this.paymentStatus,
+    this.createdAt,
   });
 
   factory BookingModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
     return BookingModel(
       id: doc.id,
+      userId: data['userId'] ?? '',
+      serviceId: data['serviceId'] ?? '',
       serviceName: data['serviceName'] ?? '',
+      slotId: data['slotId'],
       bookingRef: data['bookingRef'] ?? '',
       bookingDate: data['bookingDate'] ?? '',
-      quantity: data['quantity']?.toInt() ?? 1,
+      quantity: (data['quantity'] as num?)?.toInt() ?? 1,
       status: data['status'] ?? 'pending',
       totalAmount: data['totalAmount'] ?? 0,
       paymentStatus: data['paymentStatus'] ?? 'pending',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
   }
+
+  String get formattedTotal => totalAmount > 0 ? '₹$totalAmount' : 'Free';
 }
 
 class NewsModel {
@@ -157,26 +178,67 @@ class NewsModel {
   final String title;
   final String content;
   final String? imageUrl;
-  final DateTime? createdAt;
+  final DateTime? publishedAt;
 
   NewsModel({
     required this.id,
     required this.title,
     required this.content,
     this.imageUrl,
-    this.createdAt,
+    this.publishedAt,
   });
 
   factory NewsModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
     return NewsModel(
       id: doc.id,
       title: data['title'] ?? '',
       content: data['content'] ?? '',
       imageUrl: data['imageUrl'],
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      publishedAt: (data['publishedAt'] as Timestamp?)?.toDate() ??
+          (data['createdAt'] as Timestamp?)?.toDate(),
     );
   }
+}
+
+class EventModel {
+  final String id;
+  final String title;
+  final String description;
+  final String? imageUrl;
+  final String eventDate;
+  final String startTime;
+  final String endTime;
+  final bool isPublished;
+
+  EventModel({
+    required this.id,
+    required this.title,
+    required this.description,
+    this.imageUrl,
+    required this.eventDate,
+    required this.startTime,
+    required this.endTime,
+    required this.isPublished,
+  });
+
+  factory EventModel.fromFirestore(DocumentSnapshot doc) {
+    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
+    return EventModel(
+      id: doc.id,
+      title: data['title'] ?? '',
+      description: data['description'] ?? '',
+      imageUrl: data['imageUrl'],
+      eventDate: data['eventDate'] ?? '',
+      startTime: data['startTime'] ?? '',
+      endTime: data['endTime'] ?? '',
+      isPublished: data['isPublished'] ?? false,
+    );
+  }
+
+  String get timeRange => (startTime.isNotEmpty && endTime.isNotEmpty)
+      ? '$startTime - $endTime'
+      : (startTime.isNotEmpty ? startTime : '');
 }
 
 class TempleInfoModel {
@@ -185,6 +247,7 @@ class TempleInfoModel {
   final String address;
   final String city;
   final String state;
+  final String pincode;
   final String phone;
   final String? email;
   final String? website;
@@ -197,6 +260,7 @@ class TempleInfoModel {
     required this.address,
     required this.city,
     required this.state,
+    required this.pincode,
     required this.phone,
     this.email,
     this.website,
@@ -205,18 +269,23 @@ class TempleInfoModel {
   });
 
   factory TempleInfoModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
+    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
     return TempleInfoModel(
       name: data['name'] ?? '',
       description: data['description'] ?? '',
       address: data['address'] ?? '',
       city: data['city'] ?? '',
       state: data['state'] ?? '',
+      pincode: data['pincode'] ?? '',
       phone: data['phone'] ?? '',
       email: data['email'],
       website: data['website'],
-      timings: data['timings'] ?? {},
+      timings: data['timings'] as Map<String, dynamic>? ?? {},
       imageUrl: data['imageUrl'],
     );
   }
+
+  String get morningTimings => timings['morning']?.toString() ?? '6:00 AM - 12:00 PM';
+  String get eveningTimings => timings['evening']?.toString() ?? '4:00 PM - 9:00 PM';
+  String get fullAddress => '$address, $city, $state${pincode.isNotEmpty ? ' - $pincode' : ''}';
 }

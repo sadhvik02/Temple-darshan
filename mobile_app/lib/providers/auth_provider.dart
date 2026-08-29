@@ -38,38 +38,78 @@ class AuthProvider extends ChangeNotifier {
 
   Future<String?> login(String email, String password) async {
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
       return null; // Success
     } on FirebaseAuthException catch (e) {
-      return e.message ?? "An error occurred during login.";
+      return _mapAuthError(e.code, e.message);
     } catch (e) {
-      return e.toString();
+      return "An unexpected error occurred. Please try again.";
     }
   }
 
   Future<String?> register(String name, String phone, String email, String password) async {
     try {
-      UserCredential cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+      final UserCredential cred = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
       if (cred.user != null) {
-        // Create user profile in Firestore
+        // Create user profile in Firestore matching rules
         await _firestore.collection('users').doc(cred.user!.uid).set({
-          'name': name,
-          'phone': phone,
-          'email': email,
+          'name': name.trim(),
+          'phone': phone.trim(),
+          'email': email.trim(),
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
+        await _fetchUserProfile(cred.user!.uid);
         return null; // Success
       }
-      return "Registration failed.";
+      return "Registration could not be completed. Please try again.";
     } on FirebaseAuthException catch (e) {
-      return e.message ?? "An error occurred during registration.";
+      return _mapAuthError(e.code, e.message);
     } catch (e) {
-      return e.toString();
+      return "Registration failed: ${e.toString()}";
+    }
+  }
+
+  Future<String?> resetPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+      return null; // Success
+    } on FirebaseAuthException catch (e) {
+      return _mapAuthError(e.code, e.message);
+    } catch (e) {
+      return "Unable to send reset link. Please try again.";
     }
   }
 
   Future<void> logout() async {
     await _auth.signOut();
+  }
+
+  String _mapAuthError(String code, String? defaultMessage) {
+    switch (code) {
+      case 'user-not-found':
+        return 'No devotee account found with this email.';
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'Invalid email or password. Please try again.';
+      case 'email-already-in-use':
+        return 'An account already exists with this email.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'weak-password':
+        return 'Password is too weak. Please use at least 6 characters.';
+      case 'network-request-failed':
+        return 'Network connection issue. Please check your internet connection.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please wait a few moments and try again.';
+      default:
+        return defaultMessage ?? 'Authentication error. Please try again.';
+    }
   }
 }

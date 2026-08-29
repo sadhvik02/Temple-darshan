@@ -37,8 +37,6 @@ class DatabaseService {
         .collection('slots')
         .where('serviceId', isEqualTo: serviceId)
         .where('isActive', isEqualTo: true)
-        // Note: Ordering by multiple fields requires a composite index. 
-        // Admin dashboard indexes support date sorting. We will fetch and sort in dart if needed.
         .snapshots()
         .map((snap) {
           final slots = snap.docs.map((doc) => SlotModel.fromFirestore(doc)).toList();
@@ -71,29 +69,45 @@ class DatabaseService {
             snap.docs.map((doc) => NewsModel.fromFirestore(doc)).toList());
   }
 
+  Stream<List<EventModel>> getPublishedEvents() {
+    return _db
+        .collection('events')
+        .where('isPublished', isEqualTo: true)
+        .snapshots()
+        .map((snap) {
+          final events = snap.docs.map((doc) => EventModel.fromFirestore(doc)).toList();
+          events.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+          return events;
+        });
+  }
+
   /// CRITICAL: Atomic Booking Transaction
-  Future<void> createBooking({
+  /// Returns the unique booking reference code (refCode)
+  Future<String> createBooking({
     required String userId,
     required ServiceModel service,
     required SlotModel? slot, // null if service is not slot-based
     required int quantity,
     required String date,
   }) async {
-    return _db.runTransaction((transaction) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    final refCode = 'BK-${timestamp.substring(timestamp.length - 6)}';
+
+    await _db.runTransaction((transaction) async {
       // 1. If slot-based, safely increment bookedCount
       if (slot != null) {
         final slotRef = _db.collection('slots').doc(slot.id);
         final slotDoc = await transaction.get(slotRef);
         
         if (!slotDoc.exists) {
-          throw Exception("Slot does not exist.");
+          throw Exception("The selected slot is no longer available.");
         }
 
-        final currentBooked = slotDoc.data()?['bookedCount'] ?? 0;
-        final capacity = slotDoc.data()?['capacity'] ?? 0;
+        final currentBooked = (slotDoc.data()?['bookedCount'] as num?)?.toInt() ?? 0;
+        final capacity = (slotDoc.data()?['capacity'] as num?)?.toInt() ?? 0;
 
         if (currentBooked + quantity > capacity) {
-          throw Exception("Capacity exceeded. Not enough available spots.");
+          throw Exception("Capacity exceeded. Only ${capacity - currentBooked} spots remain.");
         }
 
         transaction.update(slotRef, {
@@ -103,14 +117,10 @@ class DatabaseService {
       }
 
       // 2. Derive total amount from SERVER-SIDE/fetched service data. 
-      // Do NOT trust client UI input for price!
+      // Security rules require totalAmount == service.price * quantity
       final totalAmount = service.price * quantity;
 
-      // 3. Create booking reference
-      final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-      final refCode = 'BK-${timestamp.substring(timestamp.length - 6)}';
-
-      // 4. Save booking
+      // 3. Save booking document
       final bookingRef = _db.collection('bookings').doc();
       transaction.set(bookingRef, {
         'userId': userId,
@@ -121,11 +131,13 @@ class DatabaseService {
         'bookingDate': date,
         'quantity': quantity,
         'status': 'pending',
-        'paymentStatus': 'pending', // No payments in this phase
+        'paymentStatus': 'pending',
         'totalAmount': totalAmount,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
+
+    return refCode;
   }
 }
