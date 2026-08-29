@@ -1,4 +1,4 @@
-package com.temple.mobile_app
+package com.temple.mobileapp
 
 import io.flutter.embedding.android.FlutterActivity
 
