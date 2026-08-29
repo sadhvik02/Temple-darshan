@@ -1,0 +1,48 @@
+# === OS Files ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === IDE / Editor ===
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# === Environment / Secrets ===
+.env
+.env.local
+.env.production
+*.key
+*.pem
+service-account*.json
+*-service-account*.json
+firebase-adminsdk*.json
+
+# === Node.js ===
+node_modules/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+
+# === Firebase ===
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+
+# === Build ===
+build/
+dist/
+*.log
+
+# === Android (for future Phase 3) ===
+*.apk
+*.aab
+*.jks
+*.keystore
+local.properties
+google-services.json

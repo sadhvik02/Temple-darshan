@@ -1,0 +1,229 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================
+    // HELPER FUNCTIONS
+    // =========================================================
+
+    // Check if the request is from an authenticated user
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if the authenticated user is the owner of the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if the authenticated user is an admin.
+    // Reads the admins collection to verify the user has an admin document.
+    function isAdmin() {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Check if a field value is a valid server timestamp
+    function isValidTimestamp(field) {
+      return field == request.time;
+    }
+
+    // =========================================================
+    // ADMINS COLLECTION
+    // =========================================================
+    // SECURITY CRITICAL:
+    // - NO user (authenticated or otherwise) can create, update,
+    //   or delete admin documents via client SDKs.
+    // - Admin accounts MUST be provisioned manually via:
+    //   1. Firebase Console (Firestore > admins collection > Add document)
+    //   2. Firebase Admin SDK (server-side / local script)
+    // - This prevents privilege escalation attacks where a user
+    //   creates an admin document with their own UID.
+    // =========================================================
+    match /admins/{adminId} {
+      // Admins can read ONLY their own admin document
+      allow read: if isOwner(adminId);
+
+      // NEVER allow client-side create, update, or delete
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // =========================================================
+    // USERS COLLECTION
+    // =========================================================
+    match /users/{userId} {
+      // Users can read only their own profile
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Users can create their own profile document on registration
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasAll(['name', 'phone', 'createdAt', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.phone is string
+        && isValidTimestamp(request.resource.data.createdAt)
+        && isValidTimestamp(request.resource.data.updatedAt);
+
+      // Users can update only their own profile
+      allow update: if isOwner(userId)
+        && isValidTimestamp(request.resource.data.updatedAt)
+        // Prevent users from changing createdAt
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      // Users cannot delete their own profile; admins can
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // TEMPLE INFO COLLECTION
+    // =========================================================
+    // Public read. Only admins can write.
+    match /templeInfo/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // =========================================================
+    // BANNERS COLLECTION
+    // =========================================================
+    // Public can read active banners. Only admins can write.
+    match /banners/{bannerId} {
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // =========================================================
+    // SERVICES COLLECTION
+    // =========================================================
+    // Public can read active services. Only admins can write.
+    match /services/{serviceId} {
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // =========================================================
+    // SLOTS COLLECTION
+    // =========================================================
+    // Authenticated users can read active slots.
+    // Only admins can create or delete slots.
+    //
+    // BOOKING CAPACITY ENFORCEMENT:
+    // Authenticated users can update a slot ONLY to increment
+    // bookedCount (as part of a Firestore transaction during booking).
+    // The security rule enforces:
+    //   1. Only bookedCount and updatedAt fields are modified
+    //   2. bookedCount increases (no decrements by users)
+    //   3. bookedCount never exceeds capacity
+    // Combined with a client-side Firestore transaction, this
+    // guarantees atomic capacity enforcement without Cloud Functions.
+    // =========================================================
+    match /slots/{slotId} {
+      allow read: if (isAuthenticated() && resource.data.isActive == true)
+                  || isAdmin();
+
+      allow create, delete: if isAdmin();
+
+      allow update: if isAdmin()
+        || (
+          // --- User booking capacity update rules ---
+          isAuthenticated()
+
+          // Only bookedCount and updatedAt may change
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['bookedCount', 'updatedAt'])
+
+          // bookedCount must increase (no negative adjustments by users)
+          && request.resource.data.bookedCount > resource.data.bookedCount
+
+          // bookedCount must not exceed capacity
+          && request.resource.data.bookedCount <= resource.data.capacity
+
+          // Slot must be active to accept bookings
+          && resource.data.isActive == true
+
+          // updatedAt must be a server timestamp
+          && isValidTimestamp(request.resource.data.updatedAt)
+        );
+    }
+
+    // =========================================================
+    // BOOKINGS COLLECTION
+    // =========================================================
+    // Users can read only their own bookings.
+    // Users can create a booking only for themselves.
+    // Only admins can update or delete bookings.
+    // =========================================================
+    match /bookings/{bookingId} {
+      // Users read their own bookings; admins read all
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid)
+                  || isAdmin();
+
+      // Users can create bookings only for themselves
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasAll([
+            'userId', 'serviceId', 'serviceName', 'bookingRef',
+            'bookingDate', 'quantity', 'status', 'paymentStatus',
+            'totalAmount', 'createdAt', 'updatedAt'
+          ])
+        && request.resource.data.userId is string
+        && request.resource.data.serviceId is string
+        && request.resource.data.serviceName is string
+        && request.resource.data.bookingRef is string
+        && request.resource.data.bookingDate is string
+        && request.resource.data.quantity is int
+        && request.resource.data.quantity > 0
+        && request.resource.data.status == 'pending'
+        && request.resource.data.paymentStatus == 'pending'
+        && request.resource.data.totalAmount is number
+        // CRITICAL SECURITY FIX: Enforce that totalAmount exactly matches the actual service price
+        && request.resource.data.totalAmount == (
+             get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.price 
+             * request.resource.data.quantity
+           )
+        && isValidTimestamp(request.resource.data.createdAt)
+        && isValidTimestamp(request.resource.data.updatedAt);
+
+      // Only admins can update bookings (status changes, confirmations)
+      allow update: if isAdmin();
+
+      // Only admins can delete bookings
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // NEWS COLLECTION
+    // =========================================================
+    // Public can read published news. Only admins can write.
+    match /news/{newsId} {
+      allow read: if resource.data.isPublished == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // =========================================================
+    // EVENTS COLLECTION
+    // =========================================================
+    // Public can read published events. Only admins can write.
+    match /events/{eventId} {
+      allow read: if resource.data.isPublished == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // =========================================================
+    // NOTIFICATIONS COLLECTION
+    // =========================================================
+    // Users can read notifications targeted to them or global ones.
+    // Only admins can create/manage notifications.
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated()
+        && (resource.data.isGlobal == true
+            || resource.data.targetUserId == request.auth.uid)
+        || isAdmin();
+
+      allow create, update, delete: if isAdmin();
+    }
+
+  }
+}

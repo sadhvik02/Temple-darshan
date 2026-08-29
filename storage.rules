@@ -1,0 +1,73 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // =========================================================
+    // HELPER FUNCTIONS
+    // =========================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated()
+        && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+
+    // Validate uploaded file is an image and within size limit (5 MB)
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*')
+        && request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // =========================================================
+    // TEMPLE IMAGES
+    // =========================================================
+    match /temple/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+    }
+
+    // =========================================================
+    // BANNER IMAGES
+    // =========================================================
+    match /banners/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+    }
+
+    // =========================================================
+    // SERVICE IMAGES
+    // =========================================================
+    match /services/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+    }
+
+    // =========================================================
+    // EVENT IMAGES
+    // =========================================================
+    match /events/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+    }
+
+    // =========================================================
+    // NEWS IMAGES
+    // =========================================================
+    match /news/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+    }
+
+    // =========================================================
+    // DENY ALL OTHER PATHS
+    // =========================================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+  }
+}
