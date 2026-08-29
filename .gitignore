@@ -23,26 +23,46 @@ firebase-adminsdk*.json
 
 # === Node.js ===
 node_modules/
+**/node_modules/
+dist/
+**/dist/
 npm-debug.log*
 yarn-error.log*
 package-lock.json
 
+# === Flutter & Dart ===
+.dart_tool/
+**/.dart_tool/
+.flutter-plugins
+**/.flutter-plugins
+.flutter-plugins-dependencies
+**/.flutter-plugins-dependencies
+.pub-cache/
+**/.pub-cache/
+.pub/
+**/.pub/
+
+# === Build Artifacts ===
+build/
+**/build/
+*.log
+
 # === Firebase ===
 .firebase/
+**/.firebase/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
 pubsub-debug.log
 
-# === Build ===
-build/
-dist/
-*.log
-
-# === Android (for future Phase 3) ===
+# === Android & Gradle ===
+.gradle/
+**/.gradle/
+local.properties
+**/local.properties
+google-services.json
+**/google-services.json
 *.apk
 *.aab
 *.jks
 *.keystore
-local.properties
-google-services.json
