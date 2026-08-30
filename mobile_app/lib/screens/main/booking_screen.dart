@@ -7,7 +7,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/payment_processing_dialog.dart';
 import 'booking_success_screen.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'payment_failure_screen.dart';
 
 class DevoteeEntry {
   final TextEditingController nameController;
@@ -39,18 +39,11 @@ class _BookingScreenState extends State<BookingScreen> {
   bool _isLoading = false;
   final List<DevoteeEntry> _devotees = [];
   bool _isInitialized = false;
-  late Razorpay _razorpay;
-  final PaymentService _paymentService = PaymentService();
-  String? _currentPaymentDocId;
-  String? _currentOrderId;
+  final ValueNotifier<PaymentUIState> _paymentStateNotifier = ValueNotifier(PaymentUIState.idle);
 
   @override
   void initState() {
     super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
   @override
@@ -70,7 +63,6 @@ class _BookingScreenState extends State<BookingScreen> {
 
   @override
   void dispose() {
-    _razorpay.clear();
     for (final d in _devotees) {
       d.dispose();
     }
@@ -143,10 +135,6 @@ class _BookingScreenState extends State<BookingScreen> {
 
     setState(() => _isLoading = true);
 
-    final totalAmount = widget.service.price * _quantity;
-    final primaryName = _devotees.first.nameController.text.trim();
-    final primaryPhone = _devotees.first.phoneController.text.trim();
-
     final List<Map<String, String>> devoteeList = _devotees.map((entry) {
       return {
         'name': entry.nameController.text.trim(),
@@ -154,80 +142,66 @@ class _BookingScreenState extends State<BookingScreen> {
       };
     }).toList();
 
-      final orderDetails = await _paymentService.createPaymentOrder(
-        sourceType: 'seva',
-        offeringId: widget.service.id,
-        quantity: _quantity,
-        slotId: widget.slot.id,
-      );
+    final primaryName = _devotees.first.nameController.text.trim();
+    final primaryPhone = _devotees.first.phoneController.text.trim();
+    final expectedTotal = widget.service.price * _quantity;
 
-      if (!mounted) return;
+    PaymentProcessingDialog.show(context, stateNotifier: _paymentStateNotifier);
 
-      _currentOrderId = orderDetails['orderId'];
-      _currentPaymentDocId = orderDetails['paymentDocId'];
-
-      var options = {
-        'key': orderDetails['keyId'],
-        'amount': orderDetails['amount'],
-        'name': 'Temple Booking',
-        'description': '${widget.service.name} Booking',
-        'order_id': orderDetails['orderId'],
-        'prefill': {
-          'contact': user.phone ?? '',
-          'email': user.email ?? ''
-        }
-      };
-
-      _razorpay.open(options);
-      
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception:', '').trim()),
-          backgroundColor: AppColors.statusCancelled,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
-  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
     try {
-      final List<Map<String, dynamic>> devoteeList = _devotees.asMap().entries.map((entry) {
-        return {
-          'personIndex': entry.key + 1,
-          'name': entry.value.nameController.text.trim(),
-          'phone': entry.value.phoneController.text.trim(),
-        };
-      }).toList();
-
-      final verifyResult = await _paymentService.verifyPayment(
-        razorpayOrderId: response.orderId ?? _currentOrderId!,
-        razorpayPaymentId: response.paymentId!,
-        razorpaySignature: response.signature!,
-        paymentDocId: _currentPaymentDocId!,
-        devoteeDetails: devoteeList.isNotEmpty ? devoteeList.first : null, // Store primary devotee if needed, or modify backend to accept array
+      final result = await PaymentService().startSevaPayment(
+        serviceId: widget.service.id,
+        serviceName: widget.service.name,
+        slotId: widget.slot.id,
+        date: widget.slot.date,
+        timeRange: widget.slot.timeRange,
+        quantity: _quantity,
+        expectedTotal: expectedTotal,
+        devoteeDetails: devoteeList,
+        donorName: primaryName,
+        donorPhone: primaryPhone,
+        donorEmail: user.email,
+        onStateChange: (state) {
+          _paymentStateNotifier.value = state;
+        }
       );
 
       if (!mounted) return;
       PaymentProcessingDialog.hide(context);
 
-      if (verifyResult['success'] == true) {
-        final refCode = verifyResult['bookingRef'];
-        final totalAmount = widget.service.price * _quantity;
-
+      if (result.isSuccess) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => BookingSuccessScreen(
-              bookingRef: refCode ?? 'BK-VERIFIED',
+              bookingRef: result.bookingRef ?? 'BK-VERIFIED',
               service: widget.service,
               slot: widget.slot,
               quantity: _quantity,
-              totalAmount: totalAmount,
+              totalAmount: expectedTotal.toDouble(),
               date: widget.slot.date,
+            ),
+          ),
+        );
+      } else if (result.isCancelled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message ?? 'Payment cancelled.'),
+            backgroundColor: AppColors.textSecondary,
+          ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentFailureScreen(
+              type: result.isVerificationFailed ? FailureType.verificationFailed : (result.isNetworkError ? FailureType.networkError : FailureType.failed),
+              title: widget.service.name,
+              message: result.message,
+              paymentId: result.paymentId,
+              orderId: result.orderId,
+              totalAmount: expectedTotal.toDouble(),
+              onRetry: () => _submitBooking(),
             ),
           ),
         );
@@ -237,30 +211,13 @@ class _BookingScreenState extends State<BookingScreen> {
       PaymentProcessingDialog.hide(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Payment verification failed: $e'),
+          content: Text(e.toString().replaceAll('Exception:', '').trim()),
           backgroundColor: AppColors.statusCancelled,
         ),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _handlePaymentError(PaymentFailureResponse response) {
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Payment Failed: ${response.message}'),
-        backgroundColor: AppColors.statusCancelled,
-      ),
-    );
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    // Handling external wallets is not supported in this test flow
-    if (!mounted) return;
-    setState(() => _isLoading = false);
   }
 
   @override

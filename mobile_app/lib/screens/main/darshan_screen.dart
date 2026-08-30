@@ -9,9 +9,8 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_image.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
-import '../../widgets/custom_button.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
-import '../../services/payment_service.dart';
+import '../../widgets/payment_processing_dialog.dart';
+import 'payment_failure_screen.dart';
 import 'booking_success_screen.dart';
 
 class DarshanScreen extends StatelessWidget {
@@ -317,27 +316,33 @@ class _DarshanReviewScreen extends StatefulWidget {
 class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
   int _quantity = 1;
   bool _isLoading = false;
-  late Razorpay _razorpay;
-  final PaymentService _paymentService = PaymentService();
-  String? _currentPaymentDocId;
-  String? _currentOrderId;
+  final ValueNotifier<PaymentUIState> _paymentStateNotifier = ValueNotifier(PaymentUIState.idle);
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthProvider>().userModel;
+      if (user != null) {
+        _nameController.text = user.name;
+        _phoneController.text = user.phone;
+      }
+    });
   }
 
   @override
   void dispose() {
-    _razorpay.clear();
+    _nameController.dispose();
+    _phoneController.dispose();
+    _paymentStateNotifier.dispose();
     super.dispose();
   }
 
   Future<void> _submitBooking() async {
+    if (_isLoading || PaymentService().isProcessing) return;
+
     final user = context.read<AuthProvider>().userModel;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -346,66 +351,46 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    final name = _nameController.text.trim();
+    final phone = _phoneController.text.trim();
 
-    try {
-      final orderDetails = await _paymentService.createPaymentOrder(
-        sourceType: 'darshan',
-        offeringId: widget.darshan.id!,
-        quantity: _quantity,
-        slotId: widget.slot.id,
-      );
-
-      if (!mounted) return;
-
-      _currentOrderId = orderDetails['orderId'];
-      _currentPaymentDocId = orderDetails['paymentDocId'];
-
-      var options = {
-        'key': orderDetails['keyId'],
-        'amount': orderDetails['amount'],
-        'name': 'Temple Darshan',
-        'description': '${widget.darshan.name} Booking',
-        'order_id': orderDetails['orderId'],
-        'prefill': {
-          'contact': user.phone ?? '',
-          'email': user.email ?? ''
-        }
-      };
-
-      _razorpay.open(options);
-      
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+    if (name.isEmpty || phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception:', '').trim()),
+        const SnackBar(
+          content: Text('Please enter devotee name and phone number.'),
           backgroundColor: AppColors.statusCancelled,
-          behavior: SnackBarBehavior.floating,
         ),
       );
+      return;
     }
-  }
 
-  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    setState(() => _isLoading = true);
+    final expectedTotal = widget.darshan.price * _quantity;
+    PaymentProcessingDialog.show(context, stateNotifier: _paymentStateNotifier);
+
     try {
-      final verifyResult = await _paymentService.verifyPayment(
-        razorpayOrderId: response.orderId ?? _currentOrderId!,
-        razorpayPaymentId: response.paymentId!,
-        razorpaySignature: response.signature!,
-        paymentDocId: _currentPaymentDocId!,
+      final result = await PaymentService().startDarshanPayment(
+        darshanId: widget.darshan.id,
+        darshanName: widget.darshan.name,
+        slotId: widget.slot.id,
+        date: widget.slot.date,
+        timeRange: widget.slot.timeRange,
+        quantity: _quantity,
+        expectedTotal: expectedTotal,
+        devoteeName: name,
+        devoteePhone: phone,
+        devoteeEmail: user.email,
+        onStateChange: (state) {
+          _paymentStateNotifier.value = state;
+        }
       );
 
       if (!mounted) return;
+      PaymentProcessingDialog.hide(context);
 
-      if (verifyResult['success'] == true) {
-        final refCode = verifyResult['bookingRef'];
-        final totalAmount = widget.darshan.price * _quantity;
-
-        // Since darshan doesn't have a ServiceModel exactly matching, we map it
+      if (result.isSuccess) {
         final serviceMock = ServiceModel(
-          id: widget.darshan.id ?? '',
+          id: widget.darshan.id,
           name: widget.darshan.name,
           description: widget.darshan.description,
           price: widget.darshan.price,
@@ -416,43 +401,50 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
           context,
           MaterialPageRoute(
             builder: (_) => BookingSuccessScreen(
-              bookingRef: refCode ?? 'BK-VERIFIED',
+              bookingRef: result.bookingRef ?? 'BK-VERIFIED',
               service: serviceMock,
               slot: widget.slot,
               quantity: _quantity,
-              totalAmount: totalAmount,
+              totalAmount: expectedTotal.toDouble(),
               date: widget.slot.date,
+            ),
+          ),
+        );
+      } else if (result.isCancelled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message ?? 'Payment cancelled.'),
+            backgroundColor: AppColors.textSecondary,
+          ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentFailureScreen(
+              type: result.isVerificationFailed ? FailureType.verificationFailed : (result.isNetworkError ? FailureType.networkError : FailureType.failed),
+              title: widget.darshan.name,
+              message: result.message,
+              paymentId: result.paymentId,
+              orderId: result.orderId,
+              totalAmount: expectedTotal.toDouble(),
+              onRetry: () => _submitBooking(),
             ),
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
+      PaymentProcessingDialog.hide(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Payment verification failed: $e'),
+          content: Text(e.toString().replaceAll('Exception:', '').trim()),
           backgroundColor: AppColors.statusCancelled,
         ),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _handlePaymentError(PaymentFailureResponse response) {
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Payment Failed: ${response.message}'),
-        backgroundColor: AppColors.statusCancelled,
-      ),
-    );
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    if (!mounted) return;
-    setState(() => _isLoading = false);
   }
 
   @override

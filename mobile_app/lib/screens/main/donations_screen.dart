@@ -8,9 +8,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_image.dart';
 import '../../widgets/empty_state_widget.dart';
-import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
-import 'donation_checkout_screen.dart';
 import '../../widgets/payment_processing_dialog.dart';
 import 'payment_failure_screen.dart';
 import 'payment_success_screen.dart';
@@ -131,87 +129,73 @@ class _DonationTypeCard extends StatelessWidget {
       elevation: 1,
       margin: const EdgeInsets.only(bottom: 14),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DonationCheckoutScreen(donationType: donationType),
-            ),
-          );
-        },
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => _openDonationModal(context),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: AppColors.cardBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header row
-            Row(
-              children: [
-                if (donationType.imageUrl != null && donationType.imageUrl!.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header row
+              Row(
+                children: [
+                  if (donationType.imageUrl != null && donationType.imageUrl!.isNotEmpty)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SizedBox(
+                        width: 64,
+                        height: 64,
+                        child: CustomImage(imageUrl: donationType.imageUrl!, fit: BoxFit.cover),
+                      ),
+                    )
+                  else
+                    Container(
                       width: 64,
                       height: 64,
-                      child: CustomImage(imageUrl: donationType.imageUrl!, fit: BoxFit.cover),
-                    ),
-                  )
-                else
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.volunteer_activism_rounded, color: AppColors.accent, size: 30),
-                  ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        donationType.title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          donationType.category.toUpperCase(),
+                      child: const Icon(Icons.volunteer_activism_rounded, color: AppColors.accent, size: 30),
+                    ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          donationType.title,
                           style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                            letterSpacing: 0.5,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            donationType.category.toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+                ],
+              ),
+              const SizedBox(height: 12),
 
-            // Description
+              // Description
             Text(
               donationType.description,
               style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
@@ -229,33 +213,6 @@ class _DonationTypeCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: donationType.suggestedAmounts.map((amount) {
-                  return InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DonationCheckoutScreen(
-                            donationType: donationType,
-                            initialAmount: amount.toInt(),
-                          ),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.accent.withValues(alpha: 0.5)),
-                        borderRadius: BorderRadius.circular(20),
-                        color: AppColors.accentGold.withValues(alpha: 0.08),
-                      ),
-                      child: Text(
-                        '₹$amount',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primaryDark,
-                          fontSize: 14,
-                        ),
                   return InkWell(
                     onTap: () => _openDonationModal(context, amount),
                     borderRadius: BorderRadius.circular(20),
@@ -308,6 +265,7 @@ class _DonationTypeCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -666,7 +624,6 @@ class _DonationCheckoutSheetState extends State<_DonationCheckoutSheet> {
             ),
           ],
         ),
-      ),
       ),
     );
   }

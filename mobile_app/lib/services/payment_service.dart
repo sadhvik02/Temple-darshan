@@ -94,15 +94,15 @@ class PaymentService {
   factory PaymentService() => _instance;
   PaymentService._internal();
 
-  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: 'asia-south1');
+  final FirebaseFunctions _functions = FirebaseFunctions.instance;
   
   Razorpay? _razorpay;
   bool _isProcessing = false;
-  Completer<PaymentResult>? _activePaymentCompleter;
-
   String? _currentOrderId;
   String? _currentPaymentDocId;
   num? _currentAmount;
+  List<Map<String, String>>? _currentDevotees;
+  Completer<PaymentResult>? _activePaymentCompleter;
 
   bool get isProcessing => _isProcessing;
 
@@ -137,9 +137,9 @@ class PaymentService {
   }) async {
     return _startPaymentFlow(
       payload: {
-        'offeringType': 'seva',
-        'serviceId': serviceId,
-        'serviceName': serviceName,
+        'sourceType': 'seva',
+        'offeringId': serviceId,
+        'offeringName': serviceName,
         'slotId': slotId,
         'bookingDate': date,
         'timeRange': timeRange,
@@ -174,9 +174,9 @@ class PaymentService {
   }) async {
     return _startPaymentFlow(
       payload: {
-        'offeringType': 'darshan',
-        'darshanId': darshanId,
-        'darshanName': darshanName,
+        'sourceType': 'darshan',
+        'offeringId': darshanId,
+        'offeringName': darshanName,
         'slotId': slotId,
         'bookingDate': date,
         'timeRange': timeRange,
@@ -207,10 +207,10 @@ class PaymentService {
   }) async {
     return _startPaymentFlow(
       payload: {
-        'offeringType': 'donation',
-        'donationTypeId': donationTypeId,
-        'donationTitle': donationTitle,
-        'amount': amount,
+        'sourceType': 'donation',
+        'offeringId': donationTypeId,
+        'offeringName': donationTitle,
+        'donationAmount': amount,
         'donorName': donorName,
         'donorPhone': donorPhone,
         'donorEmail': donorEmail,
@@ -270,6 +270,7 @@ class PaymentService {
       _currentOrderId = orderId;
       _currentPaymentDocId = paymentDocId;
       _currentAmount = amountInPaise / 100;
+      _currentDevotees = payload['devotees'] as List<Map<String, String>>?;
 
       // 2. Open Razorpay Checkout UI
       onStateChange?.call(PaymentUIState.openingCheckout);
@@ -333,10 +334,12 @@ class PaymentService {
       final HttpsCallable verifyCallable = _functions.httpsCallable('verifyPayment');
       
       final HttpsCallableResult verifyResult = await verifyCallable.call({
-        'orderId': response.orderId ?? _currentOrderId,
-        'paymentId': response.paymentId,
-        'signature': response.signature,
+        'razorpay_order_id': response.orderId ?? _currentOrderId,
+        'razorpay_payment_id': response.paymentId,
+        'razorpay_signature': response.signature,
         'paymentDocId': _currentPaymentDocId,
+        if (_currentDevotees != null && _currentDevotees!.isNotEmpty)
+          'devoteeDetails': _currentDevotees!.first,
       });
 
       final dynamic rawData = verifyResult.data;
@@ -345,6 +348,7 @@ class PaymentService {
           : Map<String, dynamic>.from(rawData as Map);
 
       final String status = data['status']?.toString() ?? 'failed';
+      final bool isSuccess = data['success'] == true;
       final String? bookingRef = data['bookingRef']?.toString();
       final String? bookingId = data['bookingId']?.toString();
       final String? donationRef = data['donationRef']?.toString();
@@ -352,7 +356,7 @@ class PaymentService {
 
       _isProcessing = false;
 
-      if (status == 'success') {
+      if (isSuccess || status == 'success' || status == 'paid' || status == 'already_paid') {
         _activePaymentCompleter?.complete(PaymentResult(
           isSuccess: true,
           bookingRef: bookingRef,
