@@ -13,6 +13,8 @@ import 'service_details_screen.dart';
 import 'services_screen.dart';
 import 'temple_info_screen.dart';
 import 'donations_screen.dart';
+import 'darshan_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -170,11 +172,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 2. TTD Style Quick Services Row
   Widget _buildTTDQuickServicesGrid() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildTTDServiceItem(
+            icon: Icons.temple_hindu_rounded,
+            label: 'Darshan',
+            gradient: const [AppColors.primary, AppColors.primaryDark],
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => DarshanScreen()),
+              );
+            },
+          ),
+          const SizedBox(width: 12),
           _buildTTDServiceItem(
             icon: Icons.volunteer_activism_rounded,
             label: 'Arjitha Sevas',
@@ -186,8 +203,9 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
+          const SizedBox(width: 12),
           _buildTTDServiceItem(
-            icon: Icons.temple_hindu_rounded,
+            icon: Icons.info_outline_rounded,
             label: 'Temple Info',
             gradient: const [Color(0xFFC2185B), Color(0xFFE91E63)],
             onTap: () {
@@ -197,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-
+          const SizedBox(width: 12),
           _buildTTDServiceItem(
             icon: Icons.menu_book_rounded,
             label: 'Publications',
@@ -209,6 +227,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
+          const SizedBox(width: 12),
           _buildTTDServiceItem(
             icon: Icons.celebration_rounded,
             label: 'Utsavams',
