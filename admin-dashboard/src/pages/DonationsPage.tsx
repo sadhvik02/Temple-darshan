@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { DonationService } from "../services/donationService";
-import type { Donation } from "../types";
-import { useState, useEffect, type FormEvent } from "react";
 import { getDonationTypes, createDonationType, updateDonationType, deleteDonationType } from "../services/donationTypeService";
-import type { DonationType } from "../types";
+import type { Donation, DonationType } from "../types";
 
 const CATEGORY_OPTIONS = [
   { value: "general", label: "General Temple Fund", icon: "🏛️" },
@@ -16,6 +14,7 @@ const CATEGORY_OPTIONS = [
 
 export default function DonationsPage() {
   const [donations, setDonations] = useState<Donation[]>([]);
+  const [donationTypes, setDonationTypes] = useState<DonationType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
@@ -38,26 +37,31 @@ export default function DonationsPage() {
   });
 
   const loadDonationTypes = async () => {
-    setLoading(true);
     try {
       const data = await getDonationTypes();
       setDonationTypes(data);
     } catch (err) {
       console.error("Error loading donation types:", err);
       setError("Failed to load donation types.");
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const loadDonations = async () => {
+    try {
+      const data = await DonationService.getAllDonations();
+      setDonations(data);
+    } catch (err) {
+      console.error("Error loading donations:", err);
     }
   };
 
   useEffect(() => {
-    DonationService.getAllDonations()
-      .then(setDonations)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    setLoading(true);
+    Promise.all([loadDonationTypes(), loadDonations()]).finally(() => {
+      setLoading(false);
+    });
   }, []);
 
-  if (loading) return <div className="p-8">Loading donations...</div>;
   const handleOpenModal = (dt?: DonationType) => {
     if (dt) {
       setEditingId(dt.id!);
@@ -168,349 +172,354 @@ export default function DonationsPage() {
   const activeCount = donationTypes.filter((d) => d.isActive).length;
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Completed Donations</h1>
-      
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-600">Date</th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-600">Donor Name</th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-600">Phone</th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-600">Donation Type</th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-600">Amount</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {donations.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                  No donations found.
-                </td>
-              </tr>
-            ) : (
-              donations.map((donation) => (
-                <tr key={donation.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {donation.createdAt?.toLocaleString() ?? "N/A"}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {donation.donorName || "Anonymous"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {donation.donorPhone || "N/A"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-800">
-                    {donation.donationTypeName}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-bold text-green-700">
-                    ₹{donation.amount}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    <div className="donations-page" style={{ width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box" }}>
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "22px",
-          flexWrap: "wrap",
-          gap: "14px",
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: "1.55rem", fontWeight: "800", color: "#0f172a" }}>Donation & Hundi Funds</h1>
-          <p style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem", marginTop: "4px" }}>
-            Configure temple donation schemes (Annadanam, Renovation, Hundi) and preset contribution amounts.
-          </p>
-        </div>
+    <div className="p-8 max-w-6xl mx-auto flex flex-col gap-8">
+      {/* DONATION FUNDS MANAGEMENT SECTION */}
+      <div className="donations-page" style={{ width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box" }}>
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "22px",
+            flexWrap: "wrap",
+            gap: "14px",
+          }}
+        >
+          <div>
+            <h1 style={{ fontSize: "1.55rem", fontWeight: "800", color: "#0f172a" }}>Donation & Hundi Funds</h1>
+            <p style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem", marginTop: "4px" }}>
+              Configure temple donation schemes (Annadanam, Renovation, Hundi) and preset contribution amounts.
+            </p>
+          </div>
 
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <div
-            style={{
-              background: "#ffffff",
-              border: "1px solid var(--color-border)",
-              borderRadius: "10px",
-              padding: "3px",
-              display: "flex",
-            }}
-          >
-            <button
-              onClick={() => setViewMode("grid")}
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <div
               style={{
-                padding: "6px 12px",
-                borderRadius: "8px",
-                border: "none",
-                background: viewMode === "grid" ? "var(--color-primary-bg)" : "transparent",
-                color: viewMode === "grid" ? "var(--color-primary)" : "var(--color-text-secondary)",
-                fontWeight: "700",
-                fontSize: "0.82rem",
-                cursor: "pointer",
+                background: "#ffffff",
+                border: "1px solid var(--color-border)",
+                borderRadius: "10px",
+                padding: "3px",
+                display: "flex",
               }}
             >
-              🗂️ Cards
-            </button>
-            <button
-              onClick={() => setViewMode("table")}
-              style={{
-                padding: "6px 12px",
-                borderRadius: "8px",
-                border: "none",
-                background: viewMode === "table" ? "var(--color-primary-bg)" : "transparent",
-                color: viewMode === "table" ? "var(--color-primary)" : "var(--color-text-secondary)",
-                fontWeight: "700",
-                fontSize: "0.82rem",
-                cursor: "pointer",
-              }}
-            >
-              📋 Table
-            </button>
-          </div>
-
-          <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-            + Add Donation Fund
-          </button>
-        </div>
-      </div>
-
-      {/* Summary Chips */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(165px, 1fr))",
-          gap: "14px",
-          marginBottom: "22px",
-        }}
-      >
-        <div className="stat-card" style={{ padding: "14px 18px" }}>
-          <span style={{ fontSize: "1.4rem" }}>💰</span>
-          <div>
-            <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#0f172a" }}>{donationTypes.length}</div>
-            <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Total Funds</div>
-          </div>
-        </div>
-
-        <div className="stat-card" style={{ padding: "14px 18px" }}>
-          <span style={{ fontSize: "1.4rem" }}>🟢</span>
-          <div>
-            <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#047857" }}>{activeCount}</div>
-            <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Active on Mobile</div>
-          </div>
-        </div>
-
-        <div className="stat-card" style={{ padding: "14px 18px" }}>
-          <span style={{ fontSize: "1.4rem" }}>🍲</span>
-          <div>
-            <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#b45309" }}>
-              {donationTypes.filter((d) => d.category === "annadanam").length}
-            </div>
-            <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Annadanam Funds</div>
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="alert alert-error">
-          <span className="alert-icon">⚠️</span>
-          {error}
-        </div>
-      )}
-
-      {donationTypes.length === 0 && !error ? (
-        <div className="card-section empty-state">
-          <div className="empty-icon">💰</div>
-          <h3 style={{ fontSize: "1.2rem", fontWeight: "800", color: "#0f172a", marginBottom: "6px" }}>
-            No donation funds created yet
-          </h3>
-          <p style={{ color: "var(--color-text-secondary)", marginBottom: "18px" }}>
-            Create your first donation fund (e.g. Nitya Annadanam, Temple Renovation, Goshala Seva).
-          </p>
-          <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-            + Create First Donation Fund
-          </button>
-        </div>
-      ) : viewMode === "grid" ? (
-        /* Cards View */
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
-          {donationTypes.map((dt) => {
-            const catInfo = getCategoryInfo(dt.category);
-            return (
-              <div
-                key={dt.id}
-                className="form-card"
-                style={{ padding: "20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}
+              <button
+                onClick={() => setViewMode("grid")}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: viewMode === "grid" ? "var(--color-primary-bg)" : "transparent",
+                  color: viewMode === "grid" ? "var(--color-primary)" : "var(--color-text-secondary)",
+                  fontWeight: "700",
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                }}
               >
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      {dt.imageUrl ? (
-                        <img
-                          src={dt.imageUrl}
-                          alt={dt.title}
-                          style={{ width: "46px", height: "46px", objectFit: "cover", borderRadius: "10px", border: "1px solid var(--color-border)" }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: "46px",
-                            height: "46px",
-                            borderRadius: "10px",
-                            background: "linear-gradient(135deg, #ecfdf5, #a7f3d0)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "1.4rem",
-                            border: "1px solid #6ee7b7",
-                          }}
-                        >
-                          {catInfo.icon}
-                        </div>
-                      )}
-                      <div>
-                        <h3 style={{ fontSize: "1.1rem", fontWeight: "800", color: "#0f172a" }}>{dt.title}</h3>
-                        <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", fontWeight: "600" }}>
-                          {catInfo.label}
-                        </span>
-                      </div>
-                    </div>
+                🗂️ Cards
+              </button>
+              <button
+                onClick={() => setViewMode("table")}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: viewMode === "table" ? "var(--color-primary-bg)" : "transparent",
+                  color: viewMode === "table" ? "var(--color-primary)" : "var(--color-text-secondary)",
+                  fontWeight: "700",
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                }}
+              >
+                📋 Table
+              </button>
+            </div>
 
-                    <span className={`badge ${dt.isActive ? "badge-success" : "badge-neutral"}`}>
-                      {dt.isActive ? "● Active" : "● Inactive"}
-                    </span>
-                  </div>
-
-                  <p
-                    style={{
-                      fontSize: "0.86rem",
-                      color: "var(--color-text-secondary)",
-                      lineHeight: "1.5",
-                      marginBottom: "16px",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {dt.description || "Devotee contribution fund for temple causes."}
-                  </p>
-                </div>
-
-                <div>
-                  {/* Preset Amounts */}
-                  <div style={{ marginBottom: "16px" }}>
-                    <div style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", fontWeight: "700", textTransform: "uppercase", marginBottom: "6px" }}>
-                      Preset Suggested Amounts
-                    </div>
-                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                      {dt.suggestedAmounts?.map((amt) => (
-                        <span
-                          key={amt}
-                          style={{
-                            background: "#fef3c7",
-                            border: "1px solid #fde68a",
-                            color: "#b45309",
-                            padding: "3px 8px",
-                            borderRadius: "6px",
-                            fontSize: "0.78rem",
-                            fontWeight: "800",
-                          }}
-                        >
-                          ₹{amt}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
-                    <button className="btn-icon text-primary" onClick={() => handleOpenModal(dt)}>
-                      ✏️ Edit
-                    </button>
-                    <button className="btn-icon text-danger" onClick={() => setDeleteId(dt.id!)}>
-                      🗑️ Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+            <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+              + Add Donation Fund
+            </button>
+          </div>
         </div>
-      ) : (
-        /* Table View */
-        <div className="card-section" style={{ padding: 0, overflow: "hidden" }}>
-          <div className="table-container" style={{ border: "none" }}>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Donation Fund</th>
-                  <th>Category</th>
-                  <th>Suggested Amounts</th>
-                  <th>Display Order</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {donationTypes.map((dt) => (
-                  <tr key={dt.id}>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+
+        {/* Summary Chips */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(165px, 1fr))",
+            gap: "14px",
+            marginBottom: "22px",
+          }}
+        >
+          <div className="stat-card" style={{ padding: "14px 18px" }}>
+            <span style={{ fontSize: "1.4rem" }}>💰</span>
+            <div>
+              <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#0f172a" }}>{donationTypes.length}</div>
+              <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Total Funds</div>
+            </div>
+          </div>
+
+          <div className="stat-card" style={{ padding: "14px 18px" }}>
+            <span style={{ fontSize: "1.4rem" }}>🟢</span>
+            <div>
+              <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#047857" }}>{activeCount}</div>
+              <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Active on Mobile</div>
+            </div>
+          </div>
+
+          <div className="stat-card" style={{ padding: "14px 18px" }}>
+            <span style={{ fontSize: "1.4rem" }}>🍲</span>
+            <div>
+              <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#b45309" }}>
+                {donationTypes.filter((d) => d.category === "annadanam").length}
+              </div>
+              <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Annadanam Funds</div>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="alert alert-error">
+            <span className="alert-icon">⚠️</span>
+            {error}
+          </div>
+        )}
+
+        {donationTypes.length === 0 && !error ? (
+          <div className="card-section empty-state">
+            <div className="empty-icon">💰</div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: "800", color: "#0f172a", marginBottom: "6px" }}>
+              No donation funds created yet
+            </h3>
+            <p style={{ color: "var(--color-text-secondary)", marginBottom: "18px" }}>
+              Create your first donation fund (e.g. Nitya Annadanam, Temple Renovation, Goshala Seva).
+            </p>
+            <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+              + Create First Donation Fund
+            </button>
+          </div>
+        ) : viewMode === "grid" ? (
+          /* Cards View */
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
+            {donationTypes.map((dt) => {
+              const catInfo = getCategoryInfo(dt.category);
+              return (
+                <div
+                  key={dt.id}
+                  className="form-card"
+                  style={{ padding: "20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}
+                >
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                         {dt.imageUrl ? (
-                          <img src={dt.imageUrl} alt={dt.title} className="table-img-preview" />
+                          <img
+                            src={dt.imageUrl}
+                            alt={dt.title}
+                            style={{ width: "46px", height: "46px", objectFit: "cover", borderRadius: "10px", border: "1px solid var(--color-border)" }}
+                          />
                         ) : (
-                          <div className="table-img-placeholder">💰 Fund</div>
+                          <div
+                            style={{
+                              width: "46px",
+                              height: "46px",
+                              borderRadius: "10px",
+                              background: "linear-gradient(135deg, #ecfdf5, #a7f3d0)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "1.4rem",
+                              border: "1px solid #6ee7b7",
+                            }}
+                          >
+                            {catInfo.icon}
+                          </div>
                         )}
                         <div>
-                          <div style={{ fontWeight: "800", color: "#0f172a" }}>{dt.title}</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
-                            {dt.description?.substring(0, 45)}...
-                          </div>
+                          <h3 style={{ fontSize: "1.1rem", fontWeight: "800", color: "#0f172a" }}>{dt.title}</h3>
+                          <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", fontWeight: "600" }}>
+                            {catInfo.label}
+                          </span>
                         </div>
                       </div>
-                    </td>
-                    <td>
-                      <span className="badge badge-info">{getCategoryInfo(dt.category).label}</span>
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-                        {dt.suggestedAmounts?.map((a) => (
-                          <span key={a} className="ref-code">
-                            ₹{a}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td>
-                      <span className="ref-code">#{dt.displayOrder}</span>
-                    </td>
-                    <td>
+
                       <span className={`badge ${dt.isActive ? "badge-success" : "badge-neutral"}`}>
                         {dt.isActive ? "● Active" : "● Inactive"}
                       </span>
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
-                        <button className="btn-icon text-primary" onClick={() => handleOpenModal(dt)}>
-                          Edit
-                        </button>
-                        <button className="btn-icon text-danger" onClick={() => setDeleteId(dt.id!)}>
-                          Delete
-                        </button>
+                    </div>
+
+                    <p
+                      style={{
+                        fontSize: "0.86rem",
+                        color: "var(--color-text-secondary)",
+                        lineHeight: "1.5",
+                        marginBottom: "16px",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {dt.description || "Devotee contribution fund for temple causes."}
+                    </p>
+                  </div>
+
+                  <div>
+                    {/* Preset Amounts */}
+                    <div style={{ marginBottom: "16px" }}>
+                      <div style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", fontWeight: "700", textTransform: "uppercase", marginBottom: "6px" }}>
+                        Preset Suggested Amounts
                       </div>
+                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                        {dt.suggestedAmounts?.map((amt) => (
+                          <span
+                            key={amt}
+                            style={{
+                              background: "#fef3c7",
+                              border: "1px solid #fde68a",
+                              color: "#b45309",
+                              padding: "3px 8px",
+                              borderRadius: "6px",
+                              fontSize: "0.78rem",
+                              fontWeight: "800",
+                            }}
+                          >
+                            ₹{amt}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
+                      <button className="btn-icon text-primary" onClick={() => handleOpenModal(dt)}>
+                        ✏️ Edit
+                      </button>
+                      <button className="btn-icon text-danger" onClick={() => setDeleteId(dt.id!)}>
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Table View */
+          <div className="card-section" style={{ padding: 0, overflow: "hidden" }}>
+            <div className="table-container" style={{ border: "none" }}>
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Donation Fund</th>
+                    <th>Category</th>
+                    <th>Suggested Amounts</th>
+                    <th>Display Order</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {donationTypes.map((dt) => (
+                    <tr key={dt.id}>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          {dt.imageUrl ? (
+                            <img src={dt.imageUrl} alt={dt.title} className="table-img-preview" />
+                          ) : (
+                            <div className="table-img-placeholder">💰 Fund</div>
+                          )}
+                          <div>
+                            <div style={{ fontWeight: "800", color: "#0f172a" }}>{dt.title}</div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                              {dt.description?.substring(0, 45)}...
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="badge badge-info">{getCategoryInfo(dt.category).label}</span>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                          {dt.suggestedAmounts?.map((a) => (
+                            <span key={a} className="ref-code">
+                              ₹{a}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="ref-code">#{dt.displayOrder}</span>
+                      </td>
+                      <td>
+                        <span className={`badge ${dt.isActive ? "badge-success" : "badge-neutral"}`}>
+                          {dt.isActive ? "● Active" : "● Inactive"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
+                          <button className="btn-icon text-primary" onClick={() => handleOpenModal(dt)}>
+                            Edit
+                          </button>
+                          <button className="btn-icon text-danger" onClick={() => setDeleteId(dt.id!)}>
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* COMPLETED DONATIONS SECTION */}
+      <div>
+        <h1 className="text-2xl font-bold mb-6">Completed Donations</h1>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Date</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Donor Name</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Phone</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Donation Type</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {donations.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    No donations found.
+                  </td>
+                </tr>
+              ) : (
+                donations.map((donation) => (
+                  <tr key={donation.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {donation.createdAt?.toLocaleString() ?? "N/A"}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      {donation.donorName || "Anonymous"}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {donation.donorPhone || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-800">
+                      {donation.donationTypeName}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-green-700">
+                      ₹{donation.amount}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
       {/* Add/Edit Modal */}
       {isModalOpen && (

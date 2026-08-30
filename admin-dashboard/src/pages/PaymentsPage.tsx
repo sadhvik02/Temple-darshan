@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PaymentService } from "../services/paymentService";
-import { Payment } from "../types";
+import type { Payment } from "../types";
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
