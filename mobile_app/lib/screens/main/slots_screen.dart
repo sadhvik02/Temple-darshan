@@ -147,7 +147,7 @@ class _SlotsScreenState extends State<SlotsScreen> {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               // 2. Embedded Monthly Calendar
               Padding(
@@ -158,39 +158,39 @@ class _SlotsScreenState extends State<SlotsScreen> {
                     const Text(
                       'Select Darshan Date',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                         letterSpacing: -0.2,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     _buildInlineCalendarCard(activeDates),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
               // 3. Selected Date Confirmation Strip
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.event_available_rounded, color: AppColors.primary, size: 20),
-                      const SizedBox(width: 10),
+                      const Icon(Icons.event_available_rounded, color: AppColors.primary, size: 18),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _formatFullDisplay(_selectedDate),
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: AppColors.primary,
                           ),
@@ -201,7 +201,7 @@ class _SlotsScreenState extends State<SlotsScreen> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
 
               // 4. Session Selection Cards (Morning & Evening)
               Padding(
@@ -212,7 +212,7 @@ class _SlotsScreenState extends State<SlotsScreen> {
                     const Text(
                       'Choose Darshan Session',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                         letterSpacing: -0.2,
@@ -399,24 +399,26 @@ class _SlotsScreenState extends State<SlotsScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.cardBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(14.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(Icons.chevron_left_rounded, color: AppColors.primary, size: 28),
+                icon: const Icon(Icons.chevron_left_rounded, color: AppColors.primary, size: 22),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 onPressed: () {
                   setState(() {
                     _displayedMonth = DateTime(_displayedMonth.year, _displayedMonth.month - 1, 1);
@@ -426,13 +428,15 @@ class _SlotsScreenState extends State<SlotsScreen> {
               Text(
                 _formatMonthYear(_displayedMonth),
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.chevron_right_rounded, color: AppColors.primary, size: 28),
+                icon: const Icon(Icons.chevron_right_rounded, color: AppColors.primary, size: 22),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 onPressed: () {
                   setState(() {
                     _displayedMonth = DateTime(_displayedMonth.year, _displayedMonth.month + 1, 1);
@@ -442,7 +446,7 @@ class _SlotsScreenState extends State<SlotsScreen> {
             ],
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 2),
 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -457,7 +461,7 @@ class _SlotsScreenState extends State<SlotsScreen> {
             ],
           ),
 
-          const Divider(height: 16),
+          const Divider(height: 10),
 
           GridView.builder(
             shrinkWrap: true,
@@ -465,9 +469,9 @@ class _SlotsScreenState extends State<SlotsScreen> {
             itemCount: (firstDayOfWeek - 1) + daysInMonth,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
-              childAspectRatio: 1.15,
+              mainAxisSpacing: 2,
+              crossAxisSpacing: 2,
+              childAspectRatio: 1.4,
             ),
             itemBuilder: (context, index) {
               if (index < firstDayOfWeek - 1) {
@@ -492,13 +496,13 @@ class _SlotsScreenState extends State<SlotsScreen> {
                           _selectedDate = currentDayDate;
                         });
                       },
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 child: Container(
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primary
                         : (currentDayDate == today ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   alignment: Alignment.center,
                   child: Column(
@@ -507,18 +511,18 @@ class _SlotsScreenState extends State<SlotsScreen> {
                       Text(
                         '$dayNum',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                           color: isSelected
                               ? Colors.white
-                              : (isPast ? AppColors.textTertiary.withValues(alpha: 0.5) : AppColors.textPrimary),
+                              : (isPast ? AppColors.textTertiary.withValues(alpha: 0.45) : AppColors.textPrimary),
                         ),
                       ),
                       if (hasActiveSlots && !isSelected) ...[
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 1),
                         Container(
-                          width: 4,
-                          height: 4,
+                          width: 3.5,
+                          height: 3.5,
                           decoration: const BoxDecoration(
                             color: Color(0xFF2E7D32),
                             shape: BoxShape.circle,

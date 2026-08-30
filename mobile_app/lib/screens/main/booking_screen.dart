@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/database_service.dart';
+import '../../services/payment_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/custom_button.dart';
-import 'booking_success_screen.dart';
+import '../../widgets/payment_processing_dialog.dart';
+import 'payment_failure_screen.dart';
+import 'payment_success_screen.dart';
 
 class DevoteeEntry {
   final TextEditingController nameController;
@@ -37,6 +39,7 @@ class _BookingScreenState extends State<BookingScreen> {
   bool _isLoading = false;
   final List<DevoteeEntry> _devotees = [];
   bool _isInitialized = false;
+  final ValueNotifier<PaymentUIState> _paymentStateNotifier = ValueNotifier(PaymentUIState.idle);
 
   @override
   void didChangeDependencies() {
@@ -58,6 +61,7 @@ class _BookingScreenState extends State<BookingScreen> {
     for (final d in _devotees) {
       d.dispose();
     }
+    _paymentStateNotifier.dispose();
     super.dispose();
   }
 
@@ -88,6 +92,8 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _submitBooking() async {
+    if (_isLoading || PaymentService().isProcessing) return;
+
     final user = context.read<AuthProvider>().userModel;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -124,47 +130,103 @@ class _BookingScreenState extends State<BookingScreen> {
 
     setState(() => _isLoading = true);
 
-    try {
-      final List<Map<String, dynamic>> devoteeList = _devotees.asMap().entries.map((entry) {
-        return {
-          'personIndex': entry.key + 1,
-          'name': entry.value.nameController.text.trim(),
-          'phone': entry.value.phoneController.text.trim(),
-        };
-      }).toList();
+    final totalAmount = widget.service.price * _quantity;
+    final primaryName = _devotees.first.nameController.text.trim();
+    final primaryPhone = _devotees.first.phoneController.text.trim();
 
-      final refCode = await DatabaseService().createBooking(
-        userId: user.id,
-        offeringId: widget.service.id,
-        offeringName: widget.service.name,
-        offeringPrice: widget.service.price,
-        sourceType: 'seva',
-        slot: widget.slot,
-        quantity: _quantity,
+    final List<Map<String, String>> devoteeList = _devotees.map((entry) {
+      return {
+        'name': entry.nameController.text.trim(),
+        'phone': entry.phoneController.text.trim(),
+      };
+    }).toList();
+
+    // Show non-dismissible devotional processing modal
+    PaymentProcessingDialog.show(context, stateNotifier: _paymentStateNotifier);
+
+    try {
+      final PaymentResult result = await PaymentService().startSevaPayment(
+        serviceId: widget.service.id,
+        serviceName: widget.service.name,
+        slotId: widget.slot.id,
         date: widget.slot.date,
-        devotees: devoteeList,
+        timeRange: widget.slot.timeRange,
+        quantity: _quantity,
+        expectedTotal: totalAmount,
+        devoteeDetails: devoteeList,
+        donorName: primaryName,
+        donorPhone: primaryPhone,
+        donorEmail: user.email,
+        onStateChange: (state) {
+          _paymentStateNotifier.value = state;
+        },
       );
 
       if (!mounted) return;
+      PaymentProcessingDialog.hide(context);
 
-      final totalAmount = widget.service.price * _quantity;
-
-      // Navigate to dedicated BookingSuccessScreen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BookingSuccessScreen(
-            bookingRef: refCode,
-            service: widget.service,
-            slot: widget.slot,
-            quantity: _quantity,
-            totalAmount: totalAmount,
-            date: widget.slot.date,
+      if (result.isSuccess) {
+        // Backend verified payment & created booking
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentSuccessScreen(
+              type: SuccessType.seva,
+              title: widget.service.name,
+              bookingRef: result.bookingRef,
+              paymentId: result.paymentId,
+              date: widget.slot.date,
+              time: widget.slot.timeRange,
+              quantity: _quantity,
+              amount: totalAmount,
+              donorName: primaryName,
+            ),
           ),
-        ),
-      );
+        );
+      } else if (result.isRefundNeeded) {
+        // Slot unavailable after payment -> Refund required
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentFailureScreen(
+              type: FailureType.refundRequired,
+              title: widget.service.name,
+              paymentId: result.paymentId,
+              orderId: result.orderId,
+              totalAmount: totalAmount,
+            ),
+          ),
+        );
+      } else if (result.isCancelled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message ?? 'Payment was cancelled.'),
+            backgroundColor: AppColors.textSecondary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        // Gateway or verification failure
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentFailureScreen(
+              type: result.isVerificationFailed
+                  ? FailureType.verificationFailed
+                  : (result.isNetworkError ? FailureType.networkError : FailureType.failed),
+              title: widget.service.name,
+              message: result.message,
+              paymentId: result.paymentId,
+              orderId: result.orderId,
+              totalAmount: totalAmount,
+              onRetry: () => _submitBooking(),
+            ),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
+      PaymentProcessingDialog.hide(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceAll('Exception:', '').trim()),
@@ -202,29 +264,47 @@ class _BookingScreenState extends State<BookingScreen> {
                 side: const BorderSide(color: AppColors.cardBorder),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(18.0),
+                padding: const EdgeInsets.all(18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.event_seat_rounded, color: AppColors.primary, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Seva & Darshan Details',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.spa_rounded, color: AppColors.primary, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.service.name,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${widget.slot.date} • ${widget.slot.timeRange}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const Divider(height: 24),
-                    _buildRow('Seva Name', widget.service.name),
-                    _buildRow('Darshan Date', widget.slot.date),
-                    _buildRow('Time Slot', widget.slot.timeRange),
-                    _buildRow('Dakshina / Person', widget.service.formattedPrice),
                   ],
                 ),
               ),
@@ -232,7 +312,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
             const SizedBox(height: 16),
 
-            // 2. Quantity & Pricing Card
+            // 2. Number of Devotees Counter
             Card(
               elevation: 1,
               shape: RoundedRectangleBorder(
@@ -240,70 +320,159 @@ class _BookingScreenState extends State<BookingScreen> {
                 side: const BorderSide(color: AppColors.cardBorder),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(18.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Number of Devotees / Persons',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.cardBorder),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove, size: 20),
-                                color: _quantity > 1 ? AppColors.primary : AppColors.textTertiary,
-                                onPressed: _quantity > 1 ? () => _updateQuantity(_quantity - 1) : null,
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 14.0),
-                                child: Text(
-                                  '$_quantity',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.add, size: 20),
-                                color: _quantity < maxAllowed ? AppColors.primary : AppColors.textTertiary,
-                                onPressed: _quantity < maxAllowed ? () => _updateQuantity(_quantity + 1) : null,
-                              ),
-                            ],
+                        const Text(
+                          'Number of Persons',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
                           ),
                         ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '$available spots available',
-                            style: const TextStyle(
-                              color: Color(0xFF2E7D32),
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Dakshina: ${widget.service.formattedPrice} per person',
+                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                         ),
                       ],
                     ),
-                    const Divider(height: 28),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove_rounded),
+                            color: _quantity > 1 ? AppColors.primary : AppColors.textTertiary,
+                            onPressed: _quantity > 1 ? () => _updateQuantity(_quantity - 1) : null,
+                          ),
+                          Text(
+                            '$_quantity',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add_rounded),
+                            color: _quantity < maxAllowed ? AppColors.primary : AppColors.textTertiary,
+                            onPressed: _quantity < maxAllowed ? () => _updateQuantity(_quantity + 1) : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // 3. Devotee Details Input Section
+            Text(
+              'Devotee Details ($_quantity ${_quantity == 1 ? 'Person' : 'Persons'})',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.2,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            ..._devotees.asMap().entries.map((entry) {
+              final index = entry.key;
+              final devotee = entry.value;
+
+              return Card(
+                elevation: 1,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: AppColors.cardBorder),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 12,
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                            child: Text(
+                              '${index + 1}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            index == 0 ? 'Primary Devotee (You)' : 'Devotee ${index + 1}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: devotee.nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Full Name *',
+                          hintText: 'Enter devotee full name',
+                          isDense: true,
+                          prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: devotee.phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: index == 0 ? 'Phone Number *' : 'Phone Number (Optional)',
+                          hintText: 'Enter 10-digit mobile number',
+                          isDense: true,
+                          prefixIcon: const Icon(Icons.phone_outlined, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+
+            const SizedBox(height: 12),
+
+            // 4. Payment Summary Card
+            Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.cardBorder),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -311,12 +480,12 @@ class _BookingScreenState extends State<BookingScreen> {
                           'Total Dakshina',
                           style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary,
                           ),
                         ),
                         Text(
-                          totalAmount > 0 ? '₹$totalAmount' : 'Free',
+                          '₹$totalAmount',
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
@@ -326,181 +495,33 @@ class _BookingScreenState extends State<BookingScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Dakshina is collected at the temple counter upon arrival.',
-                      style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                    const Row(
+                      children: [
+                        Icon(Icons.lock_rounded, size: 14, color: AppColors.textSecondary),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Secured via Temple Payment Gateway (Razorpay)',
+                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 20),
-
-            // 3. Dynamic Devotee Information Forms (Editable for Each Person)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Devotee Details',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                Text(
-                  '$_quantity Person${_quantity > 1 ? 's' : ''}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-
-            ...List.generate(_devotees.length, (index) {
-              final entry = _devotees[index];
-              final isPrimary = index == 0;
-
-              return Card(
-                margin: const EdgeInsets.only(bottom: 14),
-                elevation: 1,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: isPrimary ? AppColors.primaryLight.withValues(alpha: 0.5) : AppColors.cardBorder,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: (isPrimary ? AppColors.primary : AppColors.accent).withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  Icons.person_rounded,
-                                  color: isPrimary ? AppColors.primary : AppColors.accent,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                isPrimary ? 'Person 1 (Primary Pilgrim)' : 'Person ${index + 1} (Accompanying)',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (isPrimary)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                'Primary',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Name Field
-                      TextFormField(
-                        controller: entry.nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Full Name *',
-                          hintText: 'Enter devotee full name',
-                          prefixIcon: const Icon(Icons.badge_outlined, size: 20),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Phone Field
-                      TextFormField(
-                        controller: entry.phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          labelText: isPrimary ? 'Phone Number *' : 'Phone Number (Optional)',
-                          hintText: '10-digit mobile number',
-                          prefixIcon: const Icon(Icons.phone_outlined, size: 20),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-
             const SizedBox(height: 24),
 
-            // Confirm Button
+            // 5. Pay Now Button (Protected against double taps)
             CustomButton(
-              text: 'CONFIRM BOOKING (₹$totalAmount)',
-              icon: Icons.check_circle_outline,
-              onPressed: _submitBooking,
+              text: 'Pay ₹$totalAmount & Confirm',
               isLoading: _isLoading,
+              onPressed: _isLoading ? null : _submitBooking,
             ),
-            const SizedBox(height: 16),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 130,
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -82,10 +82,6 @@ class _MainNavigatorState extends State<MainNavigator> {
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
-          NavigationDestination(
             icon: Icon(Icons.temple_hindu_outlined),
             selectedIcon: Icon(Icons.temple_hindu_rounded),
             label: 'Darshan',

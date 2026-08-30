@@ -13,7 +13,6 @@ import 'service_details_screen.dart';
 import 'services_screen.dart';
 import 'temple_info_screen.dart';
 import 'donations_screen.dart';
-import 'darshan_screen.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -149,12 +148,12 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildTimingsCard(),
             const SizedBox(height: 20),
 
-            // 4. Featured / Active Sevas Section
-            _buildServicesSection(),
+            // 4. Latest News & Announcements (Sliding Banner Style)
+            _buildNewsSection(),
             const SizedBox(height: 20),
 
-            // 5. Latest News & Announcements
-            _buildNewsSection(),
+            // 5. Featured / Active Sevas Section
+            _buildServicesSection(),
             const SizedBox(height: 20),
 
             // 6. Upcoming Festivals & Utsavams
@@ -172,72 +171,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 2. TTD Style Quick Services Row
   Widget _buildTTDQuickServicesGrid() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildTTDServiceItem(
-            icon: Icons.temple_hindu_rounded,
-            label: 'Darshan',
-            gradient: const [AppColors.primary, AppColors.primaryDark],
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => DarshanScreen()),
-              );
-            },
-          ),
-          const SizedBox(width: 12),
-          _buildTTDServiceItem(
-            icon: Icons.volunteer_activism_rounded,
-            label: 'Arjitha Sevas',
-            gradient: const [Color(0xFFE65100), Color(0xFFFF8F00)],
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ServicesScreen()),
-              );
-            },
-          ),
-          const SizedBox(width: 12),
-          _buildTTDServiceItem(
-            icon: Icons.info_outline_rounded,
-            label: 'Temple Info',
-            gradient: const [Color(0xFFC2185B), Color(0xFFE91E63)],
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const TempleInfoScreen()),
-              );
-            },
-          ),
-          const SizedBox(width: 12),
-          _buildTTDServiceItem(
-            icon: Icons.menu_book_rounded,
-            label: 'Publications',
-            gradient: const [Color(0xFF0277BD), Color(0xFF00ACC1)],
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NewsScreen()),
-              );
-            },
-          ),
-          const SizedBox(width: 12),
-          _buildTTDServiceItem(
-            icon: Icons.celebration_rounded,
-            label: 'Utsavams',
-            gradient: const [Color(0xFF6A1B9A), Color(0xFF8E24AA)],
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const EventsScreen()),
-              );
-            },
           Expanded(
             child: _buildTTDServiceItem(
               icon: Icons.spa_rounded,
@@ -670,76 +608,117 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 5. News & Announcements Section
+  // 4. Latest News & Announcements Section (Sliding Banner Style)
   Widget _buildNewsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: 'Latest Announcements',
-          actionText: 'View All',
-          onAction: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const NewsScreen()),
-            );
-          },
-        ),
-        const SizedBox(height: 6),
-        StreamBuilder<List<NewsModel>>(
-          stream: _db.getPublishedNews(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const SizedBox.shrink();
-            }
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const SizedBox.shrink();
-            }
+    return StreamBuilder<List<NewsModel>>(
+      stream: _db.getPublishedNews(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
 
-            final latestNews = snapshot.data!.take(2).toList();
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                children: latestNews.map((news) {
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      leading: CustomImage(
-                        imageUrl: news.imageUrl,
-                        width: 52,
-                        height: 52,
-                        borderRadius: BorderRadius.circular(10),
-                        fit: BoxFit.cover,
-                        fallbackIcon: Icons.menu_book_rounded,
-                      ),
-                      title: Text(
-                        news.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        news.content,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                      ),
-                      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const NewsScreen()),
-                        );
-                      },
-                    ),
-                  );
-                }).toList(),
+        final announcements = snapshot.data!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SectionHeader(
+              title: 'Latest Announcements',
+              actionText: 'View All',
+              onAction: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NewsScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            AnnouncementCarouselWidget(
+              announcements: announcements,
+              onNewsTap: (news) => _showNewsDetailsModal(context, news),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showNewsDetailsModal(BuildContext context, NewsModel news) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (_, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(24),
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
-            );
-          },
+              if (news.imageUrl != null && news.imageUrl!.trim().isNotEmpty) ...[
+                CustomImage(
+                  imageUrl: news.imageUrl,
+                  height: 200,
+                  borderRadius: BorderRadius.circular(14),
+                  fit: BoxFit.cover,
+                  fallbackIcon: Icons.newspaper_rounded,
+                ),
+                const SizedBox(height: 16),
+              ],
+              Text(
+                news.title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              if (news.publishedAt != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textTertiary),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${news.publishedAt!.day.toString().padLeft(2, '0')}/${news.publishedAt!.month.toString().padLeft(2, '0')}/${news.publishedAt!.year}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.textTertiary, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ],
+              const Divider(height: 24),
+              Text(
+                news.content,
+                style: const TextStyle(
+                  fontSize: 15,
+                  height: 1.6,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 
@@ -1014,6 +993,214 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
               widget.banners.length,
+              (index) => AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: _currentPage == index ? 22 : 6,
+                height: 5,
+                margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                decoration: BoxDecoration(
+                  color: _currentPage == index
+                      ? AppColors.primary
+                      : AppColors.primaryLight.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// Dedicated Sliding Announcements Carousel
+class AnnouncementCarouselWidget extends StatefulWidget {
+  final List<NewsModel> announcements;
+  final void Function(NewsModel news) onNewsTap;
+
+  const AnnouncementCarouselWidget({
+    super.key,
+    required this.announcements,
+    required this.onNewsTap,
+  });
+
+  @override
+  State<AnnouncementCarouselWidget> createState() => _AnnouncementCarouselWidgetState();
+}
+
+class _AnnouncementCarouselWidgetState extends State<AnnouncementCarouselWidget> {
+  late final PageController _pageController;
+  int _currentPage = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    if (widget.announcements.length <= 1) return;
+
+    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (!mounted || !_pageController.hasClients) return;
+      int next = _currentPage + 1;
+      if (next >= widget.announcements.length) {
+        next = 0;
+      }
+      _pageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant AnnouncementCarouselWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.announcements.length != widget.announcements.length) {
+      _startTimer();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.announcements.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      children: [
+        Container(
+          height: 180,
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: widget.announcements.length,
+              onPageChanged: (index) {
+                setState(() => _currentPage = index);
+              },
+              itemBuilder: (context, index) {
+                final news = widget.announcements[index];
+                return InkWell(
+                  onTap: () => widget.onNewsTap(news),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CustomImage(
+                        imageUrl: news.imageUrl,
+                        fit: BoxFit.cover,
+                        fallbackIcon: Icons.campaign_rounded,
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.25),
+                              Colors.black.withValues(alpha: 0.88),
+                            ],
+                            stops: const [0.2, 0.5, 1.0],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 14,
+                        left: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.campaign_rounded, size: 14, color: Colors.white),
+                              SizedBox(width: 4),
+                              Text(
+                                'Announcement',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        bottom: 14,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              news.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                shadows: [
+                                  Shadow(color: Colors.black87, blurRadius: 6),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              news.content,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.88),
+                                fontSize: 12,
+                                height: 1.3,
+                                shadows: const [
+                                  Shadow(color: Colors.black87, blurRadius: 4),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        if (widget.announcements.length > 1) ...[
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              widget.announcements.length,
               (index) => AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 width: _currentPage == index ? 22 : 6,

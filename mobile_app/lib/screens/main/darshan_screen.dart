@@ -3,10 +3,15 @@ import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/payment_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/custom_button.dart';
 import '../../widgets/custom_image.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
+import '../../widgets/payment_processing_dialog.dart';
+import 'payment_failure_screen.dart';
+import 'payment_success_screen.dart';
 
 class DarshanScreen extends StatelessWidget {
   const DarshanScreen({super.key});
@@ -297,7 +302,7 @@ class _DarshanSlotsSection extends StatelessWidget {
 }
 
 /// Darshan Review Screen — shows darshan + slot details, quantity selection,
-/// and stops at "Payment Coming Soon" instead of creating a booking.
+/// and securely processes Darshan payment through PaymentService.
 class _DarshanReviewScreen extends StatefulWidget {
   final DarshanModel darshan;
   final SlotModel slot;
@@ -310,25 +315,190 @@ class _DarshanReviewScreen extends StatefulWidget {
 
 class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
   int _quantity = 1;
+  bool _isLoading = false;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final ValueNotifier<PaymentUIState> _paymentStateNotifier = ValueNotifier(PaymentUIState.idle);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthProvider>().userModel;
+      if (user != null) {
+        _nameController.text = user.name;
+        _phoneController.text = user.phone;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _paymentStateNotifier.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitDarshanBooking() async {
+    if (_isLoading || PaymentService().isProcessing) return;
+
+    final user = context.read<AuthProvider>().userModel;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to complete your booking.')),
+      );
+      return;
+    }
+
+    final name = _nameController.text.trim();
+    final phone = _phoneController.text.trim();
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter devotee full name.'),
+          backgroundColor: AppColors.statusCancelled,
+        ),
+      );
+      return;
+    }
+
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter contact mobile number.'),
+          backgroundColor: AppColors.statusCancelled,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final totalAmount = widget.darshan.price * _quantity;
+
+    // Show non-dismissible devotional processing modal
+    PaymentProcessingDialog.show(context, stateNotifier: _paymentStateNotifier);
+
+    try {
+      final PaymentResult result = await PaymentService().startDarshanPayment(
+        darshanId: widget.darshan.id,
+        darshanName: widget.darshan.name,
+        slotId: widget.slot.id,
+        date: widget.slot.date,
+        timeRange: widget.slot.timeRange,
+        quantity: _quantity,
+        expectedTotal: totalAmount,
+        devoteeName: name,
+        devoteePhone: phone,
+        devoteeEmail: user.email,
+        onStateChange: (state) {
+          _paymentStateNotifier.value = state;
+        },
+      );
+
+      if (!mounted) return;
+      PaymentProcessingDialog.hide(context);
+
+      if (result.isSuccess) {
+        // Backend confirmed payment and created booking
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentSuccessScreen(
+              type: SuccessType.darshan,
+              title: widget.darshan.name,
+              bookingRef: result.bookingRef,
+              paymentId: result.paymentId,
+              date: widget.slot.date,
+              time: widget.slot.timeRange,
+              quantity: _quantity,
+              amount: totalAmount,
+              donorName: name,
+            ),
+          ),
+        );
+      } else if (result.isRefundNeeded) {
+        // Slot unavailable after payment -> Refund required
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentFailureScreen(
+              type: FailureType.refundRequired,
+              title: widget.darshan.name,
+              paymentId: result.paymentId,
+              orderId: result.orderId,
+              totalAmount: totalAmount,
+            ),
+          ),
+        );
+      } else if (result.isCancelled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message ?? 'Payment was cancelled.'),
+            backgroundColor: AppColors.textSecondary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        // Gateway or verification failure
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentFailureScreen(
+              type: result.isVerificationFailed
+                  ? FailureType.verificationFailed
+                  : (result.isNetworkError ? FailureType.networkError : FailureType.failed),
+              title: widget.darshan.name,
+              message: result.message,
+              paymentId: result.paymentId,
+              orderId: result.orderId,
+              totalAmount: totalAmount,
+              onRetry: () => _submitDarshanBooking(),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      PaymentProcessingDialog.hide(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception:', '').trim()),
+          backgroundColor: AppColors.statusCancelled,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().userModel;
-    final available = widget.slot.available;
+    final available = widget.slot.available > 0 ? widget.slot.available : 50;
     final maxAllowed = available > 10 ? 10 : available;
     final totalAmount = widget.darshan.price * _quantity;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Review Darshan'),
+        title: const Text('Review Darshan Booking'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Devotee Info
+            // Devotee Info Form
             Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.cardBorder),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
@@ -342,9 +512,29 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                       ],
                     ),
-                    const Divider(height: 24),
-                    _buildRow('Name', user?.name ?? 'Devotee'),
-                    _buildRow('Phone', user?.phone ?? '—'),
+                    const Divider(height: 20),
+                    TextField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Devotee Name *',
+                        hintText: 'Enter full name',
+                        isDense: true,
+                        prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'Contact Phone Number *',
+                        hintText: 'Enter 10-digit mobile number',
+                        isDense: true,
+                        prefixIcon: const Icon(Icons.phone_outlined, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -353,6 +543,11 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
 
             // Darshan & Slot details
             Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.cardBorder),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
@@ -379,13 +574,18 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
 
             // Quantity selector
             Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.cardBorder),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Number of Devotees',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 14),
                     Row(
                       children: [
@@ -397,17 +597,17 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
                           child: Row(
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.remove, size: 20),
+                                icon: const Icon(Icons.remove_rounded, size: 20),
                                 color: _quantity > 1 ? AppColors.primary : AppColors.textTertiary,
                                 onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null,
                               ),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 12),
                                 child: Text('$_quantity',
-                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.add, size: 20),
+                                icon: const Icon(Icons.add_rounded, size: 20),
                                 color: _quantity < maxAllowed ? AppColors.primary : AppColors.textTertiary,
                                 onPressed: _quantity < maxAllowed ? () => setState(() => _quantity++) : null,
                               ),
@@ -420,16 +620,16 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
                                 color: AppColors.statusConfirmed, fontWeight: FontWeight.w600, fontSize: 13)),
                       ],
                     ),
-                    const Divider(height: 28),
+                    const Divider(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Total Amount',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                         Text(
                           totalAmount > 0 ? '₹$totalAmount' : 'Free',
                           style: const TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.primary),
+                              fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.primary),
                         ),
                       ],
                     ),
@@ -437,36 +637,13 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
-            // PAYMENT COMING SOON — do NOT create a booking
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.statusPendingBg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
-              ),
-              child: const Column(
-                children: [
-                  Icon(Icons.hourglass_top_rounded, size: 48, color: AppColors.accent),
-                  SizedBox(height: 12),
-                  Text(
-                    'Payment Coming Soon',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryDark,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Online payment for Darshan bookings will be available soon. Please visit the temple counter for now.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
-                  ),
-                ],
-              ),
+            // Pay Now Button
+            CustomButton(
+              text: 'Pay ₹$totalAmount & Confirm Darshan',
+              isLoading: _isLoading,
+              onPressed: _isLoading ? null : _submitDarshanBooking,
             ),
             const SizedBox(height: 16),
           ],
@@ -483,11 +660,11 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+            child: Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
           ),
           Expanded(
             child: Text(value,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
           ),
         ],
       ),
