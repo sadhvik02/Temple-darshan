@@ -170,3 +170,41 @@ export interface DonationType {
   updatedAt: any;
 }
 
+/** Payment Transaction */
+export interface Payment {
+  id?: string;
+  userId: string;
+  sourceType: 'seva' | 'darshan' | 'donation';
+  offeringId: string;
+  offeringName: string;
+  quantity: number;
+  slotId?: string | null;
+  amount: number;
+  amountInr: number;
+  currency: string;
+  razorpayOrderId: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  status: 'created' | 'paid' | 'failed' | 'refund_needed';
+  bookingRef?: string;
+  bookingId?: string;
+  donationId?: string;
+  createdAt: any;
+  updatedAt: any;
+}
+
+/** Donation Transaction */
+export interface Donation {
+  id?: string;
+  userId: string;
+  donationTypeId: string;
+  donationTypeName: string;
+  amount: number;
+  paymentId: string;
+  razorpayPaymentId: string;
+  status: 'pending' | 'completed' | 'failed';
+  donorName: string;
+  donorPhone: string;
+  createdAt: any;
+  updatedAt: any;
+}

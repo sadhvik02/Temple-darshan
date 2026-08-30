@@ -4,7 +4,9 @@ import '../../services/database_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/custom_image.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
+import 'donation_checkout_screen.dart';
 
 class DonationsScreen extends StatelessWidget {
   const DonationsScreen({super.key});
@@ -46,30 +48,6 @@ class DonationsScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Coming soon banner
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.statusPendingBg,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline_rounded, color: AppColors.accent, size: 24),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Online donations coming soon. You can donate at the temple counter.',
-                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Donation type cards
               ...donationTypes.map((dt) => _DonationTypeCard(donationType: dt)),
             ],
           );
@@ -87,9 +65,19 @@ class _DonationTypeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DonationCheckoutScreen(donationType: donationType),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header row
@@ -169,19 +157,33 @@ class _DonationTypeCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: donationType.suggestedAmounts.map((amount) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.accent.withValues(alpha: 0.5)),
-                      borderRadius: BorderRadius.circular(20),
-                      color: AppColors.accentGold.withValues(alpha: 0.08),
-                    ),
-                    child: Text(
-                      '₹$amount',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primaryDark,
-                        fontSize: 14,
+                  return InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DonationCheckoutScreen(
+                            donationType: donationType,
+                            initialAmount: amount.toInt(),
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppColors.accent.withValues(alpha: 0.5)),
+                        borderRadius: BorderRadius.circular(20),
+                        color: AppColors.accentGold.withValues(alpha: 0.08),
+                      ),
+                      child: Text(
+                        '₹$amount',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryDark,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   );
@@ -190,6 +192,7 @@ class _DonationTypeCard extends StatelessWidget {
             ],
           ],
         ),
+      ),
       ),
     );
   }

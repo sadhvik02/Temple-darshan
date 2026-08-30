@@ -7,6 +7,10 @@ import '../../theme/app_colors.dart';
 import '../../widgets/custom_image.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
+import '../../widgets/custom_button.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import '../../services/payment_service.dart';
+import 'booking_success_screen.dart';
 
 class DarshanScreen extends StatelessWidget {
   const DarshanScreen({super.key});
@@ -310,6 +314,144 @@ class _DarshanReviewScreen extends StatefulWidget {
 
 class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
   int _quantity = 1;
+  bool _isLoading = false;
+  late Razorpay _razorpay;
+  final PaymentService _paymentService = PaymentService();
+  String? _currentPaymentDocId;
+  String? _currentOrderId;
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
+  }
+
+  Future<void> _submitBooking() async {
+    final user = context.read<AuthProvider>().userModel;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to complete your booking.')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final orderDetails = await _paymentService.createPaymentOrder(
+        sourceType: 'darshan',
+        offeringId: widget.darshan.id!,
+        quantity: _quantity,
+        slotId: widget.slot.id,
+      );
+
+      if (!mounted) return;
+
+      _currentOrderId = orderDetails['orderId'];
+      _currentPaymentDocId = orderDetails['paymentDocId'];
+
+      var options = {
+        'key': orderDetails['keyId'],
+        'amount': orderDetails['amount'],
+        'name': 'Temple Darshan',
+        'description': '${widget.darshan.name} Booking',
+        'order_id': orderDetails['orderId'],
+        'prefill': {
+          'contact': user.phone ?? '',
+          'email': user.email ?? ''
+        }
+      };
+
+      _razorpay.open(options);
+      
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception:', '').trim()),
+          backgroundColor: AppColors.statusCancelled,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    try {
+      final verifyResult = await _paymentService.verifyPayment(
+        razorpayOrderId: response.orderId ?? _currentOrderId!,
+        razorpayPaymentId: response.paymentId!,
+        razorpaySignature: response.signature!,
+        paymentDocId: _currentPaymentDocId!,
+      );
+
+      if (!mounted) return;
+
+      if (verifyResult['success'] == true) {
+        final refCode = verifyResult['bookingRef'];
+        final totalAmount = widget.darshan.price * _quantity;
+
+        // Since darshan doesn't have a ServiceModel exactly matching, we map it
+        final serviceMock = ServiceModel(
+          id: widget.darshan.id ?? '',
+          name: widget.darshan.name,
+          description: widget.darshan.description,
+          price: widget.darshan.price,
+          bookingEnabled: true,
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookingSuccessScreen(
+              bookingRef: refCode ?? 'BK-VERIFIED',
+              service: serviceMock,
+              slot: widget.slot,
+              quantity: _quantity,
+              totalAmount: totalAmount,
+              date: widget.slot.date,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment verification failed: $e'),
+          backgroundColor: AppColors.statusCancelled,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Payment Failed: ${response.message}'),
+        backgroundColor: AppColors.statusCancelled,
+      ),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -439,34 +581,11 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
             ),
             const SizedBox(height: 32),
 
-            // PAYMENT COMING SOON — do NOT create a booking
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.statusPendingBg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
-              ),
-              child: const Column(
-                children: [
-                  Icon(Icons.hourglass_top_rounded, size: 48, color: AppColors.accent),
-                  SizedBox(height: 12),
-                  Text(
-                    'Payment Coming Soon',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryDark,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Online payment for Darshan bookings will be available soon. Please visit the temple counter for now.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
-                  ),
-                ],
-              ),
+            CustomButton(
+              text: 'PAY NOW (₹$totalAmount)',
+              icon: Icons.check_circle_outline,
+              onPressed: _submitBooking,
+              isLoading: _isLoading,
             ),
             const SizedBox(height: 16),
           ],
