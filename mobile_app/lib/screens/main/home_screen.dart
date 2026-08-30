@@ -175,6 +175,50 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildTTDServiceItem(
+            icon: Icons.volunteer_activism_rounded,
+            label: 'Arjitha Sevas',
+            gradient: const [Color(0xFFE65100), Color(0xFFFF8F00)],
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ServicesScreen()),
+              );
+            },
+          ),
+          _buildTTDServiceItem(
+            icon: Icons.temple_hindu_rounded,
+            label: 'Temple Info',
+            gradient: const [Color(0xFFC2185B), Color(0xFFE91E63)],
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TempleInfoScreen()),
+              );
+            },
+          ),
+
+          _buildTTDServiceItem(
+            icon: Icons.menu_book_rounded,
+            label: 'Publications',
+            gradient: const [Color(0xFF0277BD), Color(0xFF00ACC1)],
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NewsScreen()),
+              );
+            },
+          ),
+          _buildTTDServiceItem(
+            icon: Icons.celebration_rounded,
+            label: 'Utsavams',
+            gradient: const [Color(0xFF6A1B9A), Color(0xFF8E24AA)],
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EventsScreen()),
+              );
+            },
           Expanded(
             child: _buildTTDServiceItem(
               icon: Icons.spa_rounded,
