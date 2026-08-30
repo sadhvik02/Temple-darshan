@@ -9,9 +9,10 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_image.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
-import '../../widgets/payment_processing_dialog.dart';
-import 'payment_failure_screen.dart';
-import 'payment_success_screen.dart';
+import '../../widgets/custom_button.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import '../../services/payment_service.dart';
+import 'booking_success_screen.dart';
 
 class DarshanScreen extends StatelessWidget {
   const DarshanScreen({super.key});
@@ -316,33 +317,27 @@ class _DarshanReviewScreen extends StatefulWidget {
 class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
   int _quantity = 1;
   bool _isLoading = false;
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final ValueNotifier<PaymentUIState> _paymentStateNotifier = ValueNotifier(PaymentUIState.idle);
+  late Razorpay _razorpay;
+  final PaymentService _paymentService = PaymentService();
+  String? _currentPaymentDocId;
+  String? _currentOrderId;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = context.read<AuthProvider>().userModel;
-      if (user != null) {
-        _nameController.text = user.name;
-        _phoneController.text = user.phone;
-      }
-    });
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    _paymentStateNotifier.dispose();
+    _razorpay.clear();
     super.dispose();
   }
 
-  Future<void> _submitDarshanBooking() async {
-    if (_isLoading || PaymentService().isProcessing) return;
-
+  Future<void> _submitBooking() async {
     final user = context.read<AuthProvider>().userModel;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -351,118 +346,38 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
       return;
     }
 
-    final name = _nameController.text.trim();
-    final phone = _phoneController.text.trim();
-
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter devotee full name.'),
-          backgroundColor: AppColors.statusCancelled,
-        ),
-      );
-      return;
-    }
-
-    if (phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter contact mobile number.'),
-          backgroundColor: AppColors.statusCancelled,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
 
-    final totalAmount = widget.darshan.price * _quantity;
-
-    // Show non-dismissible devotional processing modal
-    PaymentProcessingDialog.show(context, stateNotifier: _paymentStateNotifier);
-
     try {
-      final PaymentResult result = await PaymentService().startDarshanPayment(
-        darshanId: widget.darshan.id,
-        darshanName: widget.darshan.name,
-        slotId: widget.slot.id,
-        date: widget.slot.date,
-        timeRange: widget.slot.timeRange,
+      final orderDetails = await _paymentService.createPaymentOrder(
+        sourceType: 'darshan',
+        offeringId: widget.darshan.id!,
         quantity: _quantity,
-        expectedTotal: totalAmount,
-        devoteeName: name,
-        devoteePhone: phone,
-        devoteeEmail: user.email,
-        onStateChange: (state) {
-          _paymentStateNotifier.value = state;
-        },
+        slotId: widget.slot.id,
       );
 
       if (!mounted) return;
-      PaymentProcessingDialog.hide(context);
 
-      if (result.isSuccess) {
-        // Backend confirmed payment and created booking
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PaymentSuccessScreen(
-              type: SuccessType.darshan,
-              title: widget.darshan.name,
-              bookingRef: result.bookingRef,
-              paymentId: result.paymentId,
-              date: widget.slot.date,
-              time: widget.slot.timeRange,
-              quantity: _quantity,
-              amount: totalAmount,
-              donorName: name,
-            ),
-          ),
-        );
-      } else if (result.isRefundNeeded) {
-        // Slot unavailable after payment -> Refund required
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PaymentFailureScreen(
-              type: FailureType.refundRequired,
-              title: widget.darshan.name,
-              paymentId: result.paymentId,
-              orderId: result.orderId,
-              totalAmount: totalAmount,
-            ),
-          ),
-        );
-      } else if (result.isCancelled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.message ?? 'Payment was cancelled.'),
-            backgroundColor: AppColors.textSecondary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      } else {
-        // Gateway or verification failure
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PaymentFailureScreen(
-              type: result.isVerificationFailed
-                  ? FailureType.verificationFailed
-                  : (result.isNetworkError ? FailureType.networkError : FailureType.failed),
-              title: widget.darshan.name,
-              message: result.message,
-              paymentId: result.paymentId,
-              orderId: result.orderId,
-              totalAmount: totalAmount,
-              onRetry: () => _submitDarshanBooking(),
-            ),
-          ),
-        );
-      }
+      _currentOrderId = orderDetails['orderId'];
+      _currentPaymentDocId = orderDetails['paymentDocId'];
+
+      var options = {
+        'key': orderDetails['keyId'],
+        'amount': orderDetails['amount'],
+        'name': 'Temple Darshan',
+        'description': '${widget.darshan.name} Booking',
+        'order_id': orderDetails['orderId'],
+        'prefill': {
+          'contact': user.phone ?? '',
+          'email': user.email ?? ''
+        }
+      };
+
+      _razorpay.open(options);
+      
     } catch (e) {
       if (!mounted) return;
-      PaymentProcessingDialog.hide(context);
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceAll('Exception:', '').trim()),
@@ -470,11 +385,74 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    try {
+      final verifyResult = await _paymentService.verifyPayment(
+        razorpayOrderId: response.orderId ?? _currentOrderId!,
+        razorpayPaymentId: response.paymentId!,
+        razorpaySignature: response.signature!,
+        paymentDocId: _currentPaymentDocId!,
+      );
+
+      if (!mounted) return;
+
+      if (verifyResult['success'] == true) {
+        final refCode = verifyResult['bookingRef'];
+        final totalAmount = widget.darshan.price * _quantity;
+
+        // Since darshan doesn't have a ServiceModel exactly matching, we map it
+        final serviceMock = ServiceModel(
+          id: widget.darshan.id ?? '',
+          name: widget.darshan.name,
+          description: widget.darshan.description,
+          price: widget.darshan.price,
+          bookingEnabled: true,
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookingSuccessScreen(
+              bookingRef: refCode ?? 'BK-VERIFIED',
+              service: serviceMock,
+              slot: widget.slot,
+              quantity: _quantity,
+              totalAmount: totalAmount,
+              date: widget.slot.date,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment verification failed: $e'),
+          backgroundColor: AppColors.statusCancelled,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Payment Failed: ${response.message}'),
+        backgroundColor: AppColors.statusCancelled,
+      ),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    if (!mounted) return;
+    setState(() => _isLoading = false);
   }
 
   @override
@@ -639,11 +617,11 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Pay Now Button
             CustomButton(
-              text: 'Pay ₹$totalAmount & Confirm Darshan',
+              text: 'PAY NOW (₹$totalAmount)',
+              icon: Icons.check_circle_outline,
+              onPressed: _submitBooking,
               isLoading: _isLoading,
-              onPressed: _isLoading ? null : _submitDarshanBooking,
             ),
             const SizedBox(height: 16),
           ],

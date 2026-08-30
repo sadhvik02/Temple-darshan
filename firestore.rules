@@ -266,6 +266,28 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // =========================================================
+    // PAYMENTS COLLECTION
+    // =========================================================
+    // Users can read only their own payments.
+    // All writes happen via Cloud Functions (Admin SDK bypasses rules).
+    match /payments/{paymentId} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid)
+                  || isAdmin();
+      allow create, update, delete: if false; // Cloud Functions only
+    }
+
+    // =========================================================
+    // DONATIONS COLLECTION
+    // =========================================================
+    // Users can read only their own donations.
+    // All writes happen via Cloud Functions.
+    match /donations/{donationId} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid)
+                  || isAdmin();
+      allow create, update, delete: if false; // Cloud Functions only
+    }
+
   }
 }
 
