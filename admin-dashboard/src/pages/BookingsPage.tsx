@@ -7,9 +7,14 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Filters & Search
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "confirmed" | "pending" | "completed" | "cancelled">("all");
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "paid" | "pending" | "failed">("all");
+
   // Modal states
   const [viewingBooking, setViewingBooking] = useState<Booking | null>(null);
-  const [statusUpdating, setStatusUpdating] = useState<string | null>(null); // booking id that is being updated
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
 
   const loadBookings = async () => {
     setLoading(true);
@@ -28,15 +33,12 @@ export default function BookingsPage() {
     loadBookings();
   }, []);
 
-  const handleStatusChange = async (id: string, newStatus: Booking['status']) => {
-    // Note: This only changes the booking status. It deliberately avoids
-    // complex distributed transactions on the slot count from the admin side.
+  const handleStatusChange = async (id: string, newStatus: Booking["status"]) => {
     if (!confirm(`Are you sure you want to mark this booking as ${newStatus}?`)) return;
-    
+
     setStatusUpdating(id);
     try {
-      // Find the booking to preserve payment status while updating status
-      const booking = bookings.find(b => b.id === id);
+      const booking = bookings.find((b) => b.id === id);
       if (!booking) return;
 
       await updateBookingStatus(id, newStatus, booking.paymentStatus);
@@ -49,12 +51,12 @@ export default function BookingsPage() {
     }
   };
 
-  const handlePaymentStatusChange = async (id: string, newPaymentStatus: Booking['paymentStatus']) => {
+  const handlePaymentStatusChange = async (id: string, newPaymentStatus: Booking["paymentStatus"]) => {
     if (!confirm(`Are you sure you want to mark payment as ${newPaymentStatus}?`)) return;
-    
+
     setStatusUpdating(id);
     try {
-      const booking = bookings.find(b => b.id === id);
+      const booking = bookings.find((b) => b.id === id);
       if (!booking) return;
 
       await updateBookingStatus(id, booking.status, newPaymentStatus);
@@ -68,191 +70,467 @@ export default function BookingsPage() {
   };
 
   const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'confirmed': return 'badge-success';
-      case 'pending': return 'badge-info';
-      case 'cancelled': return 'badge-danger';
-      case 'completed': return 'badge-neutral';
-      default: return 'badge-neutral';
+    switch (status?.toLowerCase()) {
+      case "confirmed":
+        return "badge-success";
+      case "pending":
+        return "badge-info";
+      case "cancelled":
+        return "badge-danger";
+      case "completed":
+        return "badge-neutral";
+      default:
+        return "badge-neutral";
     }
   };
 
   const getPaymentBadgeClass = (status: string) => {
-    switch (status) {
-      case 'paid': return 'badge-success';
-      case 'pending': return 'badge-info';
-      case 'failed': return 'badge-danger';
-      case 'refunded': return 'badge-neutral';
-      default: return 'badge-neutral';
+    switch (status?.toLowerCase()) {
+      case "paid":
+        return "badge-success";
+      case "pending":
+        return "badge-info";
+      case "failed":
+        return "badge-danger";
+      case "refunded":
+        return "badge-neutral";
+      default:
+        return "badge-neutral";
     }
   };
 
+  // Metrics
+  const totalBookings = bookings.length;
+  const confirmedCount = bookings.filter((b) => b.status === "confirmed").length;
+  const pendingCount = bookings.filter((b) => b.status === "pending").length;
+  const totalDakshina = bookings
+    .filter((b) => b.paymentStatus === "paid" || b.status === "confirmed")
+    .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+
+  // Filtered Bookings
+  const filteredBookings = bookings.filter((b) => {
+    if (statusFilter !== "all" && b.status?.toLowerCase() !== statusFilter) return false;
+    if (paymentFilter !== "all" && b.paymentStatus?.toLowerCase() !== paymentFilter) return false;
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const matchRef = b.bookingRef?.toLowerCase().includes(query);
+      const matchService = b.serviceName?.toLowerCase().includes(query);
+      const matchDate = b.bookingDate?.toLowerCase().includes(query);
+      return matchRef || matchService || matchDate;
+    }
+    return true;
+  });
+
   if (loading && bookings.length === 0) {
     return (
-      <div className="page-loading">
+      <div className="empty-state">
         <span className="spinner"></span>
-        <p>Loading bookings...</p>
+        <p style={{ marginTop: "12px" }}>Loading devotee bookings...</p>
       </div>
     );
   }
 
   return (
-    <div className="bookings-page">
-      <div className="page-header">
-        <h1>Bookings Management</h1>
-        <p>View and manage devotee bookings</p>
+    <div className="bookings-page" style={{ width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box" }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "22px",
+          flexWrap: "wrap",
+          gap: "14px",
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: "1.55rem", fontWeight: "800", color: "#0f172a" }}>Bookings & Pilgrim Reservations</h1>
+          <p style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem", marginTop: "4px" }}>
+            Monitor live darshan & seva reservations, verify payment receipts, and manage booking status.
+          </p>
+        </div>
+
+        <button className="btn btn-secondary" onClick={loadBookings}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      {/* Metrics Summary */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(165px, 1fr))",
+          gap: "14px",
+          marginBottom: "22px",
+        }}
+      >
+        <div className="stat-card" style={{ padding: "14px 18px" }}>
+          <span style={{ fontSize: "1.4rem" }}>📋</span>
+          <div>
+            <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#0f172a" }}>{totalBookings}</div>
+            <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Total Bookings</div>
+          </div>
+        </div>
+
+        <div className="stat-card" style={{ padding: "14px 18px" }}>
+          <span style={{ fontSize: "1.4rem" }}>🟢</span>
+          <div>
+            <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#047857" }}>{confirmedCount}</div>
+            <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Confirmed Slots</div>
+          </div>
+        </div>
+
+        <div className="stat-card" style={{ padding: "14px 18px" }}>
+          <span style={{ fontSize: "1.4rem" }}>⏳</span>
+          <div>
+            <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#b45309" }}>{pendingCount}</div>
+            <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Pending Verification</div>
+          </div>
+        </div>
+
+        <div className="stat-card" style={{ padding: "14px 18px" }}>
+          <span style={{ fontSize: "1.4rem" }}>💰</span>
+          <div>
+            <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#b45309" }}>₹{totalDakshina}</div>
+            <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Total Dakshina Collected</div>
+          </div>
+        </div>
       </div>
 
       {error && (
         <div className="alert alert-error">
-          <span className="alert-icon">⚠</span>
+          <span className="alert-icon">⚠️</span>
           {error}
         </div>
       )}
 
-      {bookings.length === 0 && !error ? (
-        <div className="empty-state">
+      {/* Filter & Search Toolbar */}
+      <div
+        className="form-card"
+        style={{
+          padding: "14px 20px",
+          marginBottom: "20px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "14px",
+        }}
+      >
+        {/* Status Filter Tabs */}
+        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+          <button
+            onClick={() => setStatusFilter("all")}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "8px",
+              border: "none",
+              background: statusFilter === "all" ? "var(--color-primary-bg)" : "#f1f5f9",
+              color: statusFilter === "all" ? "var(--color-primary)" : "var(--color-text-secondary)",
+              fontWeight: "700",
+              fontSize: "0.82rem",
+              cursor: "pointer",
+            }}
+          >
+            All ({bookings.length})
+          </button>
+          <button
+            onClick={() => setStatusFilter("confirmed")}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "8px",
+              border: "none",
+              background: statusFilter === "confirmed" ? "#ecfdf5" : "#f1f5f9",
+              color: statusFilter === "confirmed" ? "#047857" : "var(--color-text-secondary)",
+              fontWeight: "700",
+              fontSize: "0.82rem",
+              cursor: "pointer",
+            }}
+          >
+            ● Confirmed ({confirmedCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter("pending")}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "8px",
+              border: "none",
+              background: statusFilter === "pending" ? "#fef3c7" : "#f1f5f9",
+              color: statusFilter === "pending" ? "#b45309" : "var(--color-text-secondary)",
+              fontWeight: "700",
+              fontSize: "0.82rem",
+              cursor: "pointer",
+            }}
+          >
+            ● Pending ({pendingCount})
+          </button>
+        </div>
+
+        {/* Search & Payment Dropdown */}
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          <select
+            value={paymentFilter}
+            onChange={(e) => setPaymentFilter(e.target.value as any)}
+            style={{ width: "auto", minWidth: "140px", padding: "6px 10px", fontSize: "0.82rem" }}
+          >
+            <option value="all">All Payments</option>
+            <option value="paid">₹ Paid Only</option>
+            <option value="pending">Payment Pending</option>
+            <option value="failed">Payment Failed</option>
+          </select>
+
+          <input
+            type="text"
+            placeholder="🔍 Search Ref / Seva..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ width: "auto", minWidth: "190px", padding: "6px 12px", fontSize: "0.82rem" }}
+          />
+
+          {(searchQuery || statusFilter !== "all" || paymentFilter !== "all") && (
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setStatusFilter("all");
+                setPaymentFilter("all");
+              }}
+              className="btn btn-secondary btn-sm"
+            >
+              ✕ Reset
+            </button>
+          )}
+        </div>
+      </div>
+
+      {filteredBookings.length === 0 && !error ? (
+        <div className="card-section empty-state">
           <div className="empty-icon">📋</div>
-          <h3>No bookings yet</h3>
-          <p>Bookings will appear here once devotees start reserving sevas.</p>
+          <h3 style={{ fontSize: "1.2rem", fontWeight: "800", color: "#0f172a", marginBottom: "6px" }}>
+            No bookings found
+          </h3>
+          <p style={{ color: "var(--color-text-secondary)" }}>
+            No bookings match the search criteria or filter tags.
+          </p>
         </div>
       ) : (
-        <div className="table-container">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Reference</th>
-                <th>Service</th>
-                <th>Date</th>
-                <th>Qty</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Payment</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.map((booking) => (
-                <tr key={booking.id} style={{ opacity: statusUpdating === booking.id ? 0.5 : 1 }}>
-                  <td className="font-medium" style={{ fontSize: '0.875rem' }}>{booking.bookingRef}</td>
-                  <td>{booking.serviceName}</td>
-                  <td>{booking.bookingDate}</td>
-                  <td>{booking.quantity}</td>
-                  <td>₹{booking.totalAmount}</td>
-                  <td>
-                    <select 
-                      className={`badge ${getStatusBadgeClass(booking.status)}`}
-                      value={booking.status}
-                      onChange={(e) => handleStatusChange(booking.id!, e.target.value as any)}
-                      disabled={statusUpdating === booking.id}
-                      style={{ cursor: 'pointer', border: 'none', appearance: 'none', paddingRight: '12px' }}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  </td>
-                  <td>
-                    <select 
-                      className={`badge ${getPaymentBadgeClass(booking.paymentStatus)}`}
-                      value={booking.paymentStatus}
-                      onChange={(e) => handlePaymentStatusChange(booking.id!, e.target.value as any)}
-                      disabled={statusUpdating === booking.id}
-                      style={{ cursor: 'pointer', border: 'none', appearance: 'none', paddingRight: '12px' }}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="paid">Paid</option>
-                      <option value="failed">Failed</option>
-                      <option value="refunded">Refunded</option>
-                    </select>
-                  </td>
-                  <td>
-                    <button 
-                      className="btn-icon text-primary" 
-                      onClick={() => setViewingBooking(booking)}
-                    >
-                      View Details
-                    </button>
-                  </td>
+        /* Data Table */
+        <div className="card-section" style={{ padding: 0, overflow: "hidden" }}>
+          <div className="table-container" style={{ border: "none" }}>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th style={{ whiteSpace: "nowrap" }}>Booking Ref</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Offering Name</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Darshan Date</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Devotees</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Dakshina</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Booking Status</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Payment</th>
+                  <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredBookings.map((booking) => (
+                  <tr key={booking.id} style={{ opacity: statusUpdating === booking.id ? 0.5 : 1 }}>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <span className="ref-code" style={{ whiteSpace: "nowrap", display: "inline-block" }}>
+                        {booking.bookingRef || "—"}
+                      </span>
+                    </td>
+
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <span style={{ fontWeight: "800", color: "#0f172a" }}>{booking.serviceName || "Temple Seva"}</span>
+                    </td>
+
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <span style={{ fontWeight: "600", color: "var(--color-text-secondary)" }}>
+                        {booking.bookingDate || "—"}
+                      </span>
+                    </td>
+
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <span style={{ fontWeight: "700" }}>{booking.quantity || 1} Person(s)</span>
+                    </td>
+
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <span style={{ fontWeight: "900", color: "#b45309", fontSize: "0.95rem" }}>
+                        {booking.totalAmount ? `₹${booking.totalAmount}` : "Free"}
+                      </span>
+                    </td>
+
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <select
+                        className={`badge ${getStatusBadgeClass(booking.status)}`}
+                        value={booking.status}
+                        onChange={(e) => handleStatusChange(booking.id!, e.target.value as any)}
+                        disabled={statusUpdating === booking.id}
+                        style={{ cursor: "pointer", border: "none", appearance: "none", paddingRight: "10px" }}
+                      >
+                        <option value="pending">● Pending</option>
+                        <option value="confirmed">● Confirmed</option>
+                        <option value="completed">● Completed</option>
+                        <option value="cancelled">● Cancelled</option>
+                      </select>
+                    </td>
+
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <select
+                        className={`badge ${getPaymentBadgeClass(booking.paymentStatus)}`}
+                        value={booking.paymentStatus}
+                        onChange={(e) => handlePaymentStatusChange(booking.id!, e.target.value as any)}
+                        disabled={statusUpdating === booking.id}
+                        style={{ cursor: "pointer", border: "none", appearance: "none", paddingRight: "10px" }}
+                      >
+                        <option value="pending">● Pending</option>
+                        <option value="paid">● Paid (₹)</option>
+                        <option value="failed">● Failed</option>
+                        <option value="refunded">● Refunded</option>
+                      </select>
+                    </td>
+
+                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      <button className="btn-icon text-primary" onClick={() => setViewingBooking(booking)}>
+                        🔍 Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* View Details Modal */}
+      {/* Devotee Pass Details Modal */}
       {viewingBooking && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          <div className="modal-content" style={{ maxWidth: "600px" }}>
             <div className="modal-header">
-              <h2>Booking Details</h2>
-              <button className="modal-close" onClick={() => setViewingBooking(null)}>✕</button>
+              <div>
+                <h2>Devotee Seva Pass & Receipt</h2>
+                <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
+                  Verified Temple Darshan Pass
+                </span>
+              </div>
+              <button className="modal-close" onClick={() => setViewingBooking(null)}>
+                ✕
+              </button>
             </div>
-            <div className="modal-body" style={{ gap: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+
+            <div className="modal-body" style={{ gap: "16px" }}>
+              {/* Reference Banner */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #fffbeb, #fef3c7)",
+                  border: "1.5px solid #fde68a",
+                  borderRadius: "14px",
+                  padding: "16px 20px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 <div>
-                  <div className="form-help">Booking Reference</div>
-                  <div className="font-medium">{viewingBooking.bookingRef}</div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: "800", color: "#92400e", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    BOOKING REFERENCE
+                  </div>
+                  <div style={{ fontSize: "1.35rem", fontWeight: "900", color: "#b45309", fontFamily: "monospace" }}>
+                    {viewingBooking.bookingRef}
+                  </div>
                 </div>
+
+                <div style={{ display: "flex", gap: "6px" }}>
+                  <span className={`badge ${getStatusBadgeClass(viewingBooking.status)}`}>
+                    {viewingBooking.status}
+                  </span>
+                  <span className={`badge ${getPaymentBadgeClass(viewingBooking.paymentStatus)}`}>
+                    {viewingBooking.paymentStatus}
+                  </span>
+                </div>
+              </div>
+
+              {/* Seva Information Grid */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "14px",
+                  background: "#f8fafc",
+                  padding: "16px",
+                  borderRadius: "12px",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
                 <div>
-                  <div className="form-help">Created At</div>
-                  <div>
-                    {viewingBooking.createdAt?.toDate 
-                      ? viewingBooking.createdAt.toDate().toLocaleString() 
-                      : 'Unknown'}
+                  <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", fontWeight: "700" }}>Offering</div>
+                  <div style={{ fontSize: "0.95rem", fontWeight: "800", color: "#0f172a" }}>
+                    {viewingBooking.serviceName}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", fontWeight: "700" }}>Darshan Date</div>
+                  <div style={{ fontSize: "0.95rem", fontWeight: "800", color: "#0f172a" }}>
+                    {viewingBooking.bookingDate}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", fontWeight: "700" }}>Pilgrims</div>
+                  <div style={{ fontSize: "0.95rem", fontWeight: "800", color: "#0f172a" }}>
+                    {viewingBooking.quantity} Person(s)
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", fontWeight: "700" }}>Dakshina Total</div>
+                  <div style={{ fontSize: "1.1rem", fontWeight: "900", color: "#b45309" }}>
+                    ₹{viewingBooking.totalAmount}
                   </div>
                 </div>
               </div>
 
-              <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '8px 0' }} />
+              {/* Devotee Info */}
+              {viewingBooking.devoteeDetails && (
+                <div>
+                  <div style={{ fontSize: "0.84rem", fontWeight: "800", color: "#0f172a", marginBottom: "8px" }}>
+                    👤 Devotee Information
+                  </div>
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "10px",
+                      padding: "12px 16px",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    {typeof viewingBooking.devoteeDetails === "object" ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {Object.entries(viewingBooking.devoteeDetails).map(([k, v]) => (
+                          <div key={k} style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "var(--color-text-secondary)", textTransform: "capitalize" }}>{k}:</span>
+                            <span style={{ fontWeight: "700", color: "#0f172a" }}>{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      String(viewingBooking.devoteeDetails)
+                    )}
+                  </div>
+                </div>
+              )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <div className="form-help">Service Name</div>
-                  <div className="font-medium">{viewingBooking.serviceName}</div>
-                </div>
-                <div>
-                  <div className="form-help">Service Date</div>
-                  <div>{viewingBooking.bookingDate}</div>
-                </div>
-                <div>
-                  <div className="form-help">Quantity (Persons/Tickets)</div>
-                  <div>{viewingBooking.quantity}</div>
-                </div>
-                <div>
-                  <div className="form-help">Total Amount</div>
-                  <div className="font-medium">₹{viewingBooking.totalAmount}</div>
-                </div>
-              </div>
-
-              <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '8px 0' }} />
-              
-              <div>
-                <div className="form-help" style={{ marginBottom: '8px' }}>Devotee Details (Raw JSON)</div>
-                <pre style={{ background: 'var(--color-bg)', padding: '12px', borderRadius: '4px', fontSize: '0.8rem', overflowX: 'auto', border: '1px solid var(--color-border)' }}>
-                  {viewingBooking.devoteeDetails 
-                    ? JSON.stringify(viewingBooking.devoteeDetails, null, 2) 
-                    : "No extra devotee details provided"}
-                </pre>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px' }}>
-                <div>
-                  <div className="form-help">User ID</div>
-                  <div style={{ fontSize: '0.8rem', wordBreak: 'break-all' }}>{viewingBooking.userId}</div>
-                </div>
-                <div>
-                  <div className="form-help">Slot ID</div>
-                  <div style={{ fontSize: '0.8rem', wordBreak: 'break-all' }}>{viewingBooking.slotId || "None (Not slot-based)"}</div>
-                </div>
+              {/* Technical / ID audit */}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                <span>User ID: {viewingBooking.userId?.substring(0, 16)}...</span>
+                <span>Slot: {viewingBooking.slotId ? viewingBooking.slotId.substring(0, 16) + "..." : "General"}</span>
               </div>
             </div>
-            
+
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setViewingBooking(null)}>
-                Close
+                Close Pass
               </button>
             </div>
           </div>

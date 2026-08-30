@@ -80,8 +80,8 @@ export default function TempleInfoPage() {
 
     try {
       await updateTempleInfo(formData);
-      setSuccessMsg("Temple information saved successfully.");
-      setTimeout(() => setSuccessMsg(null), 3000);
+      setSuccessMsg("Temple information updated successfully!");
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       console.error("Error saving temple info:", err);
       setError("Failed to save temple information. Please check your permissions.");
@@ -92,183 +92,316 @@ export default function TempleInfoPage() {
 
   if (loading) {
     return (
-      <div className="page-loading">
+      <div className="empty-state">
         <span className="spinner"></span>
-        <p>Loading temple information...</p>
+        <p style={{ marginTop: "12px" }}>Loading temple information...</p>
       </div>
     );
   }
 
   return (
     <div className="temple-info-page">
-      <div className="page-header">
-        <h1>Temple Information</h1>
-        <p>Manage the canonical details displayed across the platform.</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
+        <div>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: "800", color: "#0f172a" }}>Temple Profile & Canonical Info</h1>
+          <p style={{ color: "var(--color-text-secondary)", fontSize: "0.92rem", marginTop: "4px" }}>
+            Configure temple identity, sacred darshan schedules, and devotee contact channels.
+          </p>
+        </div>
+        <button
+          onClick={handleSubmit}
+          className="btn btn-primary"
+          disabled={saving}
+          style={{ padding: "10px 24px", fontSize: "0.95rem" }}
+        >
+          {saving ? (
+            <>
+              <span className="spinner spinner-sm" /> Saving...
+            </>
+          ) : (
+            "💾 Save Changes"
+          )}
+        </button>
       </div>
 
-      <div className="form-card">
+      {error && (
+        <div className="alert alert-error">
+          <span className="alert-icon">⚠️</span>
+          {error}
+        </div>
+      )}
+      {successMsg && (
+        <div className="alert alert-success">
+          <span className="alert-icon">✓</span>
+          {successMsg}
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "28px", alignItems: "start" }}>
+        {/* Left Column: Configuration Forms */}
         <form onSubmit={handleSubmit}>
-          {error && (
-            <div className="alert alert-error">
-              <span className="alert-icon">⚠</span>
-              {error}
-            </div>
-          )}
-          {successMsg && (
-            <div className="alert alert-success" style={{ background: 'rgba(78, 203, 141, 0.1)', color: 'var(--color-success)', border: '1px solid rgba(78, 203, 141, 0.25)' }}>
-              <span className="alert-icon">✓</span>
-              {successMsg}
-            </div>
-          )}
+          {/* 1. General Details */}
+          <div className="form-card">
+            <div className="form-section">
+              <h3>
+                <span>🏛️</span> General Temple Details
+              </h3>
+              <div className="form-grid">
+                <div className="form-group span-full">
+                  <label>Temple Name *</label>
+                  <input
+                    required
+                    value={formData.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    placeholder="e.g., Sri Venkateswara Swamy Temple"
+                  />
+                </div>
 
-          <div className="form-section">
-            <h3>General Details</h3>
-            <div className="form-grid">
-              <div className="form-group span-full">
-                <label>Temple Name *</label>
-                <input
-                  required
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="e.g., Sri Venkateswara Swamy Temple"
-                />
-              </div>
-              
-              <div className="form-group span-full">
-                <label>Description *</label>
-                <textarea
-                  required
-                  value={formData.description}
-                  onChange={(e) => handleInputChange("description", e.target.value)}
-                  placeholder="About the temple..."
-                  rows={4}
-                  className="form-textarea"
-                />
-              </div>
+                <div className="form-group span-full">
+                  <label>Description & Sthala Puranam *</label>
+                  <textarea
+                    required
+                    value={formData.description}
+                    onChange={(e) => handleInputChange("description", e.target.value)}
+                    placeholder="Provide a detailed description of the temple..."
+                    rows={4}
+                  />
+                </div>
 
-              <div className="form-group span-full">
-                <label>Image URL</label>
-                <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                />
-                <small className="form-help">Firebase Storage is currently not enabled on the free plan. Use an external Image URL for now.</small>
+                <div className="form-group span-full">
+                  <label>Temple Image URL</label>
+                  <input
+                    type="url"
+                    value={formData.imageUrl}
+                    onChange={(e) => handleInputChange("imageUrl", e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                  />
+                  <span className="form-help">
+                    Enter a high-resolution temple image URL to display as header hero on mobile & web.
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="form-section">
-            <h3>Contact Information</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Phone Number *</label>
-                <input
-                  required
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange("phone", e.target.value)}
-                  placeholder="+91..."
-                />
-              </div>
-              <div className="form-group">
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  placeholder="temple@example.com"
-                />
-              </div>
-              <div className="form-group span-full">
-                <label>Website URL</label>
-                <input
-                  type="url"
-                  value={formData.website}
-                  onChange={(e) => handleInputChange("website", e.target.value)}
-                  placeholder="https://..."
-                />
+            {/* 2. Contact Information */}
+            <div className="form-section">
+              <h3>
+                <span>📞</span> Devotee Contact Channels
+              </h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Official Phone Number *</label>
+                  <input
+                    required
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
+                    placeholder="+91 98765 43210"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Email Address</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    placeholder="contact@temple.org"
+                  />
+                </div>
+                <div className="form-group span-full">
+                  <label>Website URL</label>
+                  <input
+                    type="url"
+                    value={formData.website}
+                    onChange={(e) => handleInputChange("website", e.target.value)}
+                    placeholder="https://templedarshan.org"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="form-section">
-            <h3>Location</h3>
-            <div className="form-grid">
-              <div className="form-group span-full">
-                <label>Street Address *</label>
-                <input
-                  required
-                  value={formData.address}
-                  onChange={(e) => handleInputChange("address", e.target.value)}
-                  placeholder="123 Temple Road"
-                />
-              </div>
-              <div className="form-group">
-                <label>City *</label>
-                <input
-                  required
-                  value={formData.city}
-                  onChange={(e) => handleInputChange("city", e.target.value)}
-                  placeholder="City"
-                />
-              </div>
-              <div className="form-group">
-                <label>State *</label>
-                <input
-                  required
-                  value={formData.state}
-                  onChange={(e) => handleInputChange("state", e.target.value)}
-                  placeholder="State"
-                />
-              </div>
-              <div className="form-group">
-                <label>PIN Code *</label>
-                <input
-                  required
-                  value={formData.pincode}
-                  onChange={(e) => handleInputChange("pincode", e.target.value)}
-                  placeholder="PIN Code"
-                />
+            {/* 3. Location */}
+            <div className="form-section">
+              <h3>
+                <span>📍</span> Temple Address & Location
+              </h3>
+              <div className="form-grid">
+                <div className="form-group span-full">
+                  <label>Street Address *</label>
+                  <input
+                    required
+                    value={formData.address}
+                    onChange={(e) => handleInputChange("address", e.target.value)}
+                    placeholder="Temple Road, Main Entrance"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>City *</label>
+                  <input
+                    required
+                    value={formData.city}
+                    onChange={(e) => handleInputChange("city", e.target.value)}
+                    placeholder="City"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>State *</label>
+                  <input
+                    required
+                    value={formData.state}
+                    onChange={(e) => handleInputChange("state", e.target.value)}
+                    placeholder="State"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>PIN Code *</label>
+                  <input
+                    required
+                    value={formData.pincode}
+                    onChange={(e) => handleInputChange("pincode", e.target.value)}
+                    placeholder="500001"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="form-section">
-            <h3>Timings</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Morning Timings *</label>
-                <input
-                  required
-                  value={formData.timings.morning}
-                  onChange={(e) => handleTimingChange("morning", e.target.value)}
-                  placeholder="e.g., 6:00 AM - 12:00 PM"
-                />
-              </div>
-              <div className="form-group">
-                <label>Evening Timings *</label>
-                <input
-                  required
-                  value={formData.timings.evening}
-                  onChange={(e) => handleTimingChange("evening", e.target.value)}
-                  placeholder="e.g., 4:00 PM - 9:00 PM"
-                />
+            {/* 4. Darshan Timings */}
+            <div className="form-section">
+              <h3>
+                <span>⏰</span> Daily Darshan Schedule
+              </h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Morning Darshan Hours *</label>
+                  <input
+                    required
+                    value={formData.timings.morning}
+                    onChange={(e) => handleTimingChange("morning", e.target.value)}
+                    placeholder="06:00 AM - 12:00 PM"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Evening Darshan Hours *</label>
+                  <input
+                    required
+                    value={formData.timings.evening}
+                    onChange={(e) => handleTimingChange("evening", e.target.value)}
+                    placeholder="04:00 PM - 09:00 PM"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? (
-                <><span className="spinner spinner-sm"></span> Saving...</>
-              ) : (
-                "Save Changes"
-              )}
-            </button>
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? (
+                  <>
+                    <span className="spinner spinner-sm" /> Saving Changes...
+                  </>
+                ) : (
+                  "💾 Save Changes"
+                )}
+              </button>
+            </div>
           </div>
         </form>
+
+        {/* Right Column: Live Devotee Preview Card */}
+        <div style={{ position: "sticky", top: "90px" }}>
+          <div className="form-card" style={{ padding: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+              <span style={{ fontSize: "1.1rem" }}>📱</span>
+              <h4 style={{ fontSize: "1rem", fontWeight: "800", color: "#0f172a" }}>Devotee Mobile Preview</h4>
+            </div>
+
+            {formData.imageUrl ? (
+              <div
+                style={{
+                  height: "140px",
+                  borderRadius: "12px",
+                  backgroundImage: `url(${formData.imageUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  marginBottom: "14px",
+                  border: "1px solid var(--color-border)",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  height: "140px",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, #fffbeb, #fed7aa)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "2.5rem",
+                  marginBottom: "14px",
+                  border: "1px solid #fed7aa",
+                }}
+              >
+                🛕
+              </div>
+            )}
+
+            <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "#0f172a", marginBottom: "4px" }}>
+              {formData.name || "Temple Name"}
+            </h3>
+
+            <p style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)", marginBottom: "12px", lineHeight: "1.4" }}>
+              {formData.city || formData.state
+                ? `${formData.address ? `${formData.address}, ` : ""}${formData.city}, ${formData.state} - ${formData.pincode}`
+                : "Temple Address"}
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
+              <div
+                style={{
+                  background: "#fffbeb",
+                  border: "1px solid #fde68a",
+                  borderRadius: "10px",
+                  padding: "8px 12px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#92400e" }}>☀️ Morning</span>
+                <span style={{ fontSize: "0.82rem", fontWeight: "800", color: "#b45309" }}>
+                  {formData.timings.morning || "06:00 AM - 12:00 PM"}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  background: "#fff7ed",
+                  border: "1px solid #fed7aa",
+                  borderRadius: "10px",
+                  padding: "8px 12px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#9a3412" }}>🌙 Evening</span>
+                <span style={{ fontSize: "0.82rem", fontWeight: "800", color: "#c2410c" }}>
+                  {formData.timings.evening || "04:00 PM - 09:00 PM"}
+                </span>
+              </div>
+            </div>
+
+            {formData.phone && (
+              <div style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)", marginBottom: "4px" }}>
+                📞 <strong>Phone:</strong> {formData.phone}
+              </div>
+            )}
+            {formData.email && (
+              <div style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>
+                ✉️ <strong>Email:</strong> {formData.email}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

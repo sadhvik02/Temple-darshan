@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import type { NavItem } from "../types";
@@ -17,9 +17,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Users", path: "/users", icon: "👥", enabled: true },
 ];
 
-/**
- * Derive a human-readable page title from the current URL path.
- */
 function getPageTitle(pathname: string): string {
   const item = NAV_ITEMS.find((n) => n.path === pathname);
   if (item) return item.label;
@@ -32,8 +29,27 @@ export default function DashboardLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [currentTime, setCurrentTime] = useState<string>("");
 
   const pageTitle = getPageTitle(location.pathname);
+
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      setCurrentTime(
+        now.toLocaleDateString("en-IN", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      );
+    };
+    updateClock();
+    const interval = setInterval(updateClock, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -113,15 +129,23 @@ export default function DashboardLayout() {
           </div>
 
           <div className="header-right">
-            <span className="header-admin-name">
-              {adminData?.name || "Admin"}
-            </span>
+            {currentTime && (
+              <span style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+                {currentTime}
+              </span>
+            )}
+
+            <div className="header-portal-status">
+              <span className="status-dot-pulse" />
+              <span>Live Portal</span>
+            </div>
+
             <button
               onClick={handleLogout}
               className="btn btn-logout"
               disabled={loggingOut}
             >
-              {loggingOut ? "Signing out..." : "Logout"}
+              {loggingOut ? "Signing out..." : "🚪 Logout"}
             </button>
           </div>
         </header>
