@@ -223,7 +223,7 @@ exports.verifyPayment = onCall(async (request) => {
         serviceName: pData.offeringName,
         slotId: pData.slotId,
         bookingRef: bookingRefStr,
-        bookingDate: slotData ? slotData.date : "N/A", // From slot if available
+        bookingDate: slotData ? slotData.date : (pData.bookingDate || "N/A"), // From slot if available, else payload
         quantity: pData.quantity,
         status: "confirmed", // Verified payment means confirmed booking
         paymentStatus: "paid",

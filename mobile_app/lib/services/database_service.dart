@@ -68,6 +68,16 @@ class DatabaseService {
             snap.docs.map((doc) => BookingModel.fromFirestore(doc)).toList());
   }
 
+  Stream<List<DonationModel>> getUserDonations(String userId) {
+    return _db
+        .collection('donations')
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) =>
+            snap.docs.map((doc) => DonationModel.fromFirestore(doc)).toList());
+  }
+
   Stream<List<NewsModel>> getPublishedNews() {
     return _db
         .collection('news')

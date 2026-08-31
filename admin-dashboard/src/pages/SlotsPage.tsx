@@ -1,7 +1,8 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { getSlots, createSlot, updateSlot, deleteSlot } from "../services/slotService";
 import { getServices } from "../services/serviceService";
-import type { Slot, Service } from "../types";
+import { getDarshans } from "../services/darshanService";
+import type { Slot, Service, Darshan } from "../types";
 
 interface TimingPreset {
   label: string;
@@ -62,9 +63,12 @@ export default function SlotsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [fetchedSlots, fetchedServices] = await Promise.all([getSlots(), getServices()]);
+      const [fetchedSlots, fetchedServices, fetchedDarshans] = await Promise.all([getSlots(), getServices(), getDarshans()]);
       setSlots(fetchedSlots);
-      setServices(fetchedServices);
+      
+      // Combine both services and darshans so slots can be created for both
+      const combinedOfferings = [...fetchedServices, ...fetchedDarshans as any[]];
+      setServices(combinedOfferings);
     } catch (err) {
       console.error("Error loading slots data:", err);
       setError("Failed to load slots data.");

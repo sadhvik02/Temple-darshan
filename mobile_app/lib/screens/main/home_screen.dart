@@ -13,6 +13,7 @@ import 'service_details_screen.dart';
 import 'services_screen.dart';
 import 'temple_info_screen.dart';
 import 'donations_screen.dart';
+import 'darshan_screen.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -169,14 +170,33 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 2. TTD Style Quick Services Row
+  // 2. TTD Style Quick Services Grid (2 rows of 3)
   Widget _buildTTDQuickServicesGrid() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Wrap(
+        alignment: WrapAlignment.spaceEvenly,
+        spacing: 12.0,
+        runSpacing: 16.0,
         children: [
-          Expanded(
+          // Row 1: Darshan, Sevas, Donations
+          SizedBox(
+            width: (MediaQuery.of(context).size.width - 60) / 3,
+            child: _buildTTDServiceItem(
+              icon: Icons.front_hand_rounded, // Represents blessing/Abhaya Mudra for Darshan
+              iconColor: const Color(0xFFD84315),
+              bgColor: const Color(0xFFFFCCBC),
+              label: 'Darshan',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DarshanScreen()),
+                );
+              },
+            ),
+          ),
+          SizedBox(
+            width: (MediaQuery.of(context).size.width - 60) / 3,
             child: _buildTTDServiceItem(
               icon: Icons.spa_rounded,
               iconColor: const Color(0xFFE65100),
@@ -190,7 +210,24 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-          Expanded(
+          SizedBox(
+            width: (MediaQuery.of(context).size.width - 60) / 3,
+            child: _buildTTDServiceItem(
+              icon: Icons.volunteer_activism_rounded, // Represents offering/respectful donation
+              iconColor: const Color(0xFF2E7D32),
+              bgColor: const Color(0xFFE8F5E9),
+              label: 'Donations',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DonationsScreen()),
+                );
+              },
+            ),
+          ),
+          // Row 2: Temple Info, Announcements, Utsavams
+          SizedBox(
+            width: (MediaQuery.of(context).size.width - 60) / 3,
             child: _buildTTDServiceItem(
               icon: Icons.temple_hindu_rounded,
               iconColor: const Color(0xFFC2185B),
@@ -204,7 +241,8 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-          Expanded(
+          SizedBox(
+            width: (MediaQuery.of(context).size.width - 60) / 3,
             child: _buildTTDServiceItem(
               icon: Icons.menu_book_rounded,
               iconColor: const Color(0xFF0288D1),
@@ -218,7 +256,8 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-          Expanded(
+          SizedBox(
+            width: (MediaQuery.of(context).size.width - 60) / 3,
             child: _buildTTDServiceItem(
               icon: Icons.celebration_rounded,
               iconColor: const Color(0xFF7B1FA2),

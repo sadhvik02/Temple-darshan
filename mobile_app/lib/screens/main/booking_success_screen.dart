@@ -25,6 +25,8 @@ class BookingSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isPaid = totalAmount > 0;
+    
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -143,10 +145,10 @@ class BookingSuccessScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Row(
+                        Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
+                            const Text(
                               'Seva Details',
                               style: TextStyle(
                                 fontSize: 16,
@@ -154,7 +156,7 @@ class BookingSuccessScreen extends StatelessWidget {
                                 color: AppColors.textPrimary,
                               ),
                             ),
-                            StatusBadge(status: 'pending'),
+                            StatusBadge(status: isPaid ? 'paid' : 'confirmed'),
                           ],
                         ),
                         const Divider(height: 24),
@@ -173,19 +175,25 @@ class BookingSuccessScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: AppColors.statusPendingBg,
+                            color: isPaid ? AppColors.statusConfirmedBg : AppColors.statusPendingBg,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Row(
+                          child: Row(
                             children: [
-                              Icon(Icons.info_outline, size: 16, color: AppColors.statusPending),
-                              SizedBox(width: 8),
+                              Icon(
+                                isPaid ? Icons.check_circle_outline : Icons.info_outline, 
+                                size: 16, 
+                                color: isPaid ? AppColors.statusConfirmed : AppColors.statusPending
+                              ),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Dakshina/Payment to be offered at the counter.',
+                                  isPaid 
+                                      ? 'Payment successful. Receipt sent to email.'
+                                      : 'Dakshina/Payment to be offered at the counter.',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: AppColors.statusPending,
+                                    color: isPaid ? AppColors.statusConfirmed : AppColors.statusPending,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

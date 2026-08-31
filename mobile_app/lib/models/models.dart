@@ -173,6 +173,51 @@ class BookingModel {
   String get formattedTotal => totalAmount > 0 ? '₹$totalAmount' : 'Free';
 }
 
+class DonationModel {
+  final String id;
+  final String userId;
+  final String donationTypeId;
+  final String donationTypeName;
+  final num amount;
+  final String paymentId;
+  final String? razorpayPaymentId;
+  final String status;
+  final String donorName;
+  final String donorPhone;
+  final DateTime? createdAt;
+
+  DonationModel({
+    required this.id,
+    required this.userId,
+    required this.donationTypeId,
+    required this.donationTypeName,
+    required this.amount,
+    required this.paymentId,
+    this.razorpayPaymentId,
+    required this.status,
+    required this.donorName,
+    required this.donorPhone,
+    this.createdAt,
+  });
+
+  factory DonationModel.fromFirestore(DocumentSnapshot doc) {
+    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
+    return DonationModel(
+      id: doc.id,
+      userId: data['userId'] ?? '',
+      donationTypeId: data['donationTypeId'] ?? '',
+      donationTypeName: data['donationTypeName'] ?? 'General Donation',
+      amount: data['amount'] ?? 0,
+      paymentId: data['paymentId'] ?? '',
+      razorpayPaymentId: data['razorpayPaymentId'],
+      status: data['status'] ?? 'pending',
+      donorName: data['donorName'] ?? '',
+      donorPhone: data['donorPhone'] ?? '',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+    );
+  }
+}
+
 class NewsModel {
   final String id;
   final String title;
