@@ -135,6 +135,8 @@ class BookingModel {
   final String status;
   final num totalAmount;
   final String paymentStatus;
+  final String sourceType;
+  final List<dynamic>? devotees;
   final DateTime? createdAt;
   
   BookingModel({
@@ -149,6 +151,8 @@ class BookingModel {
     required this.status,
     required this.totalAmount,
     required this.paymentStatus,
+    this.sourceType = 'seva',
+    this.devotees,
     this.createdAt,
   });
 
@@ -166,6 +170,8 @@ class BookingModel {
       status: data['status'] ?? 'pending',
       totalAmount: data['totalAmount'] ?? 0,
       paymentStatus: data['paymentStatus'] ?? 'pending',
+      sourceType: data['sourceType'] ?? 'seva',
+      devotees: data['devotees'] as List<dynamic>?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
   }

@@ -97,7 +97,7 @@ export interface Booking {
   slotId?: string; // Optional (if slot-based)
   bookingRef: string;
   bookingDate: string; // YYYY-MM-DD
-  devoteeDetails?: any; // Optional map
+  devotees?: any[]; // Array of devotee maps
   quantity: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';

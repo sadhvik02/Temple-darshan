@@ -491,32 +491,34 @@ export default function BookingsPage() {
               </div>
 
               {/* Devotee Info */}
-              {viewingBooking.devoteeDetails && (
+              {viewingBooking.devotees && Array.isArray(viewingBooking.devotees) && viewingBooking.devotees.length > 0 && (
                 <div>
                   <div style={{ fontSize: "0.84rem", fontWeight: "800", color: "#0f172a", marginBottom: "8px" }}>
                     👤 Devotee Information
                   </div>
-                  <div
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: "10px",
-                      padding: "12px 16px",
-                      fontSize: "0.85rem",
-                    }}
-                  >
-                    {typeof viewingBooking.devoteeDetails === "object" ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        {Object.entries(viewingBooking.devoteeDetails).map(([k, v]) => (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {viewingBooking.devotees.map((devotee, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid var(--color-border)",
+                          borderRadius: "10px",
+                          padding: "12px 16px",
+                          fontSize: "0.85rem",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "6px"
+                        }}
+                      >
+                        {Object.entries(devotee).map(([k, v]) => (
                           <div key={k} style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "var(--color-text-secondary)", textTransform: "capitalize" }}>{k}:</span>
                             <span style={{ fontWeight: "700", color: "#0f172a" }}>{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
                           </div>
                         ))}
                       </div>
-                    ) : (
-                      String(viewingBooking.devoteeDetails)
-                    )}
+                    ))}
                   </div>
                 </div>
               )}

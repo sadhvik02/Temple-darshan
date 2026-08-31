@@ -656,29 +656,35 @@ class SlotTimingScreen extends StatelessWidget {
               ? dateSlots.where((s) => _SlotsScreenState.isMorningSlot(s.startTime)).toList()
               : dateSlots.where((s) => !_SlotsScreenState.isMorningSlot(s.startTime)).toList();
 
-          List<SlotModel> displaySlots;
+          List<SlotModel> displaySlots = [];
 
-          if (effectiveSessionSlots.isNotEmpty) {
-            // Live Admin-configured slots for this date
-            displaySlots = effectiveSessionSlots;
-          } else {
-            // Defaults
-            final defaults = isMorning ? _defaultMorningTimings : _defaultEveningTimings;
-            displaySlots = defaults.map((d) {
-              final start = d['start']!;
-              final end = d['end']!;
+          final defaults = isMorning ? _defaultMorningTimings : _defaultEveningTimings;
+          
+          for (final d in defaults) {
+            final start = d['start']!;
+            final end = d['end']!;
+            
+            // Try to find a live slot that matches this time
+            final liveSlotIndex = effectiveSessionSlots.indexWhere((s) => s.startTime == start && s.endTime == end);
+            
+            if (liveSlotIndex != -1) {
+              displaySlots.add(effectiveSessionSlots[liveSlotIndex]);
+            } else {
+              // Create a default slot with 0 bookings
               final safeId = 'auto_${service.id}_${dateKey}_${start.replaceAll(':', '')}${end.replaceAll(':', '')}';
-              return SlotModel(
-                id: safeId,
-                serviceId: service.id,
-                date: dateKey,
-                startTime: start,
-                endTime: end,
-                capacity: 50,
-                bookedCount: 0,
-                isActive: true,
+              displaySlots.add(
+                SlotModel(
+                  id: safeId,
+                  serviceId: service.id,
+                  date: dateKey,
+                  startTime: start,
+                  endTime: end,
+                  capacity: 50,
+                  bookedCount: 0,
+                  isActive: true,
+                )
               );
-            }).toList();
+            }
           }
 
           return ListView(

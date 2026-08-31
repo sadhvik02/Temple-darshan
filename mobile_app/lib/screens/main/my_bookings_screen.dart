@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../models/models.dart';
@@ -387,8 +388,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                 
                 _buildReceiptRow('Donation Type', donation.donationTypeName),
                 _buildReceiptRow('Donor Name', donation.donorName),
-                _buildReceiptRow('Date', dateStr),
-                _buildReceiptRow('Payment ID', donation.razorpayPaymentId ?? donation.paymentId),
+                _buildReceiptRow('Date & Time', dateStr),
                 
                 const Divider(height: 32),
                 Row(
@@ -398,6 +398,19 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                     Text('₹${donation.amount}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.primary)),
                   ],
                 ),
+                const Divider(height: 32),
+                
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Transaction Details',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                _buildCopyableRow(context, 'Payment ID', donation.razorpayPaymentId ?? donation.paymentId),
+                
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
@@ -433,6 +446,51 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
           Expanded(
             flex: 3,
             child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.right),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCopyableRow(BuildContext context, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(label, style: const TextStyle(color: AppColors.textSecondary)),
+          ),
+          Expanded(
+            flex: 3,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: Text(
+                    value, 
+                    style: const TextStyle(fontWeight: FontWeight.w600), 
+                    textAlign: TextAlign.right,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                InkWell(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: value));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$label copied'),
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  child: const Icon(Icons.copy_rounded, size: 16, color: AppColors.primary),
+                ),
+              ],
+            ),
           ),
         ],
       ),

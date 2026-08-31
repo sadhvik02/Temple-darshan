@@ -43,6 +43,8 @@ async function getOfferingDetails(sourceType, offeringId, quantity, donationAmou
 exports.createPaymentOrder = onCall(async (request) => {
   const { auth, data } = request;
   
+  console.log("createPaymentOrder RECEIVED DATA:", JSON.stringify(data));
+  
   if (!auth) {
     throw new HttpsError("unauthenticated", "User must be logged in.");
   }
@@ -107,6 +109,15 @@ exports.createPaymentOrder = onCall(async (request) => {
     currency: "INR",
     razorpayOrderId: order.id,
     status: "created",
+    payload: data || {}, // Store full payload for verifyPayment
+    bookingDate: data.bookingDate || null,
+    devotees: data.devotees || null,
+    devoteeName: data.devoteeName || null,
+    devoteePhone: data.devoteePhone || null,
+    devoteeEmail: data.devoteeEmail || null,
+    donorName: data.donorName || null,
+    donorPhone: data.donorPhone || null,
+    donorEmail: data.donorEmail || null,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
@@ -134,6 +145,7 @@ exports.verifyPayment = onCall(async (request) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature, paymentDocId, devoteeDetails } = data;
 
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !paymentDocId) {
+    console.error("Missing verification data!", JSON.stringify(data));
     throw new HttpsError("invalid-argument", "Missing required verification data.");
   }
 
@@ -157,6 +169,8 @@ exports.verifyPayment = onCall(async (request) => {
     }
 
     const pData = paymentDoc.data();
+    
+    console.log("PAYMENT DOC DATA IN VERIFY:", JSON.stringify(pData));
 
     // Idempotency check
     if (pData.status === "paid") {
@@ -179,36 +193,61 @@ exports.verifyPayment = onCall(async (request) => {
     if (pData.sourceType === "seva" || pData.sourceType === "darshan") {
       let slotData = null;
       
-      if (pData.slotId && !pData.slotId.startsWith("auto_")) {
+      if (pData.slotId) {
         const slotRef = db.collection("slots").doc(pData.slotId);
         const slotDoc = await transaction.get(slotRef);
         
         if (!slotDoc.exists) {
-           // Wait, payment succeeded but slot doesn't exist? Refund needed.
-           transaction.update(paymentRef, { status: "refund_needed", razorpayPaymentId: razorpay_payment_id });
-           throw new HttpsError("failed-precondition", "Slot not found. Refund required.");
-        }
-        
-        slotData = slotDoc.data();
-        const currentBooked = slotData.bookedCount || 0;
-        const capacity = slotData.capacity || 0;
+          if (pData.slotId.startsWith("auto_")) {
+            // Auto slot doesn't exist yet, create it dynamically
+            const [_, serviceId, dateKey, startEnd] = pData.slotId.split("_");
+            // Basic parsing if needed, but we can just use defaults
+            slotData = {
+              id: pData.slotId,
+              serviceId: pData.offeringId,
+              date: pData.bookingDate || "N/A",
+              capacity: 50,
+              bookedCount: pData.quantity,
+              isActive: true,
+              startTime: (pData.payload && pData.payload.timeRange) ? pData.payload.timeRange.split(" - ")[0] : "00:00",
+              endTime: (pData.payload && pData.payload.timeRange) ? pData.payload.timeRange.split(" - ")[1] : "23:59",
+              createdAt: FieldValue.serverTimestamp(),
+              updatedAt: FieldValue.serverTimestamp()
+            };
+            
+            // Check capacity just in case
+            if (pData.quantity > 50) {
+              transaction.update(paymentRef, { status: "refund_needed", razorpayPaymentId: razorpay_payment_id });
+              throw new HttpsError("resource-exhausted", "Capacity exceeded.");
+            }
+            
+            transaction.set(slotRef, slotData);
+          } else {
+            // Manual slot not found
+            transaction.update(paymentRef, { status: "refund_needed", razorpayPaymentId: razorpay_payment_id });
+            throw new HttpsError("failed-precondition", "Slot not found. Refund required.");
+          }
+        } else {
+          slotData = slotDoc.data();
+          const currentBooked = slotData.bookedCount || 0;
+          const capacity = slotData.capacity || 0;
 
-        // Atomic capacity check
-        if (currentBooked + pData.quantity > capacity) {
-          // RACE CONDITION MET: Slot became full after order creation but before payment completion.
-          transaction.update(paymentRef, { 
-            status: "refund_needed", 
-            razorpayPaymentId: razorpay_payment_id,
+          // Atomic capacity check
+          if (currentBooked + pData.quantity > capacity) {
+            transaction.update(paymentRef, { 
+              status: "refund_needed", 
+              razorpayPaymentId: razorpay_payment_id,
+              updatedAt: FieldValue.serverTimestamp()
+            });
+            throw new HttpsError("resource-exhausted", "Capacity exceeded. Slot is now full. Automatic refund initiated.");
+          }
+
+          // Increment bookedCount safely inside transaction
+          transaction.update(slotRef, {
+            bookedCount: currentBooked + pData.quantity,
             updatedAt: FieldValue.serverTimestamp()
           });
-          throw new HttpsError("resource-exhausted", "Capacity exceeded. Slot is now full. Automatic refund initiated.");
         }
-
-        // Increment bookedCount safely inside transaction
-        transaction.update(slotRef, {
-          bookedCount: currentBooked + pData.quantity,
-          updatedAt: FieldValue.serverTimestamp()
-        });
       }
 
       // Generate Booking Reference
@@ -223,7 +262,7 @@ exports.verifyPayment = onCall(async (request) => {
         serviceName: pData.offeringName,
         slotId: pData.slotId,
         bookingRef: bookingRefStr,
-        bookingDate: slotData ? slotData.date : (pData.bookingDate || "N/A"), // From slot if available, else payload
+        bookingDate: (slotData && slotData.date) ? slotData.date : (pData.bookingDate || "N/A"), // From slot if available, else payload
         quantity: pData.quantity,
         status: "confirmed", // Verified payment means confirmed booking
         paymentStatus: "paid",
@@ -233,9 +272,32 @@ exports.verifyPayment = onCall(async (request) => {
         updatedAt: FieldValue.serverTimestamp(),
       };
       
-      if (devoteeDetails) {
-        bookingData.devotees = [devoteeDetails];
+      console.log("BOOKING DATA BEFORE DEVOTEE ASSIGN:", JSON.stringify(bookingData));
+      console.log("DEVOTEE DETAILS IN PDATA:", JSON.stringify(pData.devotees));
+      
+      if (pData.devotees && Array.isArray(pData.devotees) && pData.devotees.length > 0) {
+        bookingData.devotees = pData.devotees.map((dev, idx) => ({
+          ...dev,
+          devoteeId: `${bookingRefStr}-${idx + 1}`
+        }));
+        console.log("Assigned pData.devotees to bookingData");
+      } else if (devoteeDetails) {
+        bookingData.devotees = [{
+          ...devoteeDetails,
+          devoteeId: `${bookingRefStr}-1`
+        }];
+        console.log("Assigned single devoteeDetails to bookingData");
+      } else if (pData.devoteeName) {
+        bookingData.devotees = [{
+          name: pData.devoteeName,
+          phone: pData.devoteePhone || "",
+          email: pData.devoteeEmail || "",
+          devoteeId: `${bookingRefStr}-1`
+        }];
+        console.log("Assigned single pData.devoteeName to bookingData");
       }
+      
+      console.log("FINAL BOOKING DATA:", JSON.stringify(bookingData));
 
       transaction.set(bookingRef, bookingData);
 
@@ -265,8 +327,8 @@ exports.verifyPayment = onCall(async (request) => {
         paymentId: paymentRef.id,
         razorpayPaymentId: razorpay_payment_id,
         status: "completed",
-        donorName: userName,
-        donorPhone: userPhone,
+        donorName: pData.donorName || userName,
+        donorPhone: pData.donorPhone || userPhone,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       };

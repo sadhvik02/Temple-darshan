@@ -9,6 +9,18 @@ class BookingDetailsScreen extends StatelessWidget {
 
   const BookingDetailsScreen({super.key, required this.booking});
 
+  bool get isDarshan => booking.sourceType.toLowerCase() == 'darshan';
+  String get offeringTypeLabel => isDarshan ? 'Darshan' : 'Seva';
+
+  String get instructionsTitle => isDarshan ? 'Darshan Instructions' : 'Seva Instructions';
+  String get instructionsBody => isDarshan 
+    ? '• Show this booking reference at the darshan entrance.\n'
+      '• Arrive 15 minutes prior to the slot timing.\n'
+      '• Follow temple sanctity and traditional dress etiquette.'
+    : '• Show this booking reference at the seva verification counter.\n'
+      '• Arrive 15 minutes prior to the seva timing.\n'
+      '• Follow temple sanctity and traditional dress etiquette.';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,23 +104,23 @@ class BookingDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Main Details Card
+            // Offering Information Card
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Seva Information',
-                      style: TextStyle(
+                    Text(
+                      '$offeringTypeLabel Information',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
                       ),
                     ),
                     const Divider(height: 24),
-                    _buildRow('Seva', booking.serviceName),
+                    _buildRow(offeringTypeLabel, booking.serviceName),
                     _buildRow('Date', booking.bookingDate),
                     _buildRow('Devotees', '${booking.quantity} Person(s)'),
                     _buildRow(
@@ -121,7 +133,7 @@ class BookingDetailsScreen extends StatelessWidget {
                     if (booking.createdAt != null)
                       _buildRow(
                         'Booked On',
-                        '${booking.createdAt!.day}/${booking.createdAt!.month}/${booking.createdAt!.year}',
+                        '${booking.createdAt!.day.toString().padLeft(2, '0')}/${booking.createdAt!.month.toString().padLeft(2, '0')}/${booking.createdAt!.year}',
                       ),
                   ],
                 ),
@@ -129,21 +141,24 @@ class BookingDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
+            // Devotee Details Cards
+            ..._buildDevoteeCards(),
+
             // Instructions Card
             Card(
               color: AppColors.surfaceVariant.withValues(alpha: 0.5),
-              child: const Padding(
-                padding: EdgeInsets.all(16.0),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.temple_hindu, size: 20, color: AppColors.primary),
-                        SizedBox(width: 8),
+                        const Icon(Icons.temple_hindu, size: 20, color: AppColors.primary),
+                        const SizedBox(width: 8),
                         Text(
-                          'Darshan Instructions',
-                          style: TextStyle(
+                          instructionsTitle,
+                          style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
@@ -151,12 +166,10 @@ class BookingDetailsScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
-                      '• Show this booking reference at the seva verification counter.\n'
-                      '• Arrive 15 minutes prior to the seva timing.\n'
-                      '• Follow temple sanctity and traditional dress etiquette.',
-                      style: TextStyle(
+                      instructionsBody,
+                      style: const TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,
                         height: 1.5,
@@ -170,6 +183,65 @@ class BookingDetailsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  List<Widget> _buildDevoteeCards() {
+    if (booking.devotees == null || booking.devotees!.isEmpty) {
+      return [];
+    }
+
+    List<Widget> cards = [];
+    for (int i = 0; i < booking.devotees!.length; i++) {
+      final dev = booking.devotees![i];
+      if (dev is! Map) continue;
+      
+      final Map<String, dynamic> devoteeData = Map<String, dynamic>.from(dev);
+
+      cards.add(
+        Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.person_rounded, size: 20, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      'DEVOTEE ${i + 1}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                if (devoteeData['devoteeId'] != null && devoteeData['devoteeId'].toString().isNotEmpty)
+                  _buildRow('Ticket ID', devoteeData['devoteeId'].toString(), isBold: true, valueColor: AppColors.primary),
+                if (devoteeData['name'] != null && devoteeData['name'].toString().isNotEmpty) 
+                  _buildRow('Full Name', devoteeData['name'].toString()),
+                if (devoteeData['age'] != null && devoteeData['age'].toString().isNotEmpty) 
+                  _buildRow('Age', devoteeData['age'].toString()),
+                if (devoteeData['gender'] != null && devoteeData['gender'].toString().isNotEmpty) 
+                  _buildRow('Gender', devoteeData['gender'].toString()),
+                if (devoteeData['gothram'] != null && devoteeData['gothram'].toString().isNotEmpty) 
+                  _buildRow('Gothram', devoteeData['gothram'].toString()),
+                if (devoteeData['phone'] != null && devoteeData['phone'].toString().isNotEmpty) 
+                  _buildRow('Phone', devoteeData['phone'].toString()),
+                if (devoteeData['email'] != null && devoteeData['email'].toString().isNotEmpty) 
+                  _buildRow('Email', devoteeData['email'].toString()),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return cards;
   }
 
   Widget _buildRow(String label, String value, {bool isBold = false, Color? valueColor}) {
