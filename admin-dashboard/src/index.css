@@ -1025,6 +1025,8 @@ input::placeholder, textarea::placeholder {
   }
   .main-area {
     margin-left: 0;
+    width: 100%;
+    max-width: 100%;
   }
   .menu-toggle {
     display: block;
@@ -1035,4 +1037,94 @@ input::placeholder, textarea::placeholder {
   .top-header {
     padding: 0 16px;
   }
+}
+
+/* ============================================
+   LOGIN SCREEN
+   ============================================ */
+.login-screen {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 15%, #fffbeb 0%, #fef3c7 35%, #f8fafc 100%);
+  padding: 24px;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-screen::before {
+  content: '';
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border: 1px solid #fed7aa;
+  border-radius: var(--radius-xl);
+  padding: 36px 32px;
+  box-shadow: 0 20px 45px -12px rgba(217, 119, 6, 0.18), 0 4px 12px rgba(0, 0, 0, 0.04);
+  position: relative;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.login-icon-badge {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 14px;
+  background: linear-gradient(135deg, #fffbeb, #fed7aa);
+  border: 2px solid #fde68a;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.login-header h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
+}
+
+.login-header p {
+  font-size: 0.86rem;
+  color: var(--color-text-secondary);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-footer {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 16px;
 }

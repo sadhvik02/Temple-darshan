@@ -80,16 +80,16 @@ class _MainNavigatorState extends State<MainNavigator> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.temple_hindu_outlined),
-            selectedIcon: Icon(Icons.temple_hindu_rounded),
+            icon: Image.asset('assets/icons/darshan_unselected.png', width: 23, height: 23),
+            selectedIcon: Image.asset('assets/icons/darshan_selected.png', width: 23, height: 23),
             label: 'Darshan',
           ),
           NavigationDestination(
-            icon: Icon(Icons.volunteer_activism_outlined),
-            selectedIcon: Icon(Icons.volunteer_activism_rounded),
-            label: 'Sevas',
+            icon: Icon(Icons.spa_outlined),
+            selectedIcon: Icon(Icons.spa_rounded),
+            label: 'Arjitha Sevas',
           ),
           NavigationDestination(
             icon: Icon(Icons.confirmation_number_outlined),

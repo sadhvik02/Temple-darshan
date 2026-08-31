@@ -63,21 +63,21 @@ class _HomeScreenState extends State<HomeScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Namaste, $displayName',
-                  style: const TextStyle(
-                    fontSize: 16,
+                const Text(
+                  'Sri Kedareshwara Ashramam',
+                  style: TextStyle(
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
                     letterSpacing: -0.2,
                   ),
                 ),
-                const Text(
-                  'Tirumala Tirupati Devasthanams Style',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
+                Text(
+                  'Namaste, $displayName 🙏',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -183,9 +183,9 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(
             width: (MediaQuery.of(context).size.width - 60) / 3,
             child: _buildTTDServiceItem(
-              icon: Icons.front_hand_rounded, // Represents blessing/Abhaya Mudra for Darshan
+              assetImage: 'assets/icons/darshan_selected.png',
               iconColor: const Color(0xFFD84315),
-              bgColor: const Color(0xFFFFCCBC),
+              bgColor: const Color(0xFFFFEDE5),
               label: 'Darshan',
               onTap: () {
                 Navigator.push(
@@ -277,7 +277,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTTDServiceItem({
-    required IconData icon,
+    IconData? icon,
+    String? assetImage,
     required Color iconColor,
     required Color bgColor,
     required String label,
@@ -299,7 +300,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: bgColor,
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Icon(icon, color: iconColor, size: 28),
+              child: assetImage != null
+                  ? Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.asset(assetImage, width: 34, height: 34, fit: BoxFit.contain),
+                      ),
+                    )
+                  : Icon(icon, color: iconColor, size: 28),
             ),
             const SizedBox(height: 8),
             SizedBox(

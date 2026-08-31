@@ -2,7 +2,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import { getSlots, createSlot, updateSlot, deleteSlot } from "../services/slotService";
 import { getServices } from "../services/serviceService";
 import { getDarshans } from "../services/darshanService";
-import type { Slot, Service, Darshan } from "../types";
+import type { Slot, Service } from "../types";
 
 interface TimingPreset {
   label: string;

@@ -167,6 +167,7 @@ class PaymentService {
     required String timeRange,
     required int quantity,
     required num expectedTotal,
+    List<Map<String, String>>? devoteeDetails,
     required String devoteeName,
     required String devoteePhone,
     String? devoteeEmail,
@@ -182,6 +183,7 @@ class PaymentService {
         'timeRange': timeRange,
         'quantity': quantity,
         'expectedTotal': expectedTotal,
+        'devotees': ?devoteeDetails,
         'devoteeName': devoteeName,
         'devoteePhone': devoteePhone,
         'devoteeEmail': devoteeEmail,
@@ -278,7 +280,7 @@ class PaymentService {
       final Map<String, dynamic> options = {
         'key': keyId,
         'amount': amountInPaise.toInt(),
-        'name': 'Temple Darshan & Seva',
+        'name': 'Sri Kedareshwara Ashramam',
         'description': offeringTitle,
         'order_id': orderId,
         'prefill': {

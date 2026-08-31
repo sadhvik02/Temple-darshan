@@ -152,7 +152,7 @@ export default function DashboardPage() {
         <div className="welcome-text">
           <h1>Namaste, {adminData?.name || "Temple Administrator"} 🙏</h1>
           <p>
-            Welcome to the Temple Darshan & Seva Management Portal. Monitor live bookings, configure slots, and manage devotional offerings.
+            Welcome to the Sri Kedareshwara Ashramam Management Portal. Monitor live bookings, configure slots, and manage devotional offerings.
           </p>
         </div>
         <div style={{ display: "flex", gap: "10px", zIndex: 2 }}>

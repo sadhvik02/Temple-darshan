@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.temple.mobileapp">
     <application
-        android:label="mobile_app"
+        android:label="Sri Kedareshwara Ashramam"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

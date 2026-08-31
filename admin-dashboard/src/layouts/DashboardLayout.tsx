@@ -74,7 +74,7 @@ export default function DashboardLayout() {
       <aside className="sidebar">
         <div className="sidebar-header">
           <span className="sidebar-logo">🛕</span>
-          <span className="sidebar-title">Temple Admin</span>
+          <span className="sidebar-title">Kedareshwara Ashramam</span>
         </div>
 
         <nav className="sidebar-nav">

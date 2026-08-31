@@ -211,7 +211,7 @@ class ProfileScreen extends StatelessWidget {
           // App Footer
           const Center(
             child: Text(
-              'Temple Darshan • Version 1.0.0',
+              'Sri Kedareshwara Ashramam • Version 1.0.0',
               style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
             ),
           ),

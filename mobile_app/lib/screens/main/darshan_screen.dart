@@ -301,7 +301,22 @@ class _DarshanSlotsSection extends StatelessWidget {
   }
 }
 
-/// Darshan Review Screen — shows darshan + slot details, quantity selection,
+class _DarshanDevoteeEntry {
+  final TextEditingController nameController;
+  final TextEditingController phoneController;
+
+  _DarshanDevoteeEntry({
+    required this.nameController,
+    required this.phoneController,
+  });
+
+  void dispose() {
+    nameController.dispose();
+    phoneController.dispose();
+  }
+}
+
+/// Darshan Review Screen — shows darshan + slot details, dynamic multi-devotee selection,
 /// and securely processes Darshan payment through PaymentService.
 class _DarshanReviewScreen extends StatefulWidget {
   final DarshanModel darshan;
@@ -316,28 +331,58 @@ class _DarshanReviewScreen extends StatefulWidget {
 class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
   int _quantity = 1;
   bool _isLoading = false;
+  final List<_DarshanDevoteeEntry> _devotees = [];
+  bool _isInitialized = false;
   final ValueNotifier<PaymentUIState> _paymentStateNotifier = ValueNotifier(PaymentUIState.idle);
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
       final user = context.read<AuthProvider>().userModel;
-      if (user != null) {
-        _nameController.text = user.name;
-        _phoneController.text = user.phone;
-      }
-    });
+      _devotees.add(
+        _DarshanDevoteeEntry(
+          nameController: TextEditingController(text: user?.name ?? ''),
+          phoneController: TextEditingController(text: user?.phone ?? ''),
+        ),
+      );
+      _isInitialized = true;
+    }
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
+    for (final d in _devotees) {
+      d.dispose();
+    }
     _paymentStateNotifier.dispose();
     super.dispose();
+  }
+
+  void _updateQuantity(int newQty) {
+    if (newQty < 1) return;
+    final available = widget.slot.available > 0 ? widget.slot.available : 50;
+    final maxAllowed = available > 10 ? 10 : available;
+    if (newQty > maxAllowed) return;
+
+    setState(() {
+      if (newQty > _quantity) {
+        for (int i = _quantity; i < newQty; i++) {
+          _devotees.add(
+            _DarshanDevoteeEntry(
+              nameController: TextEditingController(),
+              phoneController: TextEditingController(),
+            ),
+          );
+        }
+      } else if (newQty < _quantity) {
+        for (int i = _quantity - 1; i >= newQty; i--) {
+          _devotees[i].dispose();
+          _devotees.removeAt(i);
+        }
+      }
+      _quantity = newQty;
+    });
   }
 
   Future<void> _submitBooking() async {
@@ -351,21 +396,45 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
       return;
     }
 
-    final name = _nameController.text.trim();
-    final phone = _phoneController.text.trim();
+    // Validate Devotee Inputs
+    for (int i = 0; i < _devotees.length; i++) {
+      final name = _devotees[i].nameController.text.trim();
+      final phone = _devotees[i].phoneController.text.trim();
 
-    if (name.isEmpty || phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter devotee name and phone number.'),
-          backgroundColor: AppColors.statusCancelled,
-        ),
-      );
-      return;
+      if (name.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please enter the name for Devotee ${i + 1}.'),
+            backgroundColor: AppColors.statusCancelled,
+          ),
+        );
+        return;
+      }
+
+      if (i == 0 && phone.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid contact phone number for Primary Devotee.'),
+            backgroundColor: AppColors.statusCancelled,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _isLoading = true);
+
+    final List<Map<String, String>> devoteeList = _devotees.map((entry) {
+      return {
+        'name': entry.nameController.text.trim(),
+        'phone': entry.phoneController.text.trim(),
+      };
+    }).toList();
+
+    final primaryName = _devotees.first.nameController.text.trim();
+    final primaryPhone = _devotees.first.phoneController.text.trim();
     final expectedTotal = widget.darshan.price * _quantity;
+
     PaymentProcessingDialog.show(context, stateNotifier: _paymentStateNotifier);
 
     try {
@@ -377,12 +446,13 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
         timeRange: widget.slot.timeRange,
         quantity: _quantity,
         expectedTotal: expectedTotal,
-        devoteeName: name,
-        devoteePhone: phone,
+        devoteeDetails: devoteeList,
+        devoteeName: primaryName,
+        devoteePhone: primaryPhone,
         devoteeEmail: user.email,
         onStateChange: (state) {
           _paymentStateNotifier.value = state;
-        }
+        },
       );
 
       if (!mounted) return;
@@ -422,7 +492,9 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
           context,
           MaterialPageRoute(
             builder: (_) => PaymentFailureScreen(
-              type: result.isVerificationFailed ? FailureType.verificationFailed : (result.isNetworkError ? FailureType.networkError : FailureType.failed),
+              type: result.isVerificationFailed
+                  ? FailureType.verificationFailed
+                  : (result.isNetworkError ? FailureType.networkError : FailureType.failed),
               title: widget.darshan.name,
               message: result.message,
               paymentId: result.paymentId,
@@ -462,56 +534,7 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Devotee Info Form
-            Card(
-              elevation: 1,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: AppColors.cardBorder),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.person_pin_rounded, color: AppColors.primary, size: 20),
-                        SizedBox(width: 8),
-                        Text('Devotee Information',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                      ],
-                    ),
-                    const Divider(height: 20),
-                    TextField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: 'Devotee Name *',
-                        hintText: 'Enter full name',
-                        isDense: true,
-                        prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: 'Contact Phone Number *',
-                        hintText: 'Enter 10-digit mobile number',
-                        isDense: true,
-                        prefixIcon: const Icon(Icons.phone_outlined, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Darshan & Slot details
+            // 1. Darshan & Slot Details Card
             Card(
               elevation: 1,
               shape: RoundedRectangleBorder(
@@ -527,8 +550,10 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
                       children: [
                         Icon(Icons.temple_hindu_rounded, color: AppColors.primary, size: 20),
                         SizedBox(width: 8),
-                        Text('Darshan Details',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                        Text(
+                          'Darshan Details',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        ),
                       ],
                     ),
                     const Divider(height: 24),
@@ -542,7 +567,7 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Quantity selector
+            // 2. Number of Devotees Counter Card
             Card(
               elevation: 1,
               shape: RoundedRectangleBorder(
@@ -554,8 +579,10 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Number of Devotees',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                    const Text(
+                      'Number of Devotees',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                    ),
                     const SizedBox(height: 14),
                     Row(
                       children: [
@@ -569,37 +596,31 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
                               IconButton(
                                 icon: const Icon(Icons.remove_rounded, size: 20),
                                 color: _quantity > 1 ? AppColors.primary : AppColors.textTertiary,
-                                onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null,
+                                onPressed: _quantity > 1 ? () => _updateQuantity(_quantity - 1) : null,
                               ),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text('$_quantity',
-                                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                                child: Text(
+                                  '$_quantity',
+                                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                                ),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.add_rounded, size: 20),
                                 color: _quantity < maxAllowed ? AppColors.primary : AppColors.textTertiary,
-                                onPressed: _quantity < maxAllowed ? () => setState(() => _quantity++) : null,
+                                onPressed: _quantity < maxAllowed ? () => _updateQuantity(_quantity + 1) : null,
                               ),
                             ],
                           ),
                         ),
                         const Spacer(),
-                        Text('$available spots left',
-                            style: const TextStyle(
-                                color: AppColors.statusConfirmed, fontWeight: FontWeight.w600, fontSize: 13)),
-                      ],
-                    ),
-                    const Divider(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Total Amount',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                         Text(
-                          totalAmount > 0 ? '₹$totalAmount' : 'Free',
+                          '$available spots left',
                           style: const TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.primary),
+                            color: AppColors.statusConfirmed,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -607,8 +628,123 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 20),
+
+            // 3. Dynamic Devotee Information Section
+            Text(
+              'Devotee Details ($_quantity ${_quantity == 1 ? 'Person' : 'Persons'})',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.2,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            ..._devotees.asMap().entries.map((entry) {
+              final index = entry.key;
+              final devotee = entry.value;
+
+              return Card(
+                elevation: 1,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: AppColors.cardBorder),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 12,
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                            child: Text(
+                              '${index + 1}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            index == 0 ? 'Primary Devotee (You)' : 'Devotee ${index + 1}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: devotee.nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Full Name *',
+                          hintText: 'Enter devotee full name',
+                          isDense: true,
+                          prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: devotee.phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: index == 0 ? 'Contact Phone Number *' : 'Phone Number (Optional)',
+                          hintText: 'Enter 10-digit mobile number',
+                          isDense: true,
+                          prefixIcon: const Icon(Icons.phone_outlined, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+
+            const SizedBox(height: 12),
+
+            // 4. Payment Summary Card
+            Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.cardBorder),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Total Dakshina Amount',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                    ),
+                    Text(
+                      totalAmount > 0 ? '₹$totalAmount' : 'Free',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
 
+            // 5. Pay Now Button
             CustomButton(
               text: 'PAY NOW (₹$totalAmount)',
               icon: Icons.check_circle_outline,
@@ -630,14 +766,28 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           Expanded(
-            child: Text(value,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 }
+
