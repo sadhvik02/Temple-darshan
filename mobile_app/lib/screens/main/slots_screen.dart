@@ -16,7 +16,6 @@ class SlotsScreen extends StatefulWidget {
 
 class _SlotsScreenState extends State<SlotsScreen> {
   DateTime _selectedDate = DateTime.now();
-  String _selectedSession = 'all'; // 'all', 'morning', 'evening'
   SlotModel? _selectedSlot;
 
   @override
@@ -162,16 +161,6 @@ class _SlotsScreenState extends State<SlotsScreen> {
             eveningSlots.add(live);
           }
 
-          // Filter by selected session tab
-          List<SlotModel> displayedSlots = [];
-          if (_selectedSession == 'morning') {
-            displayedSlots = morningSlots;
-          } else if (_selectedSession == 'evening') {
-            displayedSlots = eveningSlots;
-          } else {
-            displayedSlots = [...morningSlots, ...eveningSlots];
-          }
-
           return Column(
             children: [
               Expanded(
@@ -232,27 +221,89 @@ class _SlotsScreenState extends State<SlotsScreen> {
 
                     // 3. Horizontal Date Strip (Next 30 Days)
                     _buildHorizontalDateStrip(activeDates),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 22),
 
-                    // 4. Session Filter Tabs (All / Morning / Evening)
-                    _buildSessionFilterTabs(morningSlots.length, eveningSlots.length),
-                    const SizedBox(height: 16),
-
-                    // 5. Available Slot Grid Chips
-                    const Text(
-                      'Available Darshan Timings',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.2,
+                    // 4. Morning Slots Section
+                    if (morningSlots.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF3E0),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.wb_sunny_rounded, color: Color(0xFFE65100), size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Morning Slots',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF3E0),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              '06:00 AM – 11:00 AM',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFE65100)),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 10),
+                      const SizedBox(height: 10),
+                      _buildSlotChipsGrid(morningSlots),
+                      const SizedBox(height: 20),
+                    ],
 
-                    _buildSlotChipsGrid(displayedSlots),
-
-                    const SizedBox(height: 20),
+                    // 5. Evening Slots Section
+                    if (eveningSlots.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEDE7F6),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.nights_stay_rounded, color: Color(0xFF5E35B1), size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Evening Slots',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEDE7F6),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              '06:00 PM – 09:00 PM',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF5E35B1)),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      _buildSlotChipsGrid(eveningSlots),
+                      const SizedBox(height: 20),
+                    ],
 
                     // 6. Pilgrim Notice
                     Container(
@@ -492,76 +543,6 @@ class _SlotsScreenState extends State<SlotsScreen> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  // Session Filter Tabs (All / Morning / Evening)
-  Widget _buildSessionFilterTabs(int morningCount, int eveningCount) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildFilterTab(
-              label: 'All (${morningCount + eveningCount})',
-              sessionKey: 'all',
-            ),
-          ),
-          Expanded(
-            child: _buildFilterTab(
-              label: '🌅 Morning ($morningCount)',
-              sessionKey: 'morning',
-            ),
-          ),
-          Expanded(
-            child: _buildFilterTab(
-              label: '🌙 Evening ($eveningCount)',
-              sessionKey: 'evening',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterTab({required String label, required String sessionKey}) {
-    final isSelected = _selectedSession == sessionKey;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedSession = sessionKey;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            color: isSelected ? const Color(0xFFE65100) : const Color(0xFF64748B),
-          ),
-        ),
       ),
     );
   }

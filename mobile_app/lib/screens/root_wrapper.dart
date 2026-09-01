@@ -17,25 +17,61 @@ class RootWrapper extends StatelessWidget {
       builder: (context, auth, _) {
         if (auth.isLoading) {
           return Scaffold(
+            backgroundColor: const Color(0xFFFFFBF5),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    width: 72,
-                    height: 72,
+                    width: 88,
+                    height: 88,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.25),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
-                    child: const Icon(
-                      Icons.temple_hindu,
-                      size: 40,
-                      color: AppColors.primary,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/icons/app_icon.png',
+                        width: 88,
+                        height: 88,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2.5),
+                  const Text(
+                    'Sri Kedareshwara Ashramam',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Devotee Portal & Seva Booking',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFB45309),
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2.5),
+                  ),
                 ],
               ),
             ),
