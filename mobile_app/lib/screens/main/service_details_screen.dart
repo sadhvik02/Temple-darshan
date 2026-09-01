@@ -38,6 +38,7 @@ class ServiceDetailsScreen extends StatelessWidget {
                   CustomImage(
                     imageUrl: service.imageUrl,
                     fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
                     fallbackIcon: Icons.temple_hindu,
                   ),
                   const DecoratedBox(

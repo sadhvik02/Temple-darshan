@@ -9,7 +9,6 @@ import '../../widgets/custom_image.dart';
 import '../../widgets/section_header.dart';
 import 'events_screen.dart';
 import 'news_screen.dart';
-import 'service_details_screen.dart';
 import 'services_screen.dart';
 import 'temple_info_screen.dart';
 import 'donations_screen.dart';
@@ -139,29 +138,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 return BannerCarouselWidget(banners: snapshot.data!);
               },
             ),
+            const SizedBox(height: 14),
+
+            // 2. Today's Darshan & Seva Schedule Card (Immediately below banners)
+            _buildTimingsCard(),
             const SizedBox(height: 16),
 
-            // 2. TTD Style 4-Grid Quick Services Row
+            // 3. TTD Style Quick Services Grid
             _buildTTDQuickServicesGrid(),
-            const SizedBox(height: 18),
-
-            // 3. TTD Style Today's Darshan & Seva Schedule Card
-            _buildTimingsCard(),
             const SizedBox(height: 20),
 
             // 4. Latest News & Announcements (Sliding Banner Style)
             _buildNewsSection(),
             const SizedBox(height: 20),
 
-            // 5. Featured / Active Sevas Section
-            _buildServicesSection(),
-            const SizedBox(height: 20),
-
-            // 6. Upcoming Festivals & Utsavams
-            _buildEventsSection(),
-            const SizedBox(height: 24),
-
-            // 7. Donations
+            // 5. Donations
             _buildDonationsSection(),
             const SizedBox(height: 24),
           ],
@@ -184,8 +175,8 @@ class _HomeScreenState extends State<HomeScreen> {
             width: (MediaQuery.of(context).size.width - 60) / 3,
             child: _buildTTDServiceItem(
               assetImage: 'assets/icons/darshan_selected.png',
-              iconColor: const Color(0xFFD84315),
-              bgColor: const Color(0xFFFFEDE5),
+              iconColor: const Color(0xFFE65100),
+              bgColor: const Color(0xFFFFF3E0),
               label: 'Darshan',
               onTap: () {
                 Navigator.push(
@@ -198,9 +189,9 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(
             width: (MediaQuery.of(context).size.width - 60) / 3,
             child: _buildTTDServiceItem(
-              icon: Icons.self_improvement_rounded,
-              iconColor: const Color(0xFF00796B),
-              bgColor: const Color(0xFFB2DFDB),
+              assetImage: 'assets/icons/ashrama_seva_icon.png',
+              iconColor: const Color(0xFFE65100),
+              bgColor: const Color(0xFFFFF3E0),
               label: 'Ashrama Seva',
               onTap: () {
                 Navigator.push(
@@ -218,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _buildTTDServiceItem(
               icon: Icons.spa_rounded,
               iconColor: const Color(0xFFE65100),
-              bgColor: const Color(0xFFFFEDE5),
+              bgColor: const Color(0xFFFFF3E0),
               label: 'Arjitha Sevas',
               onTap: () {
                 Navigator.push(
@@ -235,8 +226,8 @@ class _HomeScreenState extends State<HomeScreen> {
             width: (MediaQuery.of(context).size.width - 60) / 3,
             child: _buildTTDServiceItem(
               icon: Icons.volunteer_activism_rounded, // Represents offering/respectful donation
-              iconColor: const Color(0xFF2E7D32),
-              bgColor: const Color(0xFFE8F5E9),
+              iconColor: const Color(0xFFE65100),
+              bgColor: const Color(0xFFFFF3E0),
               label: 'Donations',
               onTap: () {
                 Navigator.push(
@@ -246,13 +237,12 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-          // Row 2: Temple Info, Announcements, Utsavams
           SizedBox(
             width: (MediaQuery.of(context).size.width - 60) / 3,
             child: _buildTTDServiceItem(
-              icon: Icons.temple_hindu_rounded,
-              iconColor: const Color(0xFFC2185B),
-              bgColor: const Color(0xFFFDE8EF),
+              assetImage: 'assets/icons/temple_info_icon.png',
+              iconColor: const Color(0xFFE65100),
+              bgColor: const Color(0xFFFFF3E0),
               label: 'Temple Info',
               onTap: () {
                 Navigator.push(
@@ -265,24 +255,9 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(
             width: (MediaQuery.of(context).size.width - 60) / 3,
             child: _buildTTDServiceItem(
-              icon: Icons.menu_book_rounded,
-              iconColor: const Color(0xFF0288D1),
-              bgColor: const Color(0xFFE1F5FE),
-              label: 'Announcements',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NewsScreen()),
-                );
-              },
-            ),
-          ),
-          SizedBox(
-            width: (MediaQuery.of(context).size.width - 60) / 3,
-            child: _buildTTDServiceItem(
               icon: Icons.celebration_rounded,
-              iconColor: const Color(0xFF7B1FA2),
-              bgColor: const Color(0xFFF3E5F5),
+              iconColor: const Color(0xFFE65100),
+              bgColor: const Color(0xFFFFF3E0),
               label: 'Utsavams',
               onTap: () {
                 Navigator.push(
@@ -508,177 +483,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 4. Featured Services / Sevas Section
-  Widget _buildServicesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: 'Arjitha Sevas & Pujas',
-          subtitle: 'Sacred offerings and online bookings',
-          actionText: 'View All',
-          onAction: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ServicesScreen(
-                categoryFilter: 'arjita_seva',
-                title: 'Arjitha Sevas',
-              )),
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-        StreamBuilder<List<ServiceModel>>(
-          stream: _db.getActiveServices(category: 'arjita_seva'),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20.0),
-                  child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
-                ),
-              );
-            }
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Text('No active sevas available at the moment.'),
-              );
-            }
-
-            final services = snapshot.data!;
-            return SizedBox(
-              height: 250,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                itemCount: services.length,
-                itemBuilder: (context, index) {
-                  final service = services[index];
-                  return Container(
-                    width: 220,
-                    margin: const EdgeInsets.symmetric(horizontal: 5),
-                    child: Card(
-                      elevation: 1,
-                      shadowColor: Colors.black.withValues(alpha: 0.08),
-                      clipBehavior: Clip.antiAlias,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                        side: const BorderSide(color: AppColors.cardBorder),
-                      ),
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ServiceDetailsScreen(service: service),
-                            ),
-                          );
-                        },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            CustomImage(
-                              imageUrl: service.imageUrl,
-                              height: 125,
-                              fit: BoxFit.cover,
-                              fallbackIcon: Icons.spa_rounded,
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    service.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.textPrimary,
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Dakshina',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: AppColors.textSecondary,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 1),
-                                          Text(
-                                            service.formattedPrice,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w900,
-                                              color: AppColors.primary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            colors: [AppColors.primary, AppColors.accent],
-                                            begin: Alignment.centerLeft,
-                                            end: Alignment.centerRight,
-                                          ),
-                                          borderRadius: BorderRadius.circular(10),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.primary.withValues(alpha: 0.3),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              'Book Now',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w800,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                            SizedBox(width: 4),
-                                            Icon(Icons.arrow_forward_rounded, size: 12, color: Colors.white),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
   // 4. Latest News & Announcements Section (Sliding Banner Style)
   Widget _buildNewsSection() {
     return StreamBuilder<List<NewsModel>>(
@@ -793,80 +597,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 6. Upcoming Festivals & Events
-  Widget _buildEventsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: 'Temple Festivals & Utsavams',
-          actionText: 'View All',
-          onAction: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const EventsScreen()),
-            );
-          },
-        ),
-        const SizedBox(height: 6),
-        StreamBuilder<List<EventModel>>(
-          stream: _db.getPublishedEvents(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const SizedBox.shrink();
-            }
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const SizedBox.shrink();
-            }
-
-            final events = snapshot.data!.take(2).toList();
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                children: events.map((event) {
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF7B1FA2), Color(0xFF9C27B0)],
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.celebration_rounded, color: Colors.white, size: 22),
-                      ),
-                      title: Text(
-                        event.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        '${event.eventDate}${event.timeRange.isNotEmpty ? ' • ${event.timeRange}' : ''}',
-                        style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w700),
-                      ),
-                      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const EventsScreen()),
-                        );
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  // 7. Donations Section
+  // 5. Donations Section
   Widget _buildDonationsSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),

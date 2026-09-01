@@ -114,8 +114,9 @@ class _ServicesScreenState extends State<ServicesScreen> {
                           children: [
                             CustomImage(
                               imageUrl: service.imageUrl,
-                              height: 160,
+                              height: 200,
                               fit: BoxFit.cover,
+                              alignment: Alignment.topCenter,
                               fallbackIcon: Icons.spa_rounded,
                             ),
                             Padding(

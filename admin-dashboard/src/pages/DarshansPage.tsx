@@ -6,7 +6,6 @@ export default function DarshansPage() {
   const [darshans, setDarshans] = useState<Darshan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -144,82 +143,40 @@ export default function DarshansPage() {
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          {/* View Mode Switcher */}
-          <div
-            style={{
-              background: "#ffffff",
-              border: "1px solid var(--color-border)",
-              borderRadius: "10px",
-              padding: "3px",
-              display: "flex",
-            }}
-          >
-            <button
-              onClick={() => setViewMode("grid")}
-              style={{
-                padding: "6px 12px",
-                borderRadius: "8px",
-                border: "none",
-                background: viewMode === "grid" ? "var(--color-primary-bg)" : "transparent",
-                color: viewMode === "grid" ? "var(--color-primary)" : "var(--color-text-secondary)",
-                fontWeight: "700",
-                fontSize: "0.82rem",
-                cursor: "pointer",
-              }}
-            >
-              🗂️ Cards
-            </button>
-            <button
-              onClick={() => setViewMode("table")}
-              style={{
-                padding: "6px 12px",
-                borderRadius: "8px",
-                border: "none",
-                background: viewMode === "table" ? "var(--color-primary-bg)" : "transparent",
-                color: viewMode === "table" ? "var(--color-primary)" : "var(--color-text-secondary)",
-                fontWeight: "700",
-                fontSize: "0.82rem",
-                cursor: "pointer",
-              }}
-            >
-              📋 Table
-            </button>
-          </div>
-
+        <div>
           <button className="btn btn-primary" onClick={() => handleOpenModal()}>
             + Add New Darshan
           </button>
         </div>
       </div>
 
-      {/* Summary Chips */}
-      <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", marginBottom: "24px" }}>
-        <div className="stat-card" style={{ padding: "14px 20px", flex: 1, minWidth: "160px" }}>
-          <span style={{ fontSize: "1.4rem" }}>🙏</span>
+      {/* Summary Chips - Compact */}
+      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "20px" }}>
+        <div className="stat-card" style={{ padding: "10px 16px", flex: "0 1 200px", minWidth: "150px" }}>
+          <span style={{ fontSize: "1.2rem" }}>🙏</span>
           <div>
-            <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#0f172a" }}>{darshans.length}</div>
-            <div style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+            <div style={{ fontSize: "1.15rem", fontWeight: "900", color: "#0f172a" }}>{darshans.length}</div>
+            <div style={{ fontSize: "0.74rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
               Total Offerings
             </div>
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: "14px 20px", flex: 1, minWidth: "160px" }}>
-          <span style={{ fontSize: "1.4rem" }}>🟢</span>
+        <div className="stat-card" style={{ padding: "10px 16px", flex: "0 1 200px", minWidth: "150px" }}>
+          <span style={{ fontSize: "1.2rem" }}>🟢</span>
           <div>
-            <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#047857" }}>{activeCount}</div>
-            <div style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+            <div style={{ fontSize: "1.15rem", fontWeight: "900", color: "#047857" }}>{activeCount}</div>
+            <div style={{ fontSize: "0.74rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
               Active on Mobile
             </div>
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: "14px 20px", flex: 1, minWidth: "160px" }}>
-          <span style={{ fontSize: "1.4rem" }}>⚡</span>
+        <div className="stat-card" style={{ padding: "10px 16px", flex: "0 1 200px", minWidth: "150px" }}>
+          <span style={{ fontSize: "1.2rem" }}>⚡</span>
           <div>
-            <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#b45309" }}>{bookingCount}</div>
-            <div style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+            <div style={{ fontSize: "1.15rem", fontWeight: "900", color: "#b45309" }}>{bookingCount}</div>
+            <div style={{ fontSize: "0.74rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
               Booking Enabled
             </div>
           </div>
@@ -246,35 +203,42 @@ export default function DarshansPage() {
             + Add First Darshan
           </button>
         </div>
-      ) : viewMode === "grid" ? (
-        /* Grid Cards View */
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
+      ) : (
+        /* Grid Cards View - Compact Size */
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 320px))", gap: "16px" }}>
           {darshans.map((darshan) => (
             <div
               key={darshan.id}
               className="form-card"
-              style={{ padding: "20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}
+              style={{
+                padding: "14px 16px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                borderRadius: "12px",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+              }}
             >
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     {darshan.imageUrl ? (
                       <img
                         src={darshan.imageUrl}
                         alt={darshan.name}
-                        style={{ width: "46px", height: "46px", objectFit: "cover", borderRadius: "10px", border: "1px solid var(--color-border)" }}
+                        style={{ width: "42px", height: "42px", objectFit: "cover", borderRadius: "8px", border: "1px solid var(--color-border)" }}
                       />
                     ) : (
                       <div
                         style={{
-                          width: "46px",
-                          height: "46px",
-                          borderRadius: "10px",
+                          width: "42px",
+                          height: "42px",
+                          borderRadius: "8px",
                           background: "linear-gradient(135deg, #fffbeb, #fed7aa)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: "1.4rem",
+                          fontSize: "1.3rem",
                           border: "1px solid #fde68a",
                         }}
                       >
@@ -282,26 +246,26 @@ export default function DarshansPage() {
                       </div>
                     )}
                     <div>
-                      <h3 style={{ fontSize: "1.1rem", fontWeight: "800", color: "#0f172a" }}>{darshan.name}</h3>
-                      <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", fontWeight: "600" }}>
-                        Display Priority #{darshan.displayOrder}
+                      <h3 style={{ fontSize: "0.98rem", fontWeight: "800", color: "#0f172a", marginBottom: "3px" }}>{darshan.name}</h3>
+                      <span style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", fontWeight: "600" }}>
+                        Priority #{darshan.displayOrder}
                       </span>
                     </div>
                   </div>
 
-                  <span className={`badge ${darshan.isActive ? "badge-success" : "badge-neutral"}`}>
+                  <span className={`badge ${darshan.isActive ? "badge-success" : "badge-neutral"}`} style={{ fontSize: "0.68rem", padding: "2px 6px" }}>
                     {darshan.isActive ? "● Active" : "● Inactive"}
                   </span>
                 </div>
 
                 <p
                   style={{
-                    fontSize: "0.86rem",
+                    fontSize: "0.80rem",
                     color: "var(--color-text-secondary)",
-                    lineHeight: "1.5",
-                    marginBottom: "16px",
+                    lineHeight: "1.4",
+                    marginBottom: "12px",
                     display: "-webkit-box",
-                    WebkitLineClamp: 3,
+                    WebkitLineClamp: 2,
                     WebkitBoxOrient: "vertical",
                     overflow: "hidden",
                   }}
@@ -315,123 +279,39 @@ export default function DarshansPage() {
                   style={{
                     background: "#f8fafc",
                     border: "1px solid var(--color-border)",
-                    borderRadius: "10px",
-                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    padding: "6px 10px",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginBottom: "16px",
+                    marginBottom: "10px",
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", fontWeight: "700", textTransform: "uppercase" }}>
+                    <div style={{ fontSize: "0.64rem", color: "var(--color-text-muted)", fontWeight: "700", textTransform: "uppercase" }}>
                       Dakshina / Fee
                     </div>
-                    <div style={{ fontSize: "1.2rem", fontWeight: "900", color: "#b45309" }}>
-                      {darshan.price > 0 ? `₹${darshan.price}` : "Free Darshan"}
+                    <div style={{ fontSize: "1.05rem", fontWeight: "900", color: darshan.price > 0 ? "#b45309" : "#047857" }}>
+                      {darshan.price > 0 ? `₹${darshan.price}` : "Free"}
                     </div>
                   </div>
 
-                  <span className={`badge ${darshan.bookingEnabled ? "badge-info" : "badge-neutral"}`}>
-                    {darshan.bookingEnabled ? "⚡ Online Booking" : "Walk-in Only"}
+                  <span className={`badge ${darshan.bookingEnabled ? "badge-info" : "badge-neutral"}`} style={{ fontSize: "0.68rem", padding: "2px 6px" }}>
+                    {darshan.bookingEnabled ? "⚡ Online Booking" : "Offline"}
                   </span>
                 </div>
 
-                <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
-                  <button className="btn-icon text-primary" onClick={() => handleOpenModal(darshan)}>
+                <div className="action-buttons" style={{ justifyContent: "flex-end", gap: "6px" }}>
+                  <button className="btn-icon text-primary" onClick={() => handleOpenModal(darshan)} style={{ fontSize: "0.78rem" }}>
                     ✏️ Edit
                   </button>
-                  <button className="btn-icon text-danger" onClick={() => setDeleteId(darshan.id!)}>
+                  <button className="btn-icon text-danger" onClick={() => setDeleteId(darshan.id!)} style={{ fontSize: "0.78rem" }}>
                     🗑️ Delete
                   </button>
                 </div>
               </div>
             </div>
           ))}
-        </div>
-      ) : (
-        /* Table View */
-        <div className="card-section" style={{ padding: 0, overflow: "hidden" }}>
-          <div className="table-container" style={{ border: "none" }}>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Darshan Offering</th>
-                  <th>Dakshina</th>
-                  <th>Online Booking</th>
-                  <th>Status</th>
-                  <th>Display Order</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {darshans.map((darshan) => (
-                  <tr key={darshan.id}>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        {darshan.imageUrl ? (
-                          <img
-                            src={darshan.imageUrl}
-                            alt={darshan.name}
-                            style={{ width: "38px", height: "38px", objectFit: "cover", borderRadius: "8px", border: "1px solid var(--color-border)" }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: "38px",
-                              height: "38px",
-                              borderRadius: "8px",
-                              background: "#fef3c7",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "1.1rem",
-                            }}
-                          >
-                            🙏
-                          </div>
-                        )}
-                        <div>
-                          <div style={{ fontWeight: "800", color: "#0f172a" }}>{darshan.name}</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
-                            {darshan.description?.substring(0, 45)}...
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span style={{ fontWeight: "800", color: "#b45309", fontSize: "0.95rem" }}>
-                        {darshan.price > 0 ? `₹${darshan.price}` : "Free"}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${darshan.bookingEnabled ? "badge-info" : "badge-neutral"}`}>
-                        {darshan.bookingEnabled ? "Enabled" : "Disabled"}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${darshan.isActive ? "badge-success" : "badge-neutral"}`}>
-                        {darshan.isActive ? "● Active" : "● Inactive"}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="ref-code">#{darshan.displayOrder}</span>
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
-                        <button className="btn-icon text-primary" onClick={() => handleOpenModal(darshan)}>
-                          Edit
-                        </button>
-                        <button className="btn-icon text-danger" onClick={() => setDeleteId(darshan.id!)}>
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       )}
 

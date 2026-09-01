@@ -277,22 +277,25 @@ class PaymentService {
       // 2. Open Razorpay Checkout UI
       onStateChange?.call(PaymentUIState.openingCheckout);
 
+      final int totalRupees = (amountInPaise / 100).toInt();
+
       final Map<String, dynamic> options = {
         'key': keyId,
         'amount': amountInPaise.toInt(),
         'name': 'Sri Kedareshwara Ashramam',
-        'description': offeringTitle,
         'order_id': orderId,
-        'prefill': {
-          'contact': donorPhone,
-          'email': donorEmail ?? '',
-          'name': donorName,
-        },
         'theme': {
-          'color': '#FF6F00',
+          'color': '#1E293B',
+          'hide_topbar': true,
         },
-        'external': {
-          'wallets': ['paytm'],
+        'modal': {
+          'confirm_close': true,
+        },
+        'notes': {
+          'temple': 'Sri Kedareshwara Ashramam',
+          'offering': offeringTitle,
+          'amount': '₹$totalRupees',
+          'devotee': donorName,
         },
       };
 

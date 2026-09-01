@@ -317,15 +317,31 @@ export default function TempleInfoPage() {
             {formData.imageUrl ? (
               <div
                 style={{
-                  height: "140px",
+                  height: "180px",
                   borderRadius: "12px",
-                  backgroundImage: `url(${formData.imageUrl})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
+                  background: "#0f172a",
                   marginBottom: "14px",
                   border: "1px solid var(--color-border)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
                 }}
-              />
+              >
+                <img
+                  src={formData.imageUrl}
+                  alt="Temple Preview"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    borderRadius: "12px",
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              </div>
             ) : (
               <div
                 style={{

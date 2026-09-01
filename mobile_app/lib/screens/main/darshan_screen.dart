@@ -20,7 +20,8 @@ class DarshanScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Darshan'),
+        title: const Text('Darshan Seva'),
+        elevation: 0,
       ),
       body: StreamBuilder<List<DarshanModel>>(
         stream: DatabaseService().getActiveDarshans(),
@@ -35,7 +36,6 @@ class DarshanScreen extends StatelessWidget {
             return ErrorStateWidget(
               message: 'Failed to load darshan types.',
               onRetry: () {
-                // StreamBuilder automatically handles reconnection
                 (context as Element).markNeedsBuild();
               },
             );
@@ -47,14 +47,120 @@ class DarshanScreen extends StatelessWidget {
             return const EmptyStateWidget(
               icon: Icons.temple_hindu_rounded,
               title: 'No Darshan Available',
-              description: 'Darshan options will appear here once added.',
+              description: 'Darshan options will appear here once scheduled by the temple.',
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: darshans.length,
-            itemBuilder: (context, index) => _DarshanCard(darshan: darshans[index]),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 1. Devotional Header Hero Banner
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFF3E0), Color(0xFFFFE0B2)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFFFCC80), width: 1.2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orange.withValues(alpha: 0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Image.asset(
+                          'assets/icons/darshan_selected.png',
+                          width: 32,
+                          height: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Divine Darshan Booking',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFFE65100),
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            SizedBox(height: 3),
+                            Text(
+                              'Reserve fast-track passes & special entry slots in advance.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF5D4037),
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                // 2. Darshan Offerings List
+                ...darshans.map((d) => _DarshanCard(darshan: d)),
+
+                const SizedBox(height: 10),
+
+                // 3. Pilgrim Guidelines Note
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 18),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Traditional temple attire is mandatory. Please bring your digital pass on the booking date.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           );
         },
       ),
@@ -68,71 +174,192 @@ class _DarshanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => _DarshanDetailScreen(darshan: darshan),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: 72,
-                  height: 72,
-                  child: darshan.imageUrl != null && darshan.imageUrl!.isNotEmpty
-                      ? CustomImage(imageUrl: darshan.imageUrl!, fit: BoxFit.cover)
-                      : Container(
-                          color: AppColors.primaryLight.withValues(alpha: 0.15),
-                          child: const Icon(Icons.temple_hindu_rounded, color: AppColors.primary, size: 32),
-                        ),
-                ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFFE0B2), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => _DarshanDetailScreen(darshan: darshan),
               ),
-              const SizedBox(width: 16),
-              // Content
-              Expanded(
-                child: Column(
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      darshan.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                    // Icon / Image Container
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFF3E0), Color(0xFFFFE0B2)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFFFCC80), width: 1),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: darshan.imageUrl != null && darshan.imageUrl!.isNotEmpty
+                            ? CustomImage(imageUrl: darshan.imageUrl!, fit: BoxFit.cover)
+                            : Center(
+                                child: Image.asset(
+                                  'assets/icons/darshan_selected.png',
+                                  width: 36,
+                                  height: 36,
+                                ),
+                              ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      darshan.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      darshan.formattedPrice,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
+                    const SizedBox(width: 14),
+
+                    // Title & Fast-Track Badge
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                darshan.name,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimary,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE8F5E9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFA5D6A7)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.bolt_rounded, size: 12, color: Color(0xFF2E7D32)),
+                                    SizedBox(width: 2),
+                                    Text(
+                                      'Fast Track',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF2E7D32),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            darshan.description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-              const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
-            ],
+
+                const Divider(height: 24, color: Color(0xFFF5F5F5)),
+
+                // Price & Action Button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Dakshina / Devotee',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          darshan.formattedPrice,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFFE65100),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primary, AppColors.accent],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Select Slots',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(Icons.arrow_forward_rounded, size: 15, color: Colors.white),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -141,7 +368,6 @@ class _DarshanCard extends StatelessWidget {
 }
 
 /// Detail screen for a specific darshan type.
-/// Shows darshan info, available slots, and a "Payment Coming Soon" stop.
 class _DarshanDetailScreen extends StatelessWidget {
   final DarshanModel darshan;
   const _DarshanDetailScreen({required this.darshan});
@@ -151,55 +377,141 @@ class _DarshanDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(darshan.name),
+        elevation: 0,
       ),
       body: Column(
         children: [
-          // Darshan info header
-          if (darshan.imageUrl != null && darshan.imageUrl!.isNotEmpty)
-            SizedBox(
-              height: 200,
-              width: double.infinity,
-              child: CustomImage(imageUrl: darshan.imageUrl!, fit: BoxFit.cover),
+          // Darshan Info Hero Card
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: AppColors.cardBorder.withValues(alpha: 0.6))),
             ),
-          Padding(
-            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  darshan.name,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  darshan.description,
-                  style: const TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
-                ),
-                const SizedBox(height: 12),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.currency_rupee, size: 18, color: AppColors.primary),
-                    const SizedBox(width: 4),
-                    Text(
-                      darshan.formattedPrice,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            darshan.name,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                              letterSpacing: -0.4,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            darshan.description,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFFFCC80)),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Dakshina',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFB71C1C),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            darshan.formattedPrice,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFE65100),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 14),
+
+                // Feature Highlights
+                const SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _FeaturePill(icon: Icons.flash_on_rounded, text: 'Fast Entry'),
+                      SizedBox(width: 8),
+                      _FeaturePill(icon: Icons.confirmation_number_outlined, text: 'Digital Pass'),
+                      SizedBox(width: 8),
+                      _FeaturePill(icon: Icons.volunteer_activism_outlined, text: 'Prasadam'),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-          const Divider(height: 1),
 
-          // Slots section
+          // Slots section header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Available Darshan Slots',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.event_available_rounded, size: 14, color: AppColors.primary),
+                      SizedBox(width: 4),
+                      Text(
+                        'Live Availability',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Slots List
           Expanded(
             child: darshan.bookingEnabled
                 ? _DarshanSlotsSection(darshan: darshan)
@@ -212,7 +524,7 @@ class _DarshanDetailScreen extends StatelessWidget {
                           Icon(Icons.event_busy_rounded, size: 56, color: AppColors.textTertiary),
                           SizedBox(height: 16),
                           Text(
-                            'Online booking is not available for this darshan.',
+                            'Online booking is currently paused for this darshan.',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 15, color: AppColors.textSecondary),
                           ),
@@ -227,9 +539,76 @@ class _DarshanDetailScreen extends StatelessWidget {
   }
 }
 
+class _FeaturePill extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _FeaturePill({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFA),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFEEEEEE)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppColors.primary),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DarshanSlotsSection extends StatelessWidget {
   final DarshanModel darshan;
   const _DarshanSlotsSection({required this.darshan});
+
+  String _formatTime(String timeRange) {
+    // Converts "06:00 - 07:00" or "19:00 - 20:00" to "06:00 AM - 07:00 AM" or "07:00 PM - 08:00 PM"
+    try {
+      final parts = timeRange.split('-');
+      if (parts.length != 2) return timeRange;
+
+      String formatSingle(String t) {
+        final sub = t.trim().split(':');
+        if (sub.length < 2) return t.trim();
+        int hour = int.parse(sub[0]);
+        final min = sub[1];
+        final period = hour >= 12 ? 'PM' : 'AM';
+        if (hour > 12) hour -= 12;
+        if (hour == 0) hour = 12;
+        final hourStr = hour < 10 ? '0$hour' : '$hour';
+        return '$hourStr:$min $period';
+      }
+
+      return '${formatSingle(parts[0])} – ${formatSingle(parts[1])}';
+    } catch (_) {
+      return timeRange;
+    }
+  }
+
+  bool _isMorning(String timeRange) {
+    try {
+      final start = timeRange.split('-')[0].trim();
+      final hour = int.parse(start.split(':')[0]);
+      return hour < 14;
+    } catch (_) {
+      return true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -248,50 +627,147 @@ class _DarshanSlotsSection extends StatelessWidget {
           return const EmptyStateWidget(
             icon: Icons.calendar_today_rounded,
             title: 'No Slots Available',
-            description: 'There are no available darshan slots at this time.',
+            description: 'There are no active darshan slots right now. Please check back later.',
           );
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           itemCount: slots.length,
           itemBuilder: (context, index) {
             final slot = slots[index];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              child: ListTile(
-                leading: Icon(
-                  Icons.access_time_rounded,
-                  color: slot.isFull ? AppColors.textTertiary : AppColors.primary,
+            final isMorn = _isMorning(slot.timeRange);
+            final formattedTime = _formatTime(slot.timeRange);
+            final isFull = slot.isFull;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isFull ? const Color(0xFFFFCDD2) : const Color(0xFFFFE0B2),
+                  width: 1.2,
                 ),
-                title: Text(
-                  '${slot.date}  •  ${slot.timeRange}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: slot.isFull ? AppColors.textTertiary : AppColors.textPrimary,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-                subtitle: Text(
-                  slot.isFull ? 'Fully booked' : '${slot.available} spots available',
-                  style: TextStyle(
-                    color: slot.isFull ? AppColors.statusCancelled : AppColors.statusConfirmed,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
-                  ),
-                ),
-                trailing: slot.isFull
-                    ? const Text('Full', style: TextStyle(color: AppColors.textTertiary))
-                    : const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.primary),
-                onTap: slot.isFull
-                    ? null
-                    : () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => _DarshanReviewScreen(darshan: darshan, slot: slot),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: isFull
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => _DarshanReviewScreen(darshan: darshan, slot: slot),
+                            ),
+                          );
+                        },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        // Session Icon
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isMorn ? const Color(0xFFFFF8E1) : const Color(0xFFEDE7F6),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isMorn ? const Color(0xFFFFE082) : const Color(0xFFD1C4E9),
+                            ),
                           ),
-                        );
-                      },
+                          child: Icon(
+                            isMorn ? Icons.wb_sunny_rounded : Icons.nights_stay_rounded,
+                            color: isMorn ? const Color(0xFFF57F17) : const Color(0xFF5E35B1),
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+
+                        // Time & Availability
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    formattedTime,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: isFull ? AppColors.textTertiary : AppColors.textPrimary,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isFull
+                                          ? const Color(0xFFFFEBEE)
+                                          : const Color(0xFFE8F5E9),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      isFull ? '🔴 Fully Booked' : '🟢 ${slot.available} spots left',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: isFull
+                                            ? const Color(0xFFC62828)
+                                            : const Color(0xFF2E7D32),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Date: ${slot.date}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textTertiary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Action Arrow
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isFull
+                                ? Colors.transparent
+                                : const Color(0xFFFFF3E0),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 14,
+                            color: isFull ? AppColors.textTertiary : AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             );
           },
@@ -529,116 +1005,171 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Review Darshan Booking'),
+        elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // 1. Darshan & Slot Details Card
-            Card(
-              elevation: 1,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: AppColors.cardBorder),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFFFE0B2), width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.temple_hindu_rounded, color: AppColors.primary, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Darshan Details',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF3E0),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      ],
-                    ),
-                    const Divider(height: 24),
-                    _buildRow('Darshan', widget.darshan.name),
-                    _buildRow('Date', widget.slot.date),
-                    _buildRow('Time', widget.slot.timeRange),
-                    _buildRow('Price / Person', widget.darshan.formattedPrice),
-                  ],
-                ),
+                        child: Image.asset('assets/icons/darshan_selected.png', width: 22, height: 22),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Darshan Pass Summary',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 22, color: Color(0xFFF5F5F5)),
+                  _buildRow('Darshan Type', widget.darshan.name),
+                  _buildRow('Date of Visit', widget.slot.date),
+                  _buildRow('Timing Slot', widget.slot.timeRange),
+                  _buildRow('Dakshina / Person', widget.darshan.formattedPrice),
+                ],
               ),
             ),
             const SizedBox(height: 16),
 
             // 2. Number of Devotees Counter Card
-            Card(
-              elevation: 1,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: AppColors.cardBorder),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.cardBorder),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Number of Devotees',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Number of Devotees',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
                     ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.cardBorder),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove_rounded, size: 20),
-                                color: _quantity > 1 ? AppColors.primary : AppColors.textTertiary,
-                                onPressed: _quantity > 1 ? () => _updateQuantity(_quantity - 1) : null,
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text(
-                                  '$_quantity',
-                                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFAFAFA),
+                          border: Border.all(color: const Color(0xFFFFCC80)),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove_rounded, size: 20),
+                              color: _quantity > 1 ? const Color(0xFFE65100) : AppColors.textTertiary,
+                              onPressed: _quantity > 1 ? () => _updateQuantity(_quantity - 1) : null,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              child: Text(
+                                '$_quantity',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFFE65100),
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.add_rounded, size: 20),
-                                color: _quantity < maxAllowed ? AppColors.primary : AppColors.textTertiary,
-                                onPressed: _quantity < maxAllowed ? () => _updateQuantity(_quantity + 1) : null,
-                              ),
-                            ],
-                          ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add_rounded, size: 20),
+                              color: _quantity < maxAllowed ? const Color(0xFFE65100) : AppColors.textTertiary,
+                              onPressed: _quantity < maxAllowed ? () => _updateQuantity(_quantity + 1) : null,
+                            ),
+                          ],
                         ),
-                        const Spacer(),
-                        Text(
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFA5D6A7)),
+                        ),
+                        child: Text(
                           '$available spots left',
                           style: const TextStyle(
-                            color: AppColors.statusConfirmed,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
+                            color: Color(0xFF2E7D32),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
                           ),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
             // 3. Dynamic Devotee Information Section
-            Text(
-              'Devotee Details ($_quantity ${_quantity == 1 ? 'Person' : 'Persons'})',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-                letterSpacing: -0.2,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Devotee Details ($_quantity ${_quantity == 1 ? 'Person' : 'Persons'})',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const Text(
+                    'All Fields Required *',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 10),
@@ -647,126 +1178,369 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
               final index = entry.key;
               final devotee = entry.value;
 
-              return Card(
-                elevation: 1,
+              return Container(
                 margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: AppColors.cardBorder),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 12,
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                            child: Text(
-                              '${index + 1}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            index == 0 ? 'Primary Devotee (You)' : 'Devotee ${index + 1}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: devotee.nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Full Name *',
-                          hintText: 'Enter devotee full name',
-                          isDense: true,
-                          prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: devotee.phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          labelText: index == 0 ? 'Contact Phone Number *' : 'Phone Number (Optional)',
-                          hintText: 'Enter 10-digit mobile number',
-                          isDense: true,
-                          prefixIcon: const Icon(Icons.phone_outlined, size: 20),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-
-            const SizedBox(height: 12),
-
-            // 4. Payment Summary Card
-            Card(
-              elevation: 1,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: AppColors.cardBorder),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Total Dakshina Amount',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.cardBorder),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     ),
-                    Text(
-                      totalAmount > 0 ? '₹$totalAmount' : 'Free',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.primary,
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 12,
+                          backgroundColor: const Color(0xFFFFF3E0),
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFE65100),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          index == 0 ? 'Primary Devotee (You)' : 'Devotee ${index + 1}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: devotee.nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Full Name *',
+                        hintText: 'Enter devotee full name',
+                        isDense: true,
+                        prefixIcon: const Icon(Icons.person_outline_rounded, size: 20, color: AppColors.primary),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: devotee.phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: index == 0 ? 'Contact Phone Number *' : 'Phone Number (Optional)',
+                        hintText: 'Enter 10-digit mobile number',
+                        isDense: true,
+                        prefixIcon: const Icon(Icons.phone_outlined, size: 20, color: AppColors.primary),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ],
                 ),
+              );
+            }),
+
+            const SizedBox(height: 6),
+
+            // 4. Payment Summary Card
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFF8E1), Color(0xFFFFECB3)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFFFD54F), width: 1.2),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Total Dakshina',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF795548),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$_quantity Devotee(s) × ${widget.darshan.formattedPrice}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF8D6E63),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    totalAmount > 0 ? '₹$totalAmount' : 'Free',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFFE65100),
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
 
             // 5. Pay Now Button
             CustomButton(
               text: 'PAY NOW (₹$totalAmount)',
-              icon: Icons.check_circle_outline,
-              onPressed: _submitBooking,
+              icon: Icons.lock_outline_rounded,
+              onPressed: _confirmAndPay,
               isLoading: _isLoading,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
+  void _confirmAndPay() {
+    final user = context.read<AuthProvider>().userModel;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to complete your booking.')),
+      );
+      return;
+    }
+
+    // Validate Devotee Inputs first
+    for (int i = 0; i < _devotees.length; i++) {
+      final name = _devotees[i].nameController.text.trim();
+      final phone = _devotees[i].phoneController.text.trim();
+
+      if (name.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please enter the name for Devotee ${i + 1}.'),
+            backgroundColor: AppColors.statusCancelled,
+          ),
+        );
+        return;
+      }
+
+      if (i == 0 && phone.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid contact phone number for Primary Devotee.'),
+            backgroundColor: AppColors.statusCancelled,
+          ),
+        );
+        return;
+      }
+    }
+
+    final expectedTotal = widget.darshan.price * _quantity;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetCtx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Title
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Image.asset('assets/icons/darshan_selected.png', width: 24, height: 24),
+                  ),
+                  const SizedBox(width: 10),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Payment Summary',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Sri Kedareshwara Ashramam',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Breakdown Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFFFD54F), width: 1.2),
+                ),
+                child: Column(
+                  children: [
+                    _buildRow('Seva Type', widget.darshan.name),
+                    _buildRow('Date of Visit', widget.slot.date),
+                    _buildRow('Slot Time', widget.slot.timeRange),
+                    const Divider(height: 16, color: Color(0xFFFFE082)),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Devotees ($_quantity)',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF795548),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ..._devotees.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final dev = entry.value;
+                      final devName = dev.nameController.text.trim();
+                      final devPhone = dev.phoneController.text.trim();
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 9,
+                              backgroundColor: const Color(0xFFFFECB3),
+                              child: Text(
+                                '${idx + 1}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFFE65100),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    idx == 0 ? '$devName (Primary)' : devName,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  if (devPhone.isNotEmpty)
+                                    Text(
+                                      devPhone,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textSecondary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const Divider(height: 18, color: Color(0xFFFFE082)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Total Dakshina',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF795548)),
+                        ),
+                        Text(
+                          '₹$expectedTotal',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFFE65100),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Confirm button
+              CustomButton(
+                text: 'CONTINUE TO PAYMENT (₹$expectedTotal) →',
+                icon: Icons.lock_outline_rounded,
+                onPressed: () {
+                  Navigator.pop(sheetCtx);
+                  _submitBooking();
+                },
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: 130,
             child: Text(
               label,
               style: const TextStyle(
@@ -780,8 +1554,8 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
             child: Text(
               value,
               style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
                 color: AppColors.textPrimary,
               ),
             ),
@@ -791,4 +1565,3 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
     );
   }
 }
-

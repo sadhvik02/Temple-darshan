@@ -80,25 +80,25 @@ class _MainNavigatorState extends State<MainNavigator> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
-        destinations: [
+        destinations: const [
           NavigationDestination(
-            icon: Image.asset('assets/icons/darshan_unselected.png', width: 23, height: 23),
-            selectedIcon: Image.asset('assets/icons/darshan_selected.png', width: 23, height: 23),
+            icon: ImageIcon(AssetImage('assets/icons/darshan_selected.png'), size: 24, color: AppColors.primary),
+            selectedIcon: ImageIcon(AssetImage('assets/icons/darshan_selected.png'), size: 24, color: AppColors.primary),
             label: 'Darshan',
           ),
           NavigationDestination(
-            icon: Icon(Icons.spa_outlined),
-            selectedIcon: Icon(Icons.spa_rounded),
+            icon: Icon(Icons.spa_outlined, color: AppColors.primary),
+            selectedIcon: Icon(Icons.spa_rounded, color: AppColors.primary),
             label: 'Arjitha Sevas',
           ),
           NavigationDestination(
-            icon: Icon(Icons.confirmation_number_outlined),
-            selectedIcon: Icon(Icons.confirmation_number_rounded),
+            icon: Icon(Icons.confirmation_number_outlined, color: AppColors.primary),
+            selectedIcon: Icon(Icons.confirmation_number_rounded, color: AppColors.primary),
             label: 'Bookings',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_pin_circle_outlined),
-            selectedIcon: Icon(Icons.person_pin_circle_rounded),
+            icon: Icon(Icons.person_pin_circle_outlined, color: AppColors.primary),
+            selectedIcon: Icon(Icons.person_pin_circle_rounded, color: AppColors.primary),
             label: 'Devotee',
           ),
         ],

@@ -141,7 +141,7 @@ class AppTheme {
           if (states.contains(WidgetState.selected)) {
             return const IconThemeData(color: AppColors.primary, size: 24);
           }
-          return const IconThemeData(color: AppColors.textSecondary, size: 24);
+          return IconThemeData(color: AppColors.primary.withValues(alpha: 0.65), size: 24);
         }),
       ),
       dividerTheme: const DividerThemeData(

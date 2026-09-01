@@ -536,14 +536,30 @@ export default function DonationsPage() {
                 {formData.imageUrl && (
                   <div
                     style={{
-                      height: "130px",
-                      borderRadius: "10px",
-                      backgroundImage: `url(${formData.imageUrl})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
+                      height: "220px",
+                      borderRadius: "12px",
+                      background: "#0f172a",
                       border: "1px solid var(--color-border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
                     }}
-                  />
+                  >
+                    <img
+                      src={formData.imageUrl}
+                      alt="Preview"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
+                        borderRadius: "12px",
+                      }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
                 )}
 
                 <div className="form-group">

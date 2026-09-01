@@ -6,6 +6,7 @@ class CustomImage extends StatelessWidget {
   final double? width;
   final double? height;
   final BoxFit fit;
+  final Alignment alignment;
   final BorderRadius? borderRadius;
   final IconData fallbackIcon;
   final Color? backgroundColor;
@@ -16,6 +17,7 @@ class CustomImage extends StatelessWidget {
     this.width,
     this.height,
     this.fit = BoxFit.cover,
+    this.alignment = Alignment.center,
     this.borderRadius,
     this.fallbackIcon = Icons.temple_hindu,
     this.backgroundColor,
@@ -37,6 +39,7 @@ class CustomImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
+        alignment: alignment,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
           return Container(
