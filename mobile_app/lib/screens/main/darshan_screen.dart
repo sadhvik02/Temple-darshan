@@ -465,6 +465,7 @@ class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
           description: widget.darshan.description,
           price: widget.darshan.price,
           bookingEnabled: true,
+                                category: 'darshan',
         );
 
         Navigator.pushReplacement(

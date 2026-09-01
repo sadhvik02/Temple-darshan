@@ -31,14 +31,19 @@ class DatabaseService {
             snap.docs.map((doc) => BannerModel.fromFirestore(doc)).toList());
   }
 
-  Stream<List<ServiceModel>> getActiveServices() {
+  Stream<List<ServiceModel>> getActiveServices({String? category}) {
     return _db
         .collection('services')
         .where('isActive', isEqualTo: true)
         .orderBy('displayOrder')
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((doc) => ServiceModel.fromFirestore(doc)).toList());
+        .map((snap) {
+          var services = snap.docs.map((doc) => ServiceModel.fromFirestore(doc)).toList();
+          if (category != null) {
+            services = services.where((s) => s.category == category).toList();
+          }
+          return services;
+        });
   }
 
   Stream<List<SlotModel>> getActiveSlotsForService(String serviceId) {

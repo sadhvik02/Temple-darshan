@@ -58,6 +58,7 @@ class ServiceModel {
   final num price;
   final String? imageUrl;
   final bool bookingEnabled;
+  final String category;
 
   ServiceModel({
     required this.id,
@@ -66,6 +67,7 @@ class ServiceModel {
     required this.price,
     this.imageUrl,
     required this.bookingEnabled,
+    required this.category,
   });
 
   factory ServiceModel.fromFirestore(DocumentSnapshot doc) {
@@ -77,6 +79,7 @@ class ServiceModel {
       price: data['price'] ?? 0,
       imageUrl: data['imageUrl'],
       bookingEnabled: data['bookingEnabled'] ?? false,
+      category: (data['category'] == 'seva' || data['category'] == null) ? 'ashrama_seva' : data['category'],
     );
   }
 

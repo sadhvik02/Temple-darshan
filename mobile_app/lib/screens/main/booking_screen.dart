@@ -9,6 +9,8 @@ import '../../widgets/payment_processing_dialog.dart';
 import 'booking_success_screen.dart';
 import 'payment_failure_screen.dart';
 
+import 'package:cloud_functions/cloud_functions.dart';
+
 class DevoteeEntry {
   final TextEditingController nameController;
   final TextEditingController phoneController;
@@ -26,9 +28,15 @@ class DevoteeEntry {
 
 class BookingScreen extends StatefulWidget {
   final ServiceModel service;
-  final SlotModel slot;
+  final SlotModel? slot;
+  final List<Map<String, String>>? recurringOccurrences;
 
-  const BookingScreen({super.key, required this.service, required this.slot});
+  const BookingScreen({
+    super.key,
+    required this.service,
+    this.slot,
+    this.recurringOccurrences,
+  });
 
   @override
   State<BookingScreen> createState() => _BookingScreenState();
@@ -72,7 +80,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
   void _updateQuantity(int newQty) {
     if (newQty < 1) return;
-    final available = widget.slot.available;
+    final available = widget.slot?.available ?? 50;
     final maxAllowed = available > 10 ? 10 : (available > 0 ? available : 10);
     if (newQty > maxAllowed) return;
 
@@ -149,62 +157,127 @@ class _BookingScreenState extends State<BookingScreen> {
     PaymentProcessingDialog.show(context, stateNotifier: _paymentStateNotifier);
 
     try {
-      final result = await PaymentService().startSevaPayment(
-        serviceId: widget.service.id,
-        serviceName: widget.service.name,
-        slotId: widget.slot.id,
-        date: widget.slot.date,
-        timeRange: widget.slot.timeRange,
-        quantity: _quantity,
-        expectedTotal: expectedTotal,
-        devoteeDetails: devoteeList,
-        donorName: primaryName,
-        donorPhone: primaryPhone,
-        donorEmail: user.email,
-        onStateChange: (state) {
-          _paymentStateNotifier.value = state;
+      if (widget.service.category == 'ashrama_seva') {
+        // FREE ASHRAMA SEVA FLOW (One-time or Recurring)
+        List<Map<String, String>> occurrences = [];
+        
+        if (widget.recurringOccurrences != null) {
+          occurrences = widget.recurringOccurrences!;
+        } else if (widget.slot != null) {
+          occurrences = [{
+            'slotId': widget.slot!.id,
+            'date': widget.slot!.date,
+            'timeRange': widget.slot!.timeRange,
+          }];
+        } else {
+          throw Exception("Missing booking schedule.");
         }
-      );
 
-      if (!mounted) return;
-      PaymentProcessingDialog.hide(context);
+        final HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('bookFreeSeva');
+        final response = await callable.call({
+          'serviceId': widget.service.id,
+          'serviceName': widget.service.name,
+          'quantity': _quantity,
+          'devotees': devoteeList,
+          'donorName': primaryName,
+          'donorPhone': primaryPhone,
+          'donorEmail': user.email,
+          'occurrences': occurrences,
+        });
 
-      if (result.isSuccess) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BookingSuccessScreen(
-              bookingRef: result.bookingRef ?? 'BK-VERIFIED',
-              service: widget.service,
-              slot: widget.slot,
-              quantity: _quantity,
-              totalAmount: expectedTotal.toDouble(),
-              date: widget.slot.date,
+        if (!mounted) return;
+        PaymentProcessingDialog.hide(context);
+
+        if (response.data != null && response.data['success'] == true) {
+          final List<dynamic> refs = response.data['bookingRefs'] ?? [];
+          final bookingRefStr = refs.isNotEmpty ? refs[0].toString() : 'BK-VERIFIED';
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BookingSuccessScreen(
+                bookingRef: bookingRefStr,
+                service: widget.service,
+                slot: widget.slot ?? SlotModel(
+                  id: 'recurring',
+                  serviceId: widget.service.id,
+                  date: occurrences.first['date'] ?? '',
+                  startTime: occurrences.first['timeRange']?.split(" - ")[0] ?? '',
+                  endTime: occurrences.first['timeRange']?.split(" - ")[1] ?? '',
+                  capacity: 50,
+                  bookedCount: 0,
+                  isActive: true,
+                ),
+                quantity: _quantity,
+                totalAmount: 0,
+                date: widget.recurringOccurrences != null 
+                    ? 'Recurring (${occurrences.length} months)' 
+                    : occurrences.first['date'] ?? '',
+              ),
             ),
-          ),
-        );
-      } else if (result.isCancelled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.message ?? 'Payment cancelled.'),
-            backgroundColor: AppColors.textSecondary,
-          ),
-        );
+          );
+        } else {
+          throw Exception("Booking failed to process.");
+        }
       } else {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PaymentFailureScreen(
-              type: result.isVerificationFailed ? FailureType.verificationFailed : (result.isNetworkError ? FailureType.networkError : FailureType.failed),
-              title: widget.service.name,
-              message: result.message,
-              paymentId: result.paymentId,
-              orderId: result.orderId,
-              totalAmount: expectedTotal.toDouble(),
-              onRetry: () => _submitBooking(),
-            ),
-          ),
+        // PAID FLOW (Darshan etc)
+        final result = await PaymentService().startSevaPayment(
+          serviceId: widget.service.id,
+          serviceName: widget.service.name,
+          slotId: widget.slot!.id,
+          date: widget.slot!.date,
+          timeRange: widget.slot!.timeRange,
+          quantity: _quantity,
+          expectedTotal: expectedTotal,
+          devoteeDetails: devoteeList,
+          donorName: primaryName,
+          donorPhone: primaryPhone,
+          donorEmail: user.email,
+          onStateChange: (state) {
+            _paymentStateNotifier.value = state;
+          }
         );
+
+        if (!mounted) return;
+        PaymentProcessingDialog.hide(context);
+
+        if (result.isSuccess) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BookingSuccessScreen(
+                bookingRef: result.bookingRef ?? 'BK-VERIFIED',
+                service: widget.service,
+                slot: widget.slot!,
+                quantity: _quantity,
+                totalAmount: expectedTotal.toDouble(),
+                date: widget.slot!.date,
+              ),
+            ),
+          );
+        } else if (result.isCancelled) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message ?? 'Payment cancelled.'),
+              backgroundColor: AppColors.textSecondary,
+            ),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PaymentFailureScreen(
+                type: result.isVerificationFailed ? FailureType.verificationFailed : (result.isNetworkError ? FailureType.networkError : FailureType.failed),
+                title: widget.service.name,
+                message: result.message,
+                paymentId: result.paymentId,
+                orderId: result.orderId,
+                totalAmount: expectedTotal.toDouble(),
+                onRetry: () => _submitBooking(),
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -222,13 +295,14 @@ class _BookingScreenState extends State<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final available = widget.slot.available > 0 ? widget.slot.available : 50;
+    final available = widget.slot?.available ?? 50;
     final maxAllowed = available > 10 ? 10 : available;
     final totalAmount = widget.service.price * _quantity;
+    final isFree = widget.service.category == 'ashrama_seva';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Review & Confirm Seva'),
+        title: Text(isFree ? 'Review & Confirm Seva' : 'Review & Pay'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -248,39 +322,59 @@ class _BookingScreenState extends State<BookingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.spa_rounded, color: AppColors.primary, size: 22),
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.service.name,
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${widget.slot.date} • ${widget.slot.timeRange}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            widget.service.name,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
+                        ),
+                        if (!isFree)
+                          Text(
+                            '₹${widget.service.price}',
+                            style: const TextStyle(
+                              fontSize: 18, 
+                              fontWeight: FontWeight.bold, 
+                              color: AppColors.primary
+                            ),
+                          )
+                        else
+                          const Text(
+                            'FREE',
+                            style: TextStyle(
+                              fontSize: 18, 
+                              fontWeight: FontWeight.bold, 
+                              color: Color(0xFF2E7D32)
+                            ),
+                          )
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Divider(color: AppColors.divider),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textSecondary),
+                        const SizedBox(width: 8),
+                        Text(
+                          widget.recurringOccurrences != null 
+                              ? 'Recurring (${widget.recurringOccurrences!.length} months)' 
+                              : widget.slot?.date ?? '',
+                          style: const TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded, size: 16, color: AppColors.textSecondary),
+                        const SizedBox(width: 8),
+                        Text(
+                          widget.recurringOccurrences != null 
+                              ? widget.recurringOccurrences!.first['timeRange'] ?? ''
+                              : widget.slot?.timeRange ?? '',
+                          style: const TextStyle(color: AppColors.textSecondary),
                         ),
                       ],
                     ),
@@ -441,64 +535,75 @@ class _BookingScreenState extends State<BookingScreen> {
 
             const SizedBox(height: 12),
 
-            // 4. Payment Summary Card
-            Card(
-              elevation: 1,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: AppColors.cardBorder),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(18),
+            // 4. Booking Summary & Pay Button
+            if (!isFree)
+              Container(
+                margin: const EdgeInsets.only(top: 20),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.3)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -4),
+                    )
+                  ],
+                ),
                 child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Total Dakshina',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
+                        const Text('Total Amount', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
                         Text(
                           '₹$totalAmount',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.primary,
-                          ),
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    const Row(
-                      children: [
-                        Icon(Icons.lock_rounded, size: 14, color: AppColors.textSecondary),
-                        SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Secured via Temple Payment Gateway (Razorpay)',
-                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 16),
+                    CustomButton(
+                      text: 'Proceed to Pay',
+                      isLoading: _isLoading,
+                      onPressed: _submitBooking,
                     ),
                   ],
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // 5. Pay Now Button (Protected against double taps)
-            CustomButton(
-              text: 'Pay ₹$totalAmount & Confirm',
-              isLoading: _isLoading,
-              onPressed: _isLoading ? null : _submitBooking,
-            ),
+              )
+            else
+              Container(
+                margin: const EdgeInsets.only(top: 20),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF2E7D32).withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  children: [
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Total Amount', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
+                        Text(
+                          'FREE',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    CustomButton(
+                      text: 'Confirm Seva Booking',
+                      isLoading: _isLoading,
+                      backgroundColor: const Color(0xFF2E7D32),
+                      onPressed: _submitBooking,
+                    ),
+                  ],
+                ),
+              )
           ],
         ),
       ),

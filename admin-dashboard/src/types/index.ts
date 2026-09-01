@@ -65,6 +65,7 @@ export interface Service {
   id?: string; // Document ID (added for client-side use)
   name: string;
   description: string;
+  category: 'ashrama_seva' | 'arjita_seva';
   imageUrl?: string; // Optional in schema
   price: number;
   bookingEnabled: boolean;
@@ -100,8 +101,11 @@ export interface Booking {
   devotees?: any[]; // Array of devotee maps
   quantity: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded' | 'free';
   totalAmount: number;
+  recurringGroupId?: string;
+  occurrenceNumber?: number;
+  totalOccurrences?: number;
   createdAt: any;
   updatedAt: any;
 }

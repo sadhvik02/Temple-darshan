@@ -198,6 +198,24 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(
             width: (MediaQuery.of(context).size.width - 60) / 3,
             child: _buildTTDServiceItem(
+              icon: Icons.self_improvement_rounded,
+              iconColor: const Color(0xFF00796B),
+              bgColor: const Color(0xFFB2DFDB),
+              label: 'Ashrama Seva',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ServicesScreen(
+                    categoryFilter: 'ashrama_seva',
+                    title: 'Ashrama Sevas',
+                  )),
+                );
+              },
+            ),
+          ),
+          SizedBox(
+            width: (MediaQuery.of(context).size.width - 60) / 3,
+            child: _buildTTDServiceItem(
               icon: Icons.spa_rounded,
               iconColor: const Color(0xFFE65100),
               bgColor: const Color(0xFFFFEDE5),
@@ -205,7 +223,10 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ServicesScreen()),
+                  MaterialPageRoute(builder: (_) => const ServicesScreen(
+                    categoryFilter: 'arjita_seva',
+                    title: 'Arjitha Sevas',
+                  )),
                 );
               },
             ),
@@ -499,13 +520,16 @@ class _HomeScreenState extends State<HomeScreen> {
           onAction: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const ServicesScreen()),
+              MaterialPageRoute(builder: (_) => const ServicesScreen(
+                categoryFilter: 'arjita_seva',
+                title: 'Arjitha Sevas',
+              )),
             );
           },
         ),
         const SizedBox(height: 8),
         StreamBuilder<List<ServiceModel>>(
-          stream: _db.getActiveServices(),
+          stream: _db.getActiveServices(category: 'arjita_seva'),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(

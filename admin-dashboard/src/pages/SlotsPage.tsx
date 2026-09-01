@@ -247,7 +247,7 @@ export default function SlotsPage() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "22px",
+          marginBottom: "12px",
           flexWrap: "wrap",
           gap: "14px",
         }}
@@ -269,6 +269,21 @@ export default function SlotsPage() {
         </div>
       </div>
 
+      <div style={{
+        padding: "12px 16px",
+        backgroundColor: "#fff3cd",
+        border: "1px solid #ffe69c",
+        borderRadius: "8px",
+        color: "#664d03",
+        marginBottom: "24px",
+        fontSize: "0.95rem"
+      }}>
+        <strong>⚠️ IMPORTANT: Recurring Sevas Availability</strong>
+        <p style={{ margin: "4px 0 0 0" }}>
+          The mobile app allows devotees to book recurring Sevas for up to 12 months. 
+          <strong> You MUST manually bulk-create future slots (up to 12 months in advance) </strong> 
+          for recurring bookings to succeed. If a required future slot is missing, the devotee's entire recurring booking will fail.
+        </p>
       {/* Metric Summary Cards */}
       <div
         style={{
@@ -825,6 +840,7 @@ export default function SlotsPage() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

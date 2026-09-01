@@ -18,9 +18,19 @@ export default function ServicesPage() {
   const [deleting, setDeleting] = useState(false);
 
   // Form Data
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    category: 'ashrama_seva' | 'arjita_seva';
+    imageUrl: string;
+    price: number;
+    bookingEnabled: boolean;
+    isActive: boolean;
+    displayOrder: number;
+  }>({
     name: "",
     description: "",
+    category: "ashrama_seva",
     imageUrl: "",
     price: 0,
     bookingEnabled: true,
@@ -51,6 +61,7 @@ export default function ServicesPage() {
       setFormData({
         name: service.name,
         description: service.description,
+        category: service.category || 'ashrama_seva',
         imageUrl: service.imageUrl || "",
         price: service.price,
         bookingEnabled: service.bookingEnabled,
@@ -62,6 +73,7 @@ export default function ServicesPage() {
       setFormData({
         name: "",
         description: "",
+        category: "ashrama_seva",
         imageUrl: "",
         price: 0,
         bookingEnabled: true,
@@ -383,9 +395,20 @@ export default function ServicesPage() {
                         )}
                         <div>
                           <div style={{ fontWeight: "800", color: "#0f172a" }}>{service.name}</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                          <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginBottom: "4px" }}>
                             {service.description?.substring(0, 45)}...
                           </div>
+                          <span style={{
+                            display: "inline-block",
+                            padding: "2px 8px",
+                            borderRadius: "12px",
+                            fontSize: "0.7rem",
+                            fontWeight: "700",
+                            backgroundColor: service.category === 'ashrama_seva' ? "#dcfce7" : "#fef9c3",
+                            color: service.category === 'ashrama_seva' ? "#166534" : "#854d0e"
+                          }}>
+                            {service.category === 'ashrama_seva' ? "Ashrama Seva (Free)" : "Arjita Seva (Paid)"}
+                          </span>
                         </div>
                       </div>
                     </td>
@@ -450,6 +473,21 @@ export default function ServicesPage() {
                     }}
                   />
                 )}
+
+                <div className="form-group">
+                  <label>Seva Category *</label>
+                  <select
+                    required
+                    value={formData.category}
+                    onChange={(e) => handleInputChange("category", e.target.value)}
+                  >
+                    <option value="ashrama_seva">Ashrama Seva (Free)</option>
+                    <option value="arjita_seva">Arjita Seva (Paid via Razorpay)</option>
+                  </select>
+                  <small style={{ color: "var(--color-text-muted)" }}>
+                    Ashrama Sevas are completely free and bypass Razorpay. Arjita Sevas require payment.
+                  </small>
+                </div>
 
                 <div className="form-group">
                   <label>Seva / Puja Name *</label>

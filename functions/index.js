@@ -352,3 +352,181 @@ exports.verifyPayment = onCall(async (request) => {
     };
   });
 });
+
+exports.bookFreeSeva = onCall(async (request) => {
+  const data = request.data;
+  const auth = request.auth;
+
+  if (!auth || !auth.uid) {
+    throw new HttpsError("unauthenticated", "You must be logged in to book.");
+  }
+
+  const { serviceId, serviceName, quantity, devotees, donorName, donorPhone, donorEmail, occurrences } = data;
+
+  if (!serviceId || !occurrences || !Array.isArray(occurrences) || occurrences.length === 0) {
+    throw new HttpsError("invalid-argument", "Missing required fields or occurrences.");
+  }
+
+  if (occurrences.length > 12) {
+    throw new HttpsError("invalid-argument", "Maximum recurring duration is 12 months.");
+  }
+  
+  if (quantity < 1) {
+    throw new HttpsError("invalid-argument", "Quantity must be at least 1.");
+  }
+
+  const isRecurring = occurrences.length > 1;
+  const recurringGroupId = isRecurring ? `RG-${Date.now()}` : null;
+  const timestamp = Date.now().toString();
+  const baseRefStr = `BK-${timestamp.substring(timestamp.length - 6)}`;
+  
+  return await db.runTransaction(async (transaction) => {
+    const slotDocsAndRefs = [];
+    
+    // 1. Check all slots FIRST before modifying anything
+    for (let i = 0; i < occurrences.length; i++) {
+      const occ = occurrences[i];
+      const start = occ.timeRange.split(" - ")[0];
+      const end = occ.timeRange.split(" - ")[1];
+      
+      if (occ.slotId) {
+        let slotDoc = await transaction.get(db.collection("slots").doc(occ.slotId));
+        if (!slotDoc.exists) {
+          throw new HttpsError("failed-precondition", `Slot unavailable for ${occ.date} at ${occ.timeRange}. Please ensure slots are available for all dates.`);
+        }
+        
+        const slotData = slotDoc.data();
+        const currentBooked = slotData.bookedCount || 0;
+        const capacity = slotData.capacity || 0;
+        
+        if (currentBooked + quantity > capacity) {
+          throw new HttpsError("resource-exhausted", `Not enough capacity for ${occ.date} at ${occ.timeRange}. Available: ${capacity - currentBooked}.`);
+        }
+        
+        slotDocsAndRefs.push({
+          ref: slotDoc.ref,
+          currentBooked: currentBooked,
+          isNew: false
+        });
+      } else {
+        // Query the slots collection to find the exact admin-created slot
+        const slotsQuery = db.collection("slots")
+          .where("serviceId", "==", serviceId)
+          .where("date", "==", occ.date)
+          .where("startTime", "==", start)
+          .where("endTime", "==", end)
+          .where("isActive", "==", true);
+          
+        const querySnapshot = await transaction.get(slotsQuery);
+        
+        if (querySnapshot.empty) {
+          // If the slot doesn't exist, dynamically create it for recurring bookings
+          const newSlotRef = db.collection("slots").doc(`auto_${serviceId}_${occ.date.replace(/-/g, "")}_${start.replace(":", "")}`);
+          
+          if (quantity > 50) {
+            throw new HttpsError("resource-exhausted", `Requested quantity exceeds default auto-slot capacity of 50.`);
+          }
+          
+          slotDocsAndRefs.push({
+            ref: newSlotRef,
+            currentBooked: 0,
+            isNew: true,
+            newSlotData: {
+              id: newSlotRef.id,
+              serviceId: serviceId,
+              date: occ.date,
+              capacity: 50,
+              bookedCount: 0,
+              isActive: true,
+              startTime: start,
+              endTime: end,
+              createdAt: FieldValue.serverTimestamp(),
+              updatedAt: FieldValue.serverTimestamp()
+            }
+          });
+        } else {
+          const slotDoc = querySnapshot.docs[0];
+          const slotData = slotDoc.data();
+          const currentBooked = slotData.bookedCount || 0;
+          const capacity = slotData.capacity || 0;
+          
+          if (currentBooked + quantity > capacity) {
+            throw new HttpsError("resource-exhausted", `Not enough capacity for ${occ.date} at ${occ.timeRange}. Available: ${capacity - currentBooked}.`);
+          }
+          
+          slotDocsAndRefs.push({
+            ref: slotDoc.ref,
+            currentBooked: currentBooked,
+            isNew: false
+          });
+        }
+      }
+    }
+    
+    // 2. All slots are valid and have capacity! Execute all writes safely.
+    const createdBookings = [];
+    
+    for (let i = 0; i < occurrences.length; i++) {
+      const occ = occurrences[i];
+      const { ref, currentBooked, isNew, newSlotData } = slotDocsAndRefs[i];
+      
+      if (isNew) {
+        transaction.set(ref, {
+          ...newSlotData,
+          bookedCount: quantity
+        });
+      } else {
+        // Update slot capacity
+        transaction.update(ref, {
+          bookedCount: currentBooked + quantity,
+          updatedAt: FieldValue.serverTimestamp()
+        });
+      }
+      
+      // Assign Devotee IDs
+      const bookingRefStr = isRecurring ? `${baseRefStr}-${i + 1}` : baseRefStr;
+      const processedDevotees = (devotees || []).map((devotee, index) => ({
+        ...devotee,
+        devoteeId: `${bookingRefStr}-${index + 1}`
+      }));
+      
+      // Create Booking Document
+      const bookingRef = db.collection("bookings").doc();
+      const bookingData = {
+        userId: auth.uid,
+        serviceId,
+        serviceName,
+        slotId: ref.id,
+        bookingRef: bookingRefStr,
+        bookingDate: occ.date,
+        quantity,
+        status: "confirmed",
+        paymentStatus: "free",
+        totalAmount: 0,
+        sourceType: "seva",
+        devotees: processedDevotees,
+        donorName: donorName || null,
+        donorPhone: donorPhone || null,
+        donorEmail: donorEmail || null,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      
+      if (isRecurring) {
+        bookingData.recurringGroupId = recurringGroupId;
+        bookingData.occurrenceNumber = i + 1;
+        bookingData.totalOccurrences = occurrences.length;
+      }
+      
+      transaction.set(bookingRef, bookingData);
+      createdBookings.push(bookingRefStr);
+    }
+    
+    return {
+      success: true,
+      status: "confirmed",
+      bookingRefs: createdBookings,
+      recurringGroupId: recurringGroupId
+    };
+  });
+});

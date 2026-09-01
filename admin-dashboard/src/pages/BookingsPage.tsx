@@ -345,6 +345,11 @@ export default function BookingsPage() {
                     <td style={{ whiteSpace: "nowrap" }}>
                       <span style={{ fontWeight: "600", color: "var(--color-text-secondary)" }}>
                         {booking.bookingDate || "—"}
+                        {booking.recurringGroupId && (
+                          <div style={{ fontSize: "0.7rem", color: "#b45309", marginTop: "2px", fontWeight: "800" }}>
+                            Recurring ({booking.occurrenceNumber}/{booking.totalOccurrences})
+                          </div>
+                        )}
                       </span>
                     </td>
 
@@ -473,6 +478,11 @@ export default function BookingsPage() {
                   <div style={{ fontSize: "0.95rem", fontWeight: "800", color: "#0f172a" }}>
                     {viewingBooking.bookingDate}
                   </div>
+                  {viewingBooking.recurringGroupId && (
+                    <div style={{ fontSize: "0.75rem", color: "#b45309", fontWeight: "700", marginTop: "2px" }}>
+                      Recurring ({viewingBooking.occurrenceNumber} of {viewingBooking.totalOccurrences})
+                    </div>
+                  )}
                 </div>
 
                 <div>

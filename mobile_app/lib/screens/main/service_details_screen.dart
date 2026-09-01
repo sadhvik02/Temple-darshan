@@ -3,6 +3,7 @@ import '../../models/models.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_image.dart';
+import 'seva_type_selection_screen.dart';
 import 'slots_screen.dart';
 
 class ServiceDetailsScreen extends StatelessWidget {
@@ -220,7 +221,9 @@ class ServiceDetailsScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => SlotsScreen(service: service),
+                        builder: (_) => service.category == 'arjita_seva'
+                            ? SlotsScreen(service: service)
+                            : SevaTypeSelectionScreen(service: service),
                       ),
                     );
                   },

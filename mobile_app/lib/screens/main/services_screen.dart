@@ -6,10 +6,18 @@ import '../../widgets/custom_image.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
 import 'service_details_screen.dart';
+import 'seva_type_selection_screen.dart';
 import 'slots_screen.dart';
 
 class ServicesScreen extends StatefulWidget {
-  const ServicesScreen({super.key});
+  final String? categoryFilter;
+  final String title;
+
+  const ServicesScreen({
+    super.key,
+    this.categoryFilter,
+    this.title = 'Services & Sevas',
+  });
 
   @override
   State<ServicesScreen> createState() => _ServicesScreenState();
@@ -22,7 +30,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Services & Sevas'),
+        title: Text(widget.title),
       ),
       body: Column(
         children: [
@@ -44,7 +52,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
           // Services List
           Expanded(
             child: StreamBuilder<List<ServiceModel>>(
-              stream: DatabaseService().getActiveServices(),
+              stream: DatabaseService().getActiveServices(category: widget.categoryFilter),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
@@ -217,7 +225,9 @@ class _ServicesScreenState extends State<ServicesScreen> {
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
-                                                  builder: (_) => SlotsScreen(service: service),
+                                                  builder: (_) => service.category == 'arjita_seva' 
+                                                      ? SlotsScreen(service: service)
+                                                      : SevaTypeSelectionScreen(service: service),
                                                 ),
                                               );
                                             },
