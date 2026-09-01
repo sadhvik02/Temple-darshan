@@ -150,33 +150,33 @@ export default function DarshansPage() {
         </div>
       </div>
 
-      {/* Summary Chips - Compact */}
-      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "20px" }}>
-        <div className="stat-card" style={{ padding: "10px 16px", flex: "0 1 200px", minWidth: "150px" }}>
-          <span style={{ fontSize: "1.2rem" }}>🙏</span>
+      {/* Summary Chips - Full Width */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "14px", width: "100%", marginBottom: "20px" }}>
+        <div className="stat-card" style={{ padding: "12px 18px" }}>
+          <span style={{ fontSize: "1.3rem" }}>🙏</span>
           <div>
-            <div style={{ fontSize: "1.15rem", fontWeight: "900", color: "#0f172a" }}>{darshans.length}</div>
-            <div style={{ fontSize: "0.74rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+            <div style={{ fontSize: "1.2rem", fontWeight: "900", color: "#0f172a" }}>{darshans.length}</div>
+            <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
               Total Offerings
             </div>
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: "10px 16px", flex: "0 1 200px", minWidth: "150px" }}>
-          <span style={{ fontSize: "1.2rem" }}>🟢</span>
+        <div className="stat-card" style={{ padding: "12px 18px" }}>
+          <span style={{ fontSize: "1.3rem" }}>🟢</span>
           <div>
-            <div style={{ fontSize: "1.15rem", fontWeight: "900", color: "#047857" }}>{activeCount}</div>
-            <div style={{ fontSize: "0.74rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+            <div style={{ fontSize: "1.2rem", fontWeight: "900", color: "#047857" }}>{activeCount}</div>
+            <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
               Active on Mobile
             </div>
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: "10px 16px", flex: "0 1 200px", minWidth: "150px" }}>
-          <span style={{ fontSize: "1.2rem" }}>⚡</span>
+        <div className="stat-card" style={{ padding: "12px 18px" }}>
+          <span style={{ fontSize: "1.3rem" }}>⚡</span>
           <div>
-            <div style={{ fontSize: "1.15rem", fontWeight: "900", color: "#b45309" }}>{bookingCount}</div>
-            <div style={{ fontSize: "0.74rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+            <div style={{ fontSize: "1.2rem", fontWeight: "900", color: "#b45309" }}>{bookingCount}</div>
+            <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
               Booking Enabled
             </div>
           </div>

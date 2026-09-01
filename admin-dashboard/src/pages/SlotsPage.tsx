@@ -86,7 +86,7 @@ export default function SlotsPage() {
     return !isNaN(hour) && hour < 14;
   };
 
-  const handleOpenModal = (slot?: Slot) => {
+  const handleOpenModal = (slot?: Slot, defaultServiceId?: string) => {
     if (slot) {
       setEditingId(slot.id!);
       setFormData({
@@ -104,7 +104,7 @@ export default function SlotsPage() {
       const dateString = tomorrow.toISOString().split("T")[0];
 
       setFormData({
-        serviceId: services.length > 0 ? services[0].id! : "",
+        serviceId: defaultServiceId || (services.length > 0 ? services[0].id! : ""),
         date: dateString,
         startTime: "06:00",
         endTime: "07:00",
@@ -115,13 +115,13 @@ export default function SlotsPage() {
     setIsModalOpen(true);
   };
 
-  const handleOpenBulkModal = () => {
+  const handleOpenBulkModal = (defaultServiceId?: string) => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const dateString = tomorrow.toISOString().split("T")[0];
 
     setBulkData({
-      serviceId: services.length > 0 ? services[0].id! : "",
+      serviceId: defaultServiceId || (services.length > 0 ? services[0].id! : ""),
       date: dateString,
       capacity: 50,
       selectedTimings: STANDARD_TIMINGS.map((t) => `${t.startTime}-${t.endTime}`),
@@ -213,10 +213,6 @@ export default function SlotsPage() {
     }
   };
 
-  const getServiceName = (id: string) => {
-    return services.find((s) => s.id === id)?.name || "Temple Offering";
-  };
-
   // Filter slots
   const filteredSlots = slots.filter((slot) => {
     if (filterSession === "morning" && !isMorningSlot(slot.startTime)) return false;
@@ -260,7 +256,7 @@ export default function SlotsPage() {
         </div>
 
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
-          <button className="btn btn-secondary" onClick={handleOpenBulkModal} disabled={services.length === 0}>
+          <button className="btn btn-secondary" onClick={() => handleOpenBulkModal()} disabled={services.length === 0}>
             ⚡ Auto-Generate Daily Slots
           </button>
           <button className="btn btn-primary" onClick={() => handleOpenModal()} disabled={services.length === 0}>
@@ -284,44 +280,46 @@ export default function SlotsPage() {
           <strong> You MUST manually bulk-create future slots (up to 12 months in advance) </strong> 
           for recurring bookings to succeed. If a required future slot is missing, the devotee's entire recurring booking will fail.
         </p>
+      </div>
+
       {/* Metric Summary Cards */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(165px, 1fr))",
-          gap: "14px",
-          marginBottom: "22px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          gap: "12px",
+          marginBottom: "20px",
         }}
       >
-        <div className="stat-card" style={{ padding: "14px 18px" }}>
-          <span style={{ fontSize: "1.4rem" }}>📅</span>
+        <div className="stat-card" style={{ padding: "10px 16px" }}>
+          <span style={{ fontSize: "1.2rem" }}>📅</span>
           <div>
-            <div style={{ fontSize: "1.3rem", fontWeight: "900", color: "#0f172a" }}>{slots.length}</div>
-            <div style={{ fontSize: "0.76rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Total Active Slots</div>
+            <div style={{ fontSize: "1.15rem", fontWeight: "900", color: "#0f172a" }}>{slots.length}</div>
+            <div style={{ fontSize: "0.72rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Total Active Slots</div>
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: "16px 20px" }}>
-          <span style={{ fontSize: "1.5rem" }}>👥</span>
+        <div className="stat-card" style={{ padding: "10px 16px" }}>
+          <span style={{ fontSize: "1.2rem" }}>👥</span>
           <div>
-            <div style={{ fontSize: "1.35rem", fontWeight: "900", color: "#2563eb" }}>{totalCapacity}</div>
-            <div style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Total Pilgrim Capacity</div>
+            <div style={{ fontSize: "1.15rem", fontWeight: "900", color: "#2563eb" }}>{totalCapacity}</div>
+            <div style={{ fontSize: "0.72rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Total Pilgrim Capacity</div>
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: "16px 20px" }}>
-          <span style={{ fontSize: "1.5rem" }}>🎟️</span>
+        <div className="stat-card" style={{ padding: "10px 16px" }}>
+          <span style={{ fontSize: "1.2rem" }}>🎟️</span>
           <div>
-            <div style={{ fontSize: "1.35rem", fontWeight: "900", color: "#d97706" }}>{totalBooked}</div>
-            <div style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Booked Slots</div>
+            <div style={{ fontSize: "1.15rem", fontWeight: "900", color: "#d97706" }}>{totalBooked}</div>
+            <div style={{ fontSize: "0.72rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Booked Slots</div>
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: "16px 20px" }}>
-          <span style={{ fontSize: "1.5rem" }}>✨</span>
+        <div className="stat-card" style={{ padding: "10px 16px" }}>
+          <span style={{ fontSize: "1.2rem" }}>✨</span>
           <div>
-            <div style={{ fontSize: "1.35rem", fontWeight: "900", color: "#059669" }}>{totalAvailable}</div>
-            <div style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Available Quota</div>
+            <div style={{ fontSize: "1.15rem", fontWeight: "900", color: "#059669" }}>{totalAvailable}</div>
+            <div style={{ fontSize: "0.72rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>Available Quota</div>
           </div>
         </div>
       </div>
@@ -434,131 +432,280 @@ export default function SlotsPage() {
         </div>
       </div>
 
-      {filteredSlots.length === 0 && !error ? (
-        <div className="card-section empty-state">
-          <div className="empty-icon">📅</div>
-          <h3 style={{ fontSize: "1.2rem", fontWeight: "800", color: "#0f172a", marginBottom: "6px" }}>
-            No slots match the selected filters
-          </h3>
-          <p style={{ color: "var(--color-text-secondary)", marginBottom: "18px" }}>
-            Generate standard morning and evening timing slots for pilgrim bookings.
-          </p>
-          <button className="btn btn-primary" onClick={handleOpenBulkModal} disabled={services.length === 0}>
-            ⚡ Auto-Generate Daily Slots
-          </button>
-        </div>
-      ) : (
-        /* Data Table */
-        <div className="card-section" style={{ padding: 0, overflow: "hidden" }}>
-          <div className="table-container" style={{ border: "none" }}>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th style={{ whiteSpace: "nowrap" }}>Service / Seva</th>
-                  <th style={{ whiteSpace: "nowrap" }}>Darshan Date</th>
-                  <th style={{ whiteSpace: "nowrap" }}>Session</th>
-                  <th style={{ whiteSpace: "nowrap" }}>Time Interval</th>
-                  <th style={{ whiteSpace: "nowrap" }}>Capacity & Occupancy</th>
-                  <th style={{ whiteSpace: "nowrap" }}>Status</th>
-                  <th style={{ whiteSpace: "nowrap" }}>Availability</th>
-                  <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSlots.map((slot) => {
-                  const isFull = (slot.bookedCount || 0) >= slot.capacity;
-                  const isMorn = isMorningSlot(slot.startTime);
-                  const booked = slot.bookedCount || 0;
-                  const pct = Math.min(100, Math.round((booked / (slot.capacity || 1)) * 100));
+      {(() => {
+        // Group filtered slots by Seva / Service
+        const groupedSlotsByService = services
+          .map((service) => {
+            const serviceSlots = filteredSlots
+              .filter((s) => s.serviceId === service.id)
+              .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+            return {
+              service,
+              slots: serviceSlots,
+            };
+          })
+          .filter((group) => {
+            if (selectedServiceFilter !== "all") {
+              return group.service.id === selectedServiceFilter;
+            }
+            return group.slots.length > 0;
+          });
 
-                  return (
-                    <tr key={slot.id}>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span style={{ fontSize: "1.1rem" }}>🪔</span>
-                          <span style={{ fontWeight: "800", color: "#0f172a" }}>{getServiceName(slot.serviceId)}</span>
+        // Include any orphan slots for unknown services if any exist
+        const knownServiceIds = new Set(services.map((s) => s.id));
+        const orphanSlots = filteredSlots.filter((s) => !knownServiceIds.has(s.serviceId));
+        if (orphanSlots.length > 0 && (selectedServiceFilter === "all" || selectedServiceFilter === "other")) {
+          groupedSlotsByService.push({
+            service: { id: "other", name: "Other Temple Offerings", price: 0, bookingEnabled: true, category: "seva" } as any,
+            slots: orphanSlots,
+          });
+        }
+
+        if (groupedSlotsByService.length === 0 && !error) {
+          return (
+            <div className="card-section empty-state">
+              <div className="empty-icon">📅</div>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: "800", color: "#0f172a", marginBottom: "6px" }}>
+                No slots match the selected filters
+              </h3>
+              <p style={{ color: "var(--color-text-secondary)", marginBottom: "18px" }}>
+                Generate standard morning and evening timing slots for pilgrim bookings.
+              </p>
+              <button className="btn btn-primary" onClick={() => handleOpenBulkModal()} disabled={services.length === 0}>
+                ⚡ Auto-Generate Daily Slots
+              </button>
+            </div>
+          );
+        }
+
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            {groupedSlotsByService.map(({ service, slots: serviceSlots }) => {
+              const totalServiceCapacity = serviceSlots.reduce((sum, s) => sum + (s.capacity || 0), 0);
+              const totalServiceBooked = serviceSlots.reduce((sum, s) => sum + (s.bookedCount || 0), 0);
+              const totalServiceAvailable = Math.max(0, totalServiceCapacity - totalServiceBooked);
+              const isAshrama = service.category === "ashrama_seva" || service.price === 0;
+
+              return (
+                <div
+                  key={service.id}
+                  className="form-card"
+                  style={{
+                    padding: "20px 22px",
+                    borderRadius: "16px",
+                    border: "1px solid var(--color-border)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                    backgroundColor: "#ffffff",
+                  }}
+                >
+                  {/* Master Box Header for this Seva */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                      paddingBottom: "16px",
+                      borderBottom: "1px solid #f1f5f9",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div
+                        style={{
+                          width: "42px",
+                          height: "42px",
+                          borderRadius: "12px",
+                          backgroundColor: "#fff7ed",
+                          border: "1px solid #fed7aa",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "1.4rem",
+                        }}
+                      >
+                        🪔
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          <h2 style={{ fontSize: "1.25rem", fontWeight: "900", color: "#0f172a", margin: 0 }}>
+                            {service.name}
+                          </h2>
+                          <span
+                            style={{
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                              fontSize: "0.72rem",
+                              fontWeight: "800",
+                              backgroundColor: isAshrama ? "#e0f2fe" : "#fef3c7",
+                              color: isAshrama ? "#0369a1" : "#b45309",
+                            }}
+                          >
+                            {isAshrama ? "🕉️ Ashrama Seva (Free)" : `🪷 Arjitha Seva (₹${service.price})`}
+                          </span>
                         </div>
-                      </td>
+                        <div style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)", marginTop: "2px" }}>
+                          {serviceSlots.length} scheduled slot{serviceSlots.length === 1 ? "" : "s"} • {totalServiceBooked} booked • {totalServiceAvailable} available
+                        </div>
+                      </div>
+                    </div>
 
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <span className="ref-code">{slot.date}</span>
-                      </td>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => handleOpenBulkModal(service.id)}
+                        style={{ fontSize: "0.8rem", padding: "6px 12px" }}
+                      >
+                        ⚡ Bulk Generate
+                      </button>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => handleOpenModal(undefined, service.id)}
+                        style={{ fontSize: "0.8rem", padding: "6px 12px" }}
+                      >
+                        + Add Slot
+                      </button>
+                    </div>
+                  </div>
 
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <span
+                  {/* List / Sub-boxes of All Slots for this Seva */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(260px, 320px))",
+                      gap: "12px",
+                    }}
+                  >
+                    {serviceSlots.map((slot) => {
+                      const booked = slot.bookedCount || 0;
+                      const isFull = booked >= slot.capacity;
+                      const isMorn = isMorningSlot(slot.startTime);
+                      const pct = Math.min(100, Math.round((booked / (slot.capacity || 1)) * 100));
+                      const available = Math.max(0, slot.capacity - booked);
+
+                      return (
+                        <div
+                          key={slot.id}
                           style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "5px",
-                            padding: "4px 10px",
-                            borderRadius: "8px",
-                            fontSize: "0.78rem",
-                            fontWeight: "800",
-                            backgroundColor: isMorn ? "#fffbeb" : "#fff7ed",
-                            color: isMorn ? "#b45309" : "#c2410c",
-                            border: `1px solid ${isMorn ? "#fde68a" : "#fed7aa"}`,
+                            padding: "12px 14px",
+                            borderRadius: "12px",
+                            border: isFull ? "1.5px solid #fecaca" : "1px solid #e2e8f0",
+                            backgroundColor: isFull ? "#fffafa" : "#f8fafc",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between",
+                            gap: "8px",
                           }}
                         >
-                          {isMorn ? "🌅 Morning" : "🌙 Evening"}
-                        </span>
-                      </td>
-
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <span style={{ fontWeight: "700", color: "#0f172a", fontSize: "0.9rem" }}>
-                          {slot.startTime} – {slot.endTime}
-                        </span>
-                      </td>
-
-                      <td style={{ whiteSpace: "nowrap", minWidth: "160px" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: "700" }}>
-                            <span>{booked} Booked</span>
-                            <span style={{ color: "var(--color-text-muted)" }}>{slot.capacity} Max</span>
-                          </div>
-                          <div style={{ height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
-                            <div
+                          {/* Top: Date & Session */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span
                               style={{
-                                height: "100%",
-                                width: `${pct}%`,
-                                background: isFull ? "#ef4444" : pct > 70 ? "#f59e0b" : "#10b981",
-                                borderRadius: "3px",
-                                transition: "width 300ms ease",
+                                padding: "2px 7px",
+                                borderRadius: "6px",
+                                background: "#ffffff",
+                                border: "1px solid #cbd5e1",
+                                color: "#0f172a",
+                                fontWeight: "800",
+                                fontSize: "0.75rem",
                               }}
-                            />
+                            >
+                              📅 {slot.date}
+                            </span>
+                            <span
+                              style={{
+                                padding: "2px 7px",
+                                borderRadius: "6px",
+                                fontSize: "0.72rem",
+                                fontWeight: "800",
+                                backgroundColor: isMorn ? "#fffbeb" : "#fff7ed",
+                                color: isMorn ? "#b45309" : "#c2410c",
+                                border: `1px solid ${isMorn ? "#fde68a" : "#fed7aa"}`,
+                              }}
+                            >
+                              {isMorn ? "🌅 Morning" : "🌙 Evening"}
+                            </span>
+                          </div>
+
+                          {/* Middle: Time Interval & Availability */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.95rem", fontWeight: "900", color: "#0f172a" }}>
+                              ⏰ {slot.startTime} – {slot.endTime}
+                            </span>
+                            <span
+                              style={{
+                                padding: "2px 7px",
+                                borderRadius: "6px",
+                                fontSize: "0.7rem",
+                                fontWeight: "800",
+                                backgroundColor: isFull ? "#ef4444" : "#dcfce7",
+                                color: isFull ? "#ffffff" : "#15803d",
+                              }}
+                            >
+                              {isFull ? "🔴 Full" : `🟢 ${available} Left`}
+                            </span>
+                          </div>
+
+                          {/* Progress & Quota Bar */}
+                          <div>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", fontWeight: "700", marginBottom: "3px" }}>
+                              <span style={{ color: "#475569" }}>{booked} Booked</span>
+                              <span style={{ color: "var(--color-text-muted)" }}>{slot.capacity} Max</span>
+                            </div>
+                            <div style={{ height: "5px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+                              <div
+                                style={{
+                                  height: "100%",
+                                  width: `${pct}%`,
+                                  background: isFull ? "#ef4444" : pct > 75 ? "#f59e0b" : "#10b981",
+                                  borderRadius: "3px",
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              borderTop: "1px solid #e2e8f0",
+                              paddingTop: "6px",
+                              marginTop: "2px",
+                            }}
+                          >
+                            <span className={`badge ${slot.isActive ? "badge-success" : "badge-neutral"}`} style={{ fontSize: "0.65rem", padding: "1px 6px" }}>
+                              {slot.isActive ? "● Active" : "● Closed"}
+                            </span>
+                            <div style={{ display: "flex", gap: "8px" }}>
+                              <button
+                                className="btn-icon text-primary"
+                                onClick={() => handleOpenModal(slot)}
+                                style={{ fontSize: "0.75rem", padding: "2px 6px" }}
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button
+                                className="btn-icon text-danger"
+                                onClick={() => setDeleteId(slot.id!)}
+                                style={{ fontSize: "0.75rem", padding: "2px 6px" }}
+                              >
+                                🗑️ Delete
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </td>
-
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <span className={`badge ${slot.isActive ? "badge-success" : "badge-neutral"}`}>
-                          {slot.isActive ? "● Active" : "● Closed"}
-                        </span>
-                      </td>
-
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <span className={`badge ${isFull ? "badge-danger" : "badge-info"}`}>
-                          {isFull ? "🔴 Full" : `🟢 ${slot.capacity - booked} Left`}
-                        </span>
-                      </td>
-
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
-                          <button className="btn-icon text-primary" onClick={() => handleOpenModal(slot)}>
-                            Edit
-                          </button>
-                          <button className="btn-icon text-danger" onClick={() => setDeleteId(slot.id!)}>
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Add/Edit Single Slot Modal */}
       {isModalOpen && (
@@ -840,7 +987,6 @@ export default function SlotsPage() {
           </div>
         </div>
       )}
-    </div>
     </div>
   );
 }
