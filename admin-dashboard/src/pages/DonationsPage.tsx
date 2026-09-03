@@ -18,6 +18,27 @@ export default function DonationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [donationSearchQuery, setDonationSearchQuery] = useState("");
+  const [donationCategoryFilter, setDonationCategoryFilter] = useState("all");
+
+  const formatDonationDate = (createdAt: any) => {
+    if (!createdAt) return { dateStr: "N/A", timeStr: "" };
+    let d: Date;
+    if (typeof createdAt.toDate === "function") {
+      d = createdAt.toDate();
+    } else if (createdAt instanceof Date) {
+      d = createdAt;
+    } else if (createdAt.seconds) {
+      d = new Date(createdAt.seconds * 1000);
+    } else {
+      d = new Date(createdAt);
+    }
+    if (isNaN(d.getTime())) return { dateStr: String(createdAt), timeStr: "" };
+    return {
+      dateStr: d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+      timeStr: d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    };
+  };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -475,50 +496,305 @@ export default function DonationsPage() {
       </div>
 
       {/* COMPLETED DONATIONS SECTION */}
-      <div>
-        <h1 className="text-2xl font-bold mb-6">Completed Donations</h1>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Date</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Donor Name</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Phone</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Donation Type</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {donations.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                    No donations found.
-                  </td>
-                </tr>
-              ) : (
-                donations.map((donation) => (
-                  <tr key={donation.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {donation.createdAt?.toLocaleString() ?? "N/A"}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      {donation.donorName || "Anonymous"}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {donation.donorPhone || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-800">
-                      {donation.donationTypeName}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-green-700">
-                      ₹{donation.amount}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      <div style={{ marginTop: "40px" }}>
+        {/* Section Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "18px", flexWrap: "wrap", gap: "12px" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "1.4rem" }}>💖</span>
+              <h2 style={{ fontSize: "1.45rem", fontWeight: "900", color: "#0f172a", margin: 0 }}>
+                Completed Devotee Contributions
+              </h2>
+            </div>
+            <p style={{ color: "var(--color-text-secondary)", fontSize: "0.88rem", marginTop: "4px" }}>
+              Live real-time ledger of all devotee donations, Annadanam offerings, and online puja contributions.
+            </p>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                placeholder="🔍 Search donor, phone, or fund..."
+                value={donationSearchQuery}
+                onChange={(e) => setDonationSearchQuery(e.target.value)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: "10px",
+                  border: "1px solid var(--color-border)",
+                  fontSize: "0.85rem",
+                  width: "240px",
+                  background: "#ffffff",
+                }}
+              />
+            </div>
+
+            <select
+              value={donationCategoryFilter}
+              onChange={(e) => setDonationCategoryFilter(e.target.value)}
+              style={{
+                padding: "8px 12px",
+                borderRadius: "10px",
+                border: "1px solid var(--color-border)",
+                fontSize: "0.85rem",
+                background: "#ffffff",
+                width: "auto",
+              }}
+            >
+              <option value="all">All Funds</option>
+              {donationTypes.map((dt) => (
+                <option key={dt.id} value={dt.title}>
+                  {dt.title}
+                </option>
+              ))}
+            </select>
+
+            {(donationSearchQuery || donationCategoryFilter !== "all") && (
+              <button
+                onClick={() => {
+                  setDonationSearchQuery("");
+                  setDonationCategoryFilter("all");
+                }}
+                className="btn btn-secondary btn-sm"
+              >
+                ✕ Clear
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Contribution Metrics Cards */}
+        {(() => {
+          const totalAmount = donations.reduce((sum, d) => sum + (d.amount || 0), 0);
+          const uniqueDonors = new Set(donations.map((d) => d.donorPhone || d.donorName)).size;
+          const avgDonation = donations.length > 0 ? Math.round(totalAmount / donations.length) : 0;
+
+          return (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                gap: "12px",
+                marginBottom: "18px",
+              }}
+            >
+              <div className="stat-card" style={{ padding: "12px 18px" }}>
+                <span style={{ fontSize: "1.3rem" }}>💰</span>
+                <div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: "900", color: "#047857" }}>
+                    ₹{totalAmount.toLocaleString("en-IN")}
+                  </div>
+                  <div style={{ fontSize: "0.74rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+                    Total Collected
+                  </div>
+                </div>
+              </div>
+
+              <div className="stat-card" style={{ padding: "12px 18px" }}>
+                <span style={{ fontSize: "1.3rem" }}>📜</span>
+                <div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: "900", color: "#0f172a" }}>
+                    {donations.length}
+                  </div>
+                  <div style={{ fontSize: "0.74rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+                    Total Contributions
+                  </div>
+                </div>
+              </div>
+
+              <div className="stat-card" style={{ padding: "12px 18px" }}>
+                <span style={{ fontSize: "1.3rem" }}>👥</span>
+                <div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: "900", color: "#2563eb" }}>
+                    {uniqueDonors}
+                  </div>
+                  <div style={{ fontSize: "0.74rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+                    Unique Devotees
+                  </div>
+                </div>
+              </div>
+
+              <div className="stat-card" style={{ padding: "12px 18px" }}>
+                <span style={{ fontSize: "1.3rem" }}>✨</span>
+                <div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: "900", color: "#b45309" }}>
+                    ₹{avgDonation.toLocaleString("en-IN")}
+                  </div>
+                  <div style={{ fontSize: "0.74rem", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+                    Average Donation
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Filtered Donations Table */}
+        {(() => {
+          const filtered = donations.filter((d) => {
+            const query = donationSearchQuery.toLowerCase().trim();
+            const matchesSearch =
+              !query ||
+              (d.donorName || "").toLowerCase().includes(query) ||
+              (d.donorPhone || "").includes(query) ||
+              (d.donationTypeName || "").toLowerCase().includes(query);
+
+            const matchesCategory =
+              donationCategoryFilter === "all" ||
+              (d.donationTypeName || "").toLowerCase().includes(donationCategoryFilter.toLowerCase());
+
+            return matchesSearch && matchesCategory;
+          });
+
+          return (
+            <div className="card-section" style={{ padding: 0, overflow: "hidden", borderRadius: "14px", border: "1px solid var(--color-border)" }}>
+              <div className="table-container" style={{ border: "none" }}>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th style={{ whiteSpace: "nowrap" }}>Contribution Date</th>
+                      <th style={{ whiteSpace: "nowrap" }}>Donor Details</th>
+                      <th style={{ whiteSpace: "nowrap" }}>Contact Number</th>
+                      <th style={{ whiteSpace: "nowrap" }}>Donation Scheme / Fund</th>
+                      <th style={{ whiteSpace: "nowrap" }}>Dakshina Amount</th>
+                      <th style={{ whiteSpace: "nowrap" }}>Payment Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: "center", padding: "36px", color: "var(--color-text-secondary)" }}>
+                          <div style={{ fontSize: "2rem", marginBottom: "8px" }}>🙏</div>
+                          <div style={{ fontWeight: "700", color: "#0f172a" }}>No contribution records found</div>
+                          <div style={{ fontSize: "0.82rem", marginTop: "4px" }}>
+                            {donations.length === 0 ? "Completed devotee offerings will appear here automatically." : "Try adjusting your search filters."}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filtered.map((donation) => {
+                        const { dateStr, timeStr } = formatDonationDate(donation.createdAt);
+                        const initial = (donation.donorName || "D").trim().charAt(0).toUpperCase() || "D";
+                        const isAnnadanam = (donation.donationTypeName || "").toLowerCase().includes("annadanam");
+
+                        return (
+                          <tr key={donation.id}>
+                            {/* Date & Time */}
+                            <td style={{ whiteSpace: "nowrap" }}>
+                              <div style={{ display: "flex", flexDirection: "column" }}>
+                                <span style={{ fontWeight: "800", color: "#0f172a", fontSize: "0.88rem" }}>
+                                  📅 {dateStr}
+                                </span>
+                                {timeStr && (
+                                  <span style={{ fontSize: "0.74rem", color: "var(--color-text-muted)", marginTop: "2px" }}>
+                                    ⏰ {timeStr}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Donor Name & Avatar */}
+                            <td style={{ whiteSpace: "nowrap" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <div
+                                  style={{
+                                    width: "34px",
+                                    height: "34px",
+                                    borderRadius: "10px",
+                                    background: "linear-gradient(135deg, #fff7ed, #ffedd5)",
+                                    border: "1px solid #fed7aa",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontWeight: "900",
+                                    fontSize: "0.9rem",
+                                    color: "#ea580c",
+                                  }}
+                                >
+                                  {initial}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: "800", color: "#0f172a", fontSize: "0.92rem" }}>
+                                    {donation.donorName || "Anonymous Devotee"}
+                                  </div>
+                                  <div style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>
+                                    Devotee
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Phone */}
+                            <td style={{ whiteSpace: "nowrap" }}>
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  backgroundColor: "#f8fafc",
+                                  border: "1px solid #e2e8f0",
+                                  fontSize: "0.8rem",
+                                  fontWeight: "700",
+                                  color: "#334155",
+                                }}
+                              >
+                                📞 {donation.donorPhone || "N/A"}
+                              </span>
+                            </td>
+
+                            {/* Donation Type */}
+                            <td style={{ whiteSpace: "nowrap" }}>
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "5px",
+                                  padding: "4px 10px",
+                                  borderRadius: "8px",
+                                  fontSize: "0.78rem",
+                                  fontWeight: "800",
+                                  backgroundColor: isAnnadanam ? "#fff7ed" : "#f0fdf4",
+                                  color: isAnnadanam ? "#c2410c" : "#15803d",
+                                  border: `1px solid ${isAnnadanam ? "#fed7aa" : "#bbf7d0"}`,
+                                }}
+                              >
+                                {isAnnadanam ? "🍲" : "🪔"} {donation.donationTypeName || "Temple Offering"}
+                              </span>
+                            </td>
+
+                            {/* Amount */}
+                            <td style={{ whiteSpace: "nowrap" }}>
+                              <span
+                                style={{
+                                  fontSize: "1.05rem",
+                                  fontWeight: "900",
+                                  color: "#047857",
+                                  letterSpacing: "-0.3px",
+                                }}
+                              >
+                                ₹{donation.amount?.toLocaleString("en-IN") ?? 0}
+                              </span>
+                            </td>
+
+                            {/* Payment Status */}
+                            <td style={{ whiteSpace: "nowrap" }}>
+                              <span className="badge badge-success" style={{ fontSize: "0.72rem", padding: "3px 8px" }}>
+                                ● Received (Online)
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Add/Edit Modal */}
