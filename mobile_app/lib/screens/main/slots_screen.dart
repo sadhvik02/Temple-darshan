@@ -4,7 +4,7 @@ import '../../services/database_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/error_state_widget.dart';
 import 'booking_screen.dart';
-
+import 'darshan_screen.dart';
 class SlotsScreen extends StatefulWidget {
   final ServiceModel service;
 
@@ -738,10 +738,23 @@ class _SlotsScreenState extends State<SlotsScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => BookingScreen(
-                          service: widget.service,
-                          slot: _selectedSlot!,
-                        ),
+                        builder: (_) => widget.service.category == 'darshan'
+                            ? DarshanReviewScreen(
+                                darshan: DarshanModel(
+                                  id: widget.service.id,
+                                  name: widget.service.name,
+                                  description: widget.service.description,
+                                  price: widget.service.price,
+                                  bookingEnabled: widget.service.bookingEnabled,
+                                  isActive: true,
+                                  imageUrl: widget.service.imageUrl,
+                                ),
+                                slot: _selectedSlot!,
+                              )
+                            : BookingScreen(
+                                service: widget.service,
+                                slot: _selectedSlot!,
+                              ),
                       ),
                     );
                   },

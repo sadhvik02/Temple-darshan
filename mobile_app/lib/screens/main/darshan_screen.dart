@@ -395,17 +395,17 @@ class _DarshanDevoteeEntry {
 
 /// Darshan Review Screen — shows darshan + slot details, dynamic multi-devotee selection,
 /// and securely processes Darshan payment through PaymentService.
-class _DarshanReviewScreen extends StatefulWidget {
+class DarshanReviewScreen extends StatefulWidget {
   final DarshanModel darshan;
   final SlotModel slot;
 
-  const _DarshanReviewScreen({required this.darshan, required this.slot});
+  const DarshanReviewScreen({super.key, required this.darshan, required this.slot});
 
   @override
-  State<_DarshanReviewScreen> createState() => _DarshanReviewScreenState();
+  State<DarshanReviewScreen> createState() => DarshanReviewScreenState();
 }
 
-class _DarshanReviewScreenState extends State<_DarshanReviewScreen> {
+class DarshanReviewScreenState extends State<DarshanReviewScreen> {
   int _quantity = 1;
   bool _isLoading = false;
   final List<_DarshanDevoteeEntry> _devotees = [];
