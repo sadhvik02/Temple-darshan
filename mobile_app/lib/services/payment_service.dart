@@ -183,7 +183,7 @@ class PaymentService {
         'timeRange': timeRange,
         'quantity': quantity,
         'expectedTotal': expectedTotal,
-        'devotees': ?devoteeDetails,
+        'devotees': devoteeDetails,
         'devoteeName': devoteeName,
         'devoteePhone': devoteePhone,
         'devoteeEmail': devoteeEmail,
