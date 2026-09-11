@@ -538,7 +538,10 @@ exports.bookFreeSeva = onCall(async (request) => {
  * when a new notification document is created in the 'notifications' collection.
  */
 exports.sendPushOnNotificationCreate = onDocumentCreated(
-  "notifications/{notificationId}",
+  {
+    document: "notifications/{notificationId}",
+    region: "asia-south1",
+  },
   async (event) => {
     const snap = event.data;
     if (!snap) {
@@ -553,34 +556,13 @@ exports.sendPushOnNotificationCreate = onDocumentCreated(
     const imageUrl = notifData.imageUrl || null;
     const actionRoute = notifData.actionRoute || "";
 
-    console.log(`[FCM] New notification created: "${title}" (type: ${type})`);
+    const targetAudience = notifData.targetAudience || "all";
+    const isGlobal = targetAudience === "all" || notifData.isGlobal === true;
 
-    // 1. Collect all FCM tokens from all users' token subcollections
-    const usersSnapshot = await db.collection("users").get();
-    const allTokens = [];
+    console.log(`[FCM] New notification created: "${title}" (type: ${type}, audience: ${targetAudience})`);
 
-    for (const userDoc of usersSnapshot.docs) {
-      const tokensSnapshot = await userDoc.ref.collection("tokens").get();
-      for (const tokenDoc of tokensSnapshot.docs) {
-        const tokenData = tokenDoc.data();
-        if (tokenData.token) {
-          allTokens.push({
-            token: tokenData.token,
-            userId: userDoc.id,
-            tokenDocRef: tokenDoc.ref,
-          });
-        }
-      }
-    }
-
-    if (allTokens.length === 0) {
-      console.log("[FCM] No device tokens found. Skipping push.");
-      return;
-    }
-
-    console.log(`[FCM] Sending push to ${allTokens.length} device(s)`);
-
-    // 2. Build the FCM message payload
+    // Build the FCM message payload
+    const notificationId = event.params.notificationId;
     const messagePayload = {
       notification: {
         title: title,
@@ -589,14 +571,17 @@ exports.sendPushOnNotificationCreate = onDocumentCreated(
       data: {
         type: type,
         actionRoute: actionRoute,
-        notificationId: event.params.notificationId,
+        notificationId: notificationId,
       },
       android: {
+        collapseKey: notificationId,
+        priority: "high",
         notification: {
           channelId: "temple_notifications",
           priority: "high",
           defaultSound: true,
           defaultVibrateTimings: true,
+          tag: notificationId,
         },
       },
     };
@@ -606,36 +591,63 @@ exports.sendPushOnNotificationCreate = onDocumentCreated(
       messagePayload.notification.imageUrl = imageUrl;
     }
 
-    // 3. Send to each token individually and clean up invalid tokens
-    const sendResults = await Promise.allSettled(
-      allTokens.map(async ({ token, tokenDocRef }) => {
-        try {
-          await getMessaging().send({
-            ...messagePayload,
-            token: token,
-          });
-          return { success: true, token };
-        } catch (error) {
-          // Clean up invalid/expired tokens
-          if (
-            error.code === "messaging/invalid-registration-token" ||
-            error.code === "messaging/registration-token-not-registered"
-          ) {
-            console.log(`[FCM] Removing invalid token: ${token.substring(0, 20)}...`);
-            await tokenDocRef.delete().catch(() => {});
-          } else {
-            console.error(`[FCM] Error sending to token: ${error.message}`);
+    if (isGlobal) {
+      // For all devotees, broadcast via topic 'all_devotees' ONLY.
+      // Every device subscribes to this topic on app launch.
+      // Do NOT send to individual tokens to avoid duplicate notifications on devices.
+      try {
+        const response = await getMessaging().send({
+          ...messagePayload,
+          topic: "all_devotees",
+        });
+        console.log(`[FCM] Global broadcast push sent successfully to topic 'all_devotees': ${response}`);
+      } catch (topicErr) {
+        console.error("[FCM] Topic broadcast error:", topicErr.message);
+      }
+    } else {
+      // For targeted notifications, collect unique tokens for target users only
+      const targetUserId = notifData.userId || notifData.targetUserId;
+      const userTokens = new Set();
+      const tokenDocs = [];
+
+      if (targetUserId) {
+        const tokensSnap = await db.collection("users").doc(targetUserId).collection("tokens").get();
+        tokensSnap.forEach(tDoc => {
+          const t = tDoc.data().token;
+          if (t && !userTokens.has(t)) {
+            userTokens.add(t);
+            tokenDocs.push({ token: t, tokenDocRef: tDoc.ref });
           }
-          return { success: false, token, error: error.message };
-        }
-      })
-    );
+        });
+      }
 
-    const successCount = sendResults.filter(
-      (r) => r.status === "fulfilled" && r.value.success
-    ).length;
-    const failCount = allTokens.length - successCount;
+      if (tokenDocs.length === 0) {
+        console.log("[FCM] No device tokens found for targeted push. Skipping.");
+        return;
+      }
 
-    console.log(`[FCM] Push complete: ${successCount} sent, ${failCount} failed`);
+      console.log(`[FCM] Sending targeted push to ${tokenDocs.length} unique device(s)`);
+
+      await Promise.allSettled(
+        tokenDocs.map(async ({ token, tokenDocRef }) => {
+          try {
+            await getMessaging().send({
+              ...messagePayload,
+              token: token,
+            });
+          } catch (error) {
+            if (
+              error.code === "messaging/invalid-registration-token" ||
+              error.code === "messaging/registration-token-not-registered"
+            ) {
+              console.log(`[FCM] Removing invalid token: ${token.substring(0, 20)}...`);
+              await tokenDocRef.delete().catch(() => {});
+            } else {
+              console.error(`[FCM] Error sending to token: ${error.message}`);
+            }
+          }
+        })
+      );
+    }
   }
 );

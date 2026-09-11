@@ -16,10 +16,6 @@ class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
-  static StreamSubscription? _firestoreNotificationSub;
-  static final Set<String> _seenDocIds = <String>{};
-  static bool _initialSnapshotReceived = false;
-  static bool _isListening = false;
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'temple_notifications', // id
@@ -71,124 +67,36 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
-    // 5. Listen for foreground FCM messages (will work once Cloud Function is deployed)
+    // 5. Subscribe to 'all_devotees' topic so device gets push notifications even when app is closed
+    try {
+      await _messaging.subscribeToTopic('all_devotees');
+      debugPrint('[FCM] Subscribed to all_devotees topic');
+    } catch (e) {
+      debugPrint('[FCM] Error subscribing to topic: $e');
+    }
+
+    // 6. Listen for foreground FCM messages
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-    // 6. Handle notification tap when app was in background
+    // 7. Handle notification tap when app was in background
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
 
-    // 7. Check if app was opened from a terminated state via notification
+    // 8. Check if app was opened from a terminated state via notification
     final initialMessage = await _messaging.getInitialMessage();
     if (initialMessage != null) {
       debugPrint('[FCM] App opened from terminated state via notification');
     }
   }
 
-  /// Start listening to Firestore notifications collection and show local
-  /// notifications for any NEW documents created after the app started.
-  /// This works even without Cloud Functions deployed.
+  /// Deprecated: Local Firestore listener is no longer needed since
+  /// the server-side Cloud Function handles push notifications via FCM directly.
   static void startFirestoreNotificationListener() {
-    if (_isListening) {
-      return; // Already listening, do not duplicate or reset state
-    }
-
-    _firestoreNotificationSub?.cancel();
-    _isListening = true;
-    _initialSnapshotReceived = false;
-    _seenDocIds.clear();
-
-    debugPrint('[Notifications] Starting robust Firestore notification listener');
-
-    _firestoreNotificationSub = FirebaseFirestore.instance
-        .collection('notifications')
-        .snapshots()
-        .listen((snapshot) {
-      // First snapshot: record existing doc IDs so we don't spam old notifications
-      if (!_initialSnapshotReceived) {
-        for (final doc in snapshot.docs) {
-          _seenDocIds.add(doc.id);
-        }
-        _initialSnapshotReceived = true;
-        debugPrint('[Notifications] Initialized listener with ${_seenDocIds.length} existing notification(s)');
-        return;
-      }
-
-      // Subsequent snapshots: notify for any newly added documents
-      for (final change in snapshot.docChanges) {
-        if (change.type == DocumentChangeType.added) {
-          final docId = change.doc.id;
-          if (_seenDocIds.contains(docId)) continue;
-          _seenDocIds.add(docId);
-
-          final data = change.doc.data();
-          if (data == null) continue;
-
-          final title = data['title'] as String? ?? '';
-          final body = data['body'] as String? ?? '';
-          final type = data['type'] as String? ?? 'announcement';
-
-          if (title.isEmpty) continue;
-
-          debugPrint('[Notifications] New notification detected in real-time: "$title"');
-
-          // Get emoji prefix based on type
-          String prefix = '';
-          switch (type) {
-            case 'urgent':
-              prefix = '⚠️ ';
-              break;
-            case 'puja':
-              prefix = '🪔 ';
-              break;
-            case 'darshan':
-              prefix = '🙏 ';
-              break;
-            case 'event':
-              prefix = '🎉 ';
-              break;
-            case 'general':
-              prefix = '🕊️ ';
-              break;
-            case 'announcement':
-              prefix = '📢 ';
-              break;
-          }
-
-          // Show local notification with heads-up popup
-          _localNotifications.show(
-            docId.hashCode,
-            '$prefix$title',
-            body,
-            NotificationDetails(
-              android: AndroidNotificationDetails(
-                _channel.id,
-                _channel.name,
-                channelDescription: _channel.description,
-                importance: Importance.max,
-                priority: Priority.max,
-                icon: '@mipmap/ic_launcher',
-                playSound: true,
-                enableVibration: true,
-                styleInformation: BigTextStyleInformation(body),
-              ),
-            ),
-            payload: data['actionRoute'] as String?,
-          );
-        }
-      }
-    }, onError: (e) {
-      debugPrint('[Notifications] Firestore listener error: $e');
-    });
+    // No-op: FCM push notifications are now handled by Cloud Functions.
   }
 
-  /// Stop the Firestore notification listener (e.g., on logout)
+  /// Stop the Firestore notification listener
   static void stopFirestoreNotificationListener() {
-    _firestoreNotificationSub?.cancel();
-    _firestoreNotificationSub = null;
-    _isListening = false;
-    _initialSnapshotReceived = false;
-    _seenDocIds.clear();
-    debugPrint('[Notifications] Stopped Firestore notification listener');
+    // No-op
   }
 
   /// Save or refresh the FCM token for the currently logged-in user.
@@ -252,6 +160,8 @@ class NotificationService {
     }
   }
 
+  static final Set<String> _displayedForegroundIds = <String>{};
+
   /// Handle foreground FCM messages — show a local notification
   static void _handleForegroundMessage(RemoteMessage message) {
     debugPrint('[FCM] Foreground message: ${message.notification?.title}');
@@ -259,8 +169,19 @@ class NotificationService {
     final notification = message.notification;
     if (notification == null) return;
 
+    final notifKey = message.data['notificationId'] ?? message.messageId ?? '${notification.title}_${notification.body}';
+    if (_displayedForegroundIds.contains(notifKey)) {
+      debugPrint('[FCM] Duplicate foreground message ignored: $notifKey');
+      return;
+    }
+    _displayedForegroundIds.add(notifKey);
+
+    if (_displayedForegroundIds.length > 50) {
+      _displayedForegroundIds.remove(_displayedForegroundIds.first);
+    }
+
     _localNotifications.show(
-      notification.hashCode,
+      notifKey.hashCode,
       notification.title,
       notification.body,
       NotificationDetails(
@@ -271,6 +192,7 @@ class NotificationService {
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
+          tag: notifKey,
           playSound: true,
           enableVibration: true,
         ),

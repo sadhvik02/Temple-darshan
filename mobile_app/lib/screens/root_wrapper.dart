@@ -83,12 +83,8 @@ class RootWrapper extends StatelessWidget {
         if (auth.userModel != null) {
           // Save/refresh FCM token for push notifications
           NotificationService.saveTokenForUser(auth.userModel!.id);
-          // Start listening for new notifications from Firestore
-          NotificationService.startFirestoreNotificationListener();
           return const MainNavigator();
         } else {
-          // Stop listener on logout
-          NotificationService.stopFirestoreNotificationListener();
           return const LoginScreen();
         }
       },
