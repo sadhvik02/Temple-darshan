@@ -1,7 +1,9 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 
@@ -530,3 +532,110 @@ exports.bookFreeSeva = onCall(async (request) => {
     };
   });
 });
+
+/**
+ * Firestore Trigger: Send FCM push notification to all registered devices
+ * when a new notification document is created in the 'notifications' collection.
+ */
+exports.sendPushOnNotificationCreate = onDocumentCreated(
+  "notifications/{notificationId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) {
+      console.log("No data in notification document");
+      return;
+    }
+
+    const notifData = snap.data();
+    const title = notifData.title || "Temple Update";
+    const body = notifData.body || "";
+    const type = notifData.type || "announcement";
+    const imageUrl = notifData.imageUrl || null;
+    const actionRoute = notifData.actionRoute || "";
+
+    console.log(`[FCM] New notification created: "${title}" (type: ${type})`);
+
+    // 1. Collect all FCM tokens from all users' token subcollections
+    const usersSnapshot = await db.collection("users").get();
+    const allTokens = [];
+
+    for (const userDoc of usersSnapshot.docs) {
+      const tokensSnapshot = await userDoc.ref.collection("tokens").get();
+      for (const tokenDoc of tokensSnapshot.docs) {
+        const tokenData = tokenDoc.data();
+        if (tokenData.token) {
+          allTokens.push({
+            token: tokenData.token,
+            userId: userDoc.id,
+            tokenDocRef: tokenDoc.ref,
+          });
+        }
+      }
+    }
+
+    if (allTokens.length === 0) {
+      console.log("[FCM] No device tokens found. Skipping push.");
+      return;
+    }
+
+    console.log(`[FCM] Sending push to ${allTokens.length} device(s)`);
+
+    // 2. Build the FCM message payload
+    const messagePayload = {
+      notification: {
+        title: title,
+        body: body,
+      },
+      data: {
+        type: type,
+        actionRoute: actionRoute,
+        notificationId: event.params.notificationId,
+      },
+      android: {
+        notification: {
+          channelId: "temple_notifications",
+          priority: "high",
+          defaultSound: true,
+          defaultVibrateTimings: true,
+        },
+      },
+    };
+
+    // Add image if provided
+    if (imageUrl) {
+      messagePayload.notification.imageUrl = imageUrl;
+    }
+
+    // 3. Send to each token individually and clean up invalid tokens
+    const sendResults = await Promise.allSettled(
+      allTokens.map(async ({ token, tokenDocRef }) => {
+        try {
+          await getMessaging().send({
+            ...messagePayload,
+            token: token,
+          });
+          return { success: true, token };
+        } catch (error) {
+          // Clean up invalid/expired tokens
+          if (
+            error.code === "messaging/invalid-registration-token" ||
+            error.code === "messaging/registration-token-not-registered"
+          ) {
+            console.log(`[FCM] Removing invalid token: ${token.substring(0, 20)}...`);
+            await tokenDocRef.delete().catch(() => {});
+          } else {
+            console.error(`[FCM] Error sending to token: ${error.message}`);
+          }
+          return { success: false, token, error: error.message };
+        }
+      })
+    );
+
+    const successCount = sendResults.filter(
+      (r) => r.status === "fulfilled" && r.value.success
+    ).length;
+    const failCount = allTokens.length - successCount;
+
+    console.log(`[FCM] Push complete: ${successCount} sent, ${failCount} failed`);
+  }
+);

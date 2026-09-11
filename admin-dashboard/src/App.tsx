@@ -14,6 +14,7 @@ import EventsPage from "./pages/EventsPage";
 import UsersPage from "./pages/UsersPage";
 import DarshansPage from "./pages/DarshansPage";
 import DonationsPage from "./pages/DonationsPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/bookings" element={<BookingsPage />} />
             <Route path="/news" element={<NewsPage />} />
             <Route path="/events" element={<EventsPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/darshans" element={<DarshansPage />} />
             <Route path="/donations" element={<DonationsPage />} />

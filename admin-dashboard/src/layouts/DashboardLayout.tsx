@@ -14,6 +14,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Donations", path: "/donations", icon: "💰", enabled: true },
   { label: "News", path: "/news", icon: "📰", enabled: true },
   { label: "Events", path: "/events", icon: "🎉", enabled: true },
+  { label: "Notifications", path: "/notifications", icon: "🔔", enabled: true },
   { label: "Users", path: "/users", icon: "👥", enabled: true },
 ];
 

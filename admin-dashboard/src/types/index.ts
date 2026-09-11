@@ -212,3 +212,20 @@ export interface Donation {
   createdAt: any;
   updatedAt: any;
 }
+
+/** Temple Notification / Announcement */
+export interface NotificationItem {
+  id?: string;
+  title: string;
+  body: string;
+  type: 'general' | 'darshan' | 'puja' | 'event' | 'urgent' | 'announcement';
+  targetAudience: 'all' | 'devotees';
+  imageUrl?: string;
+  actionRoute?: string;
+  isGlobal: boolean;
+  targetUserId?: string | null;
+  sentBy?: string;
+  createdAt: any;
+  updatedAt?: any;
+}
+

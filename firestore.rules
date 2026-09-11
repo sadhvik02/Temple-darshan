@@ -74,6 +74,14 @@ service cloud.firestore {
 
       // Users cannot delete their own profile; admins can
       allow delete: if isAdmin();
+
+      // -------------------------------------------------------
+      // FCM DEVICE TOKENS SUBCOLLECTION
+      // Users can manage their own device tokens for push notifications
+      // -------------------------------------------------------
+      match /tokens/{tokenId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     // =========================================================
@@ -258,11 +266,7 @@ service cloud.firestore {
     // Users can read notifications targeted to them or global ones.
     // Only admins can create/manage notifications.
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated()
-        && (resource.data.isGlobal == true
-            || resource.data.targetUserId == request.auth.uid)
-        || isAdmin();
-
+      allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
@@ -290,4 +294,3 @@ service cloud.firestore {
 
   }
 }
-

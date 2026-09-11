@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import 'auth/login_screen.dart';
 import 'main/home_screen.dart';
@@ -80,8 +81,14 @@ class RootWrapper extends StatelessWidget {
 
         // If user is authenticated, show Main Navigation; otherwise Login
         if (auth.userModel != null) {
+          // Save/refresh FCM token for push notifications
+          NotificationService.saveTokenForUser(auth.userModel!.id);
+          // Start listening for new notifications from Firestore
+          NotificationService.startFirestoreNotificationListener();
           return const MainNavigator();
         } else {
+          // Stop listener on logout
+          NotificationService.stopFirestoreNotificationListener();
           return const LoginScreen();
         }
       },

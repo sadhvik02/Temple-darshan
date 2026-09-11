@@ -195,5 +195,22 @@ class DatabaseService {
 
     return refCode;
   }
+
+  Stream<List<NotificationModel>> getNotifications() {
+    return _db
+        .collection('notifications')
+        .snapshots()
+        .map((snap) {
+          final items = snap.docs.map((doc) => NotificationModel.fromFirestore(doc)).toList();
+          items.sort((a, b) {
+            if (a.createdAt == null && b.createdAt == null) return 0;
+            if (a.createdAt == null) return 1;
+            if (b.createdAt == null) return -1;
+            return b.createdAt!.compareTo(a.createdAt!);
+          });
+          return items;
+        });
+  }
 }
+
 

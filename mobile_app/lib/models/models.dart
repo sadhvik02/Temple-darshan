@@ -415,3 +415,53 @@ class DonationTypeModel {
   }
 }
 
+class NotificationModel {
+  final String id;
+  final String title;
+  final String body;
+  final String type; // 'general', 'darshan', 'puja', 'event', 'urgent', 'announcement'
+  final String targetAudience;
+  final String? imageUrl;
+  final String? actionRoute;
+  final bool isGlobal;
+  final DateTime? createdAt;
+
+  NotificationModel({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.type,
+    this.targetAudience = 'all',
+    this.imageUrl,
+    this.actionRoute,
+    this.isGlobal = true,
+    this.createdAt,
+  });
+
+  factory NotificationModel.fromFirestore(DocumentSnapshot doc) {
+    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
+    DateTime? dt;
+    final created = data['createdAt'];
+    if (created is Timestamp) {
+      dt = created.toDate();
+    } else if (created is int) {
+      dt = DateTime.fromMillisecondsSinceEpoch(created);
+    } else if (created is String) {
+      dt = DateTime.tryParse(created);
+    }
+
+    return NotificationModel(
+      id: doc.id,
+      title: data['title'] ?? '',
+      body: data['body'] ?? '',
+      type: data['type'] ?? 'announcement',
+      targetAudience: data['targetAudience'] ?? 'all',
+      imageUrl: data['imageUrl'],
+      actionRoute: data['actionRoute'],
+      isGlobal: data['isGlobal'] ?? true,
+      createdAt: dt,
+    );
+  }
+}
+
+
