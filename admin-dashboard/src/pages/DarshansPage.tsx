@@ -349,13 +349,46 @@ export default function DarshansPage() {
                 </div>
 
                 <div className="form-group">
-                  <label>Image URL (Optional)</label>
+                  <label>Image (URL or Path - Optional)</label>
                   <input
-                    type="url"
+                    type="text"
                     value={formData.imageUrl}
                     onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
+                    placeholder="/darshan_general.jpg, https://..., or leave empty"
                   />
+                  <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Presets:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange("imageUrl", "/darshan_general.jpg")}
+                      style={{ fontSize: "0.75rem", background: "rgba(217,119,6,0.1)", border: "1px solid rgba(217,119,6,0.3)", borderRadius: "4px", padding: "2px 8px", color: "var(--color-primary)", cursor: "pointer", fontWeight: "600" }}
+                    >
+                      🕉️ General
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange("imageUrl", "/darshan_special.jpg")}
+                      style={{ fontSize: "0.75rem", background: "rgba(217,119,6,0.1)", border: "1px solid rgba(217,119,6,0.3)", borderRadius: "4px", padding: "2px 8px", color: "var(--color-primary)", cursor: "pointer", fontWeight: "600" }}
+                    >
+                      ✨ Special Entry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange("imageUrl", "/darshan_vip.jpg")}
+                      style={{ fontSize: "0.75rem", background: "rgba(217,119,6,0.1)", border: "1px solid rgba(217,119,6,0.3)", borderRadius: "4px", padding: "2px 8px", color: "var(--color-primary)", cursor: "pointer", fontWeight: "600" }}
+                    >
+                      👑 VIP Divya
+                    </button>
+                    {formData.imageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange("imageUrl", "")}
+                        style={{ fontSize: "0.75rem", background: "none", border: "none", color: "#EF4444", cursor: "pointer" }}
+                      >
+                        ✕ Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="form-grid">

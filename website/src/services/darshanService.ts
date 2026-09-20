@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, getDoc, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, onSnapshot, query, where, orderBy } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import type { Darshan } from "../types";
 
@@ -40,6 +40,21 @@ export const DEFAULT_DARSHANS: Darshan[] = [
   },
 ];
 
+function formatDarshanDoc(doc: any): Darshan {
+  const data = doc.data();
+  return {
+    id: doc.id,
+    ...data,
+    name: data.name || "Sacred Darshan",
+    description: data.description || "Receive divine blessings at Sri Kedareshwara Ashramam.",
+    imageUrl: data.imageUrl || "/darshan_general.jpg",
+    price: typeof data.price === "number" ? data.price : 0,
+    bookingEnabled: data.bookingEnabled ?? false,
+    isActive: data.isActive ?? true,
+    displayOrder: data.displayOrder ?? 1,
+  };
+}
+
 export async function getActiveDarshans(): Promise<Darshan[]> {
   try {
     const q = query(
@@ -48,56 +63,42 @@ export async function getActiveDarshans(): Promise<Darshan[]> {
       orderBy("displayOrder", "asc")
     );
     const snapshot = await getDocs(q);
-    const fetched = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Darshan[];
-
-    if (!fetched || fetched.length === 0) {
+    if (snapshot.empty) {
       return DEFAULT_DARSHANS;
     }
-
-    // Enhance fetched darshans with consecrated imagery and ensure 3 complete cards
-    const enhanced = fetched.map((item) => {
-      const upper = (item.name || "").toUpperCase();
-      let imageUrl = item.imageUrl;
-      let name = item.name;
-      let description = item.description;
-
-      if (upper.includes("VIP")) {
-        name = "VIP Divya Darshan";
-        imageUrl = imageUrl || "/darshan_vip.jpg";
-        if (!description || description.toLowerCase().includes("dhrashan") || description.length < 20) {
-          description = "Priority direct sanctum entrance with personalized ashram guidance, special aarati deepam blessings, and consecrated sacred laddu prasadam.";
-        }
-      } else if (upper.includes("SPECIAL")) {
-        name = "Special Entry Darshan";
-        imageUrl = imageUrl || "/darshan_special.jpg";
-        if (!description || description.length < 25) {
-          description = "Expedited queue entry with quick sanctum access, close deity darshan, and holy prasadam blessing for devotees and families.";
-        }
-      } else {
-        imageUrl = imageUrl || "/darshan_general.jpg";
-      }
-
-      return {
-        ...item,
-        name,
-        description,
-        imageUrl,
-      };
-    });
-
-    // If General Public Darshan is missing, prepend it to form the complete sacred triad
-    const hasGeneral = enhanced.some((d) => d.price === 0 || d.name.toUpperCase().includes("GENERAL"));
-    if (!hasGeneral) {
-      return [DEFAULT_DARSHANS[0], ...enhanced];
-    }
-
-    return enhanced;
+    return snapshot.docs.map(formatDarshanDoc);
   } catch (error) {
     console.error("Error fetching active darshans:", error);
     return DEFAULT_DARSHANS;
+  }
+}
+
+/** Subscribe in real-time to darshan offerings managed in Admin Dashboard */
+export function subscribeToActiveDarshans(
+  callback: (items: Darshan[]) => void
+): () => void {
+  try {
+    const q = query(
+      DARSHANS_COLLECTION,
+      where("isActive", "==", true),
+      orderBy("displayOrder", "asc")
+    );
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        if (snapshot.empty) {
+          callback(DEFAULT_DARSHANS);
+        } else {
+          callback(snapshot.docs.map(formatDarshanDoc));
+        }
+      },
+      (error) => {
+        console.error("Error in real-time darshans subscription:", error);
+      }
+    );
+  } catch (err) {
+    console.error("Error setting up darshans listener:", err);
+    return () => {};
   }
 }
 
@@ -109,7 +110,6 @@ export async function getDarshanById(id: string): Promise<Darshan | null> {
       const data = snapshot.data();
       if (data.isActive) return { id: snapshot.id, ...data } as Darshan;
     }
-    // Fallback to default by id
     const found = DEFAULT_DARSHANS.find((d) => d.id === id);
     return found || null;
   } catch (error) {

@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, getDoc, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, onSnapshot, query, where, orderBy } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import type { Service } from "../types";
 
@@ -19,6 +19,34 @@ export async function getActiveServices(): Promise<Service[]> {
   } catch (error) {
     console.error("Error fetching active services:", error);
     return [];
+  }
+}
+
+/** Real-time subscription to active services */
+export function subscribeToActiveServices(callback: (items: Service[]) => void): () => void {
+  try {
+    const q = query(
+      SERVICES_COLLECTION,
+      where("isActive", "==", true),
+      orderBy("displayOrder", "asc")
+    );
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        callback(
+          snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as Service[]
+        );
+      },
+      (error) => {
+        console.error("Error in real-time services subscription:", error);
+      }
+    );
+  } catch (err) {
+    console.error("Error setting up services listener:", err);
+    return () => {};
   }
 }
 

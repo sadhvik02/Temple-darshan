@@ -3,7 +3,7 @@ import SEOHead from "../components/SEOHead";
 import SevaCard from "../components/SevaCard";
 import AppPromoSection from "../components/AppPromoSection";
 import { CardsGridSkeleton } from "../components/Skeletons";
-import { getActiveServices } from "../services/serviceService";
+import { getActiveServices, subscribeToActiveServices } from "../services/serviceService";
 import type { Service } from "../types";
 
 export default function SevasPage() {
@@ -22,6 +22,13 @@ export default function SevasPage() {
         setError("Unable to load sevas at this moment. Please try again later.");
       })
       .finally(() => setLoading(false));
+
+    const unsubscribe = subscribeToActiveServices((data) => {
+      setServices(data);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Filter according strictly to the existing Firestore business categories: ashrama_seva vs arjita_seva

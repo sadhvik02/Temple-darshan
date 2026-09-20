@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import SEOHead from "../components/SEOHead";
 import AppPromoSection from "../components/AppPromoSection";
-import { getTempleInfo } from "../services/templeService";
+import { getTempleInfo, subscribeToTempleInfo } from "../services/templeService";
 import type { TempleInfo } from "../types";
 
 export default function ContactPage() {
@@ -19,6 +19,13 @@ export default function ContactPage() {
     getTempleInfo()
       .then(setTempleInfo)
       .finally(() => setLoading(false));
+
+    const unsubscribe = subscribeToTempleInfo((info) => {
+      setTempleInfo(info);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const templeName = templeInfo?.name || "Sri Kedareshwara Ashramam";
@@ -30,7 +37,7 @@ export default function ContactPage() {
 
   // Maps URL generated directly from actual address
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    `Sri Kedareshwara Ashramam, Navasiddula Gutta, Nandipet, Nizamabad`
+    address || `Sri Kedareshwara Ashramam, Navasiddula Gutta, Nandipet, Nizamabad`
   )}`;
 
   const handleFormSubmit = (e: FormEvent) => {

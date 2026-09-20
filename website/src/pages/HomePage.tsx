@@ -11,13 +11,13 @@ import AppPromoSection from "../components/AppPromoSection";
 import SEOHead from "../components/SEOHead";
 import { CardsGridSkeleton } from "../components/Skeletons";
 
-import { getTempleInfo } from "../services/templeService";
-import { getActiveBanners } from "../services/bannerService";
-import { getActiveServices } from "../services/serviceService";
-import { getActiveDarshans } from "../services/darshanService";
-import { getActiveDonationTypes } from "../services/donationService";
-import { getPublishedNews } from "../services/newsService";
-import { getPublishedEvents } from "../services/eventService";
+import { getTempleInfo, subscribeToTempleInfo } from "../services/templeService";
+import { getActiveBanners, subscribeToActiveBanners } from "../services/bannerService";
+import { getActiveServices, subscribeToActiveServices } from "../services/serviceService";
+import { getActiveDarshans, subscribeToActiveDarshans } from "../services/darshanService";
+import { getActiveDonationTypes, subscribeToActiveDonationTypes } from "../services/donationService";
+import { getPublishedNews, subscribeToPublishedNews } from "../services/newsService";
+import { getPublishedEvents, subscribeToPublishedEvents } from "../services/eventService";
 
 import type {
   TempleInfo,
@@ -44,32 +44,63 @@ export default function HomePage() {
   const [loadingNewsEvents, setLoadingNewsEvents] = useState(true);
 
   useEffect(() => {
-    // Load Temple Info & Banners
+    // Initial fetch to guarantee instant rendering
     getTempleInfo().then(setTempleInfo);
     getActiveBanners().then(setBanners);
+    getActiveServices().then((s) => {
+      setServices(s);
+      setLoadingServices(false);
+    });
+    getActiveDarshans().then((d) => {
+      setDarshans(d);
+      setLoadingDarshans(false);
+    });
+    getActiveDonationTypes().then((dt) => {
+      setDonationTypes(dt);
+      setLoadingDonations(false);
+    });
 
-    // Load Services
-    getActiveServices()
-      .then(setServices)
-      .finally(() => setLoadingServices(false));
+    // Real-time Firestore subscriptions: instant sync when admin updates anything
+    const unsubTemple = subscribeToTempleInfo(setTempleInfo);
+    const unsubBanners = subscribeToActiveBanners(setBanners);
+    const unsubServices = subscribeToActiveServices((s) => {
+      setServices(s);
+      setLoadingServices(false);
+    });
+    const unsubDarshans = subscribeToActiveDarshans((d) => {
+      setDarshans(d);
+      setLoadingDarshans(false);
+    });
+    const unsubDonations = subscribeToActiveDonationTypes((dt) => {
+      setDonationTypes(dt);
+      setLoadingDonations(false);
+    });
+    const unsubNews = subscribeToPublishedNews((news) => {
+      setNewsList(news.slice(0, 3));
+      setLoadingNewsEvents(false);
+    });
+    const unsubEvents = subscribeToPublishedEvents((events) => {
+      setEventsList(events.slice(0, 3));
+      setLoadingNewsEvents(false);
+    });
 
-    // Load Darshans
-    getActiveDarshans()
-      .then(setDarshans)
-      .finally(() => setLoadingDarshans(false));
-
-    // Load Donations
-    getActiveDonationTypes()
-      .then(setDonationTypes)
-      .finally(() => setLoadingDonations(false));
-
-    // Load News & Events
+    // Initial load for News & Events
     Promise.all([getPublishedNews(), getPublishedEvents()])
       .then(([news, events]) => {
         setNewsList(news.slice(0, 3));
         setEventsList(events.slice(0, 3));
       })
       .finally(() => setLoadingNewsEvents(false));
+
+    return () => {
+      unsubTemple();
+      unsubBanners();
+      unsubServices();
+      unsubDarshans();
+      unsubDonations();
+      unsubNews();
+      unsubEvents();
+    };
   }, []);
 
   return (
@@ -371,10 +402,10 @@ export default function HomePage() {
       <section className="section">
         <div className="container">
           <div className="section-header">
-            <span className="section-badge">Selfless Giving</span>
+            <span className="section-badge">DAANA DHARMA • SACRED GIVING</span>
             <h2 className="section-title">Sacred Donations &amp; Seva Funds</h2>
             <p className="section-subtitle">
-              Support the noble mission of Sri Kedareshwara Ashramam. Your voluntary contributions nurture daily Annadanam and temple rituals.
+              Support the noble spiritual mission of Sri Kedareshwara Ashramam. Your voluntary daana nurtures daily Nitya Annadanam, cow protection, and holy shrine preservation.
             </p>
           </div>
 
@@ -387,6 +418,32 @@ export default function HomePage() {
                   <DonationCard key={donationType.id} donationType={donationType} />
                 ))}
               </div>
+
+              {/* Trust & Sacred Impact Strip */}
+              <div className="donation-trust-strip">
+                <div className="donation-trust-item">
+                  <span className="donation-trust-icon">🍲</span>
+                  <div className="donation-trust-text">
+                    <strong>Nitya Annadanam Prasadam</strong>
+                    <p>Continuous sacred feeding for hundreds of pilgrims and sadhus daily.</p>
+                  </div>
+                </div>
+                <div className="donation-trust-item">
+                  <span className="donation-trust-icon">🐄</span>
+                  <div className="donation-trust-text">
+                    <strong>Goshala &amp; Cow Sanctuary</strong>
+                    <p>Lifelong shelter, green fodder, and gentle healthcare for indigenous cows.</p>
+                  </div>
+                </div>
+                <div className="donation-trust-item">
+                  <span className="donation-trust-icon">📜</span>
+                  <div className="donation-trust-text">
+                    <strong>100% Direct Trust Transfer</strong>
+                    <p>Official bank allocation with verifiable digital &amp; office receipts.</p>
+                  </div>
+                </div>
+              </div>
+
               <div style={{ textAlign: "center", marginTop: "2.5rem" }}>
                 <Link to="/donations" className="btn btn-secondary btn-lg">
                   Explore All Donation Funds →

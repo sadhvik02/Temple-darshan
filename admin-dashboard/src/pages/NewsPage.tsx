@@ -452,12 +452,12 @@ export default function NewsPage() {
                 </div>
 
                 <div className="form-group">
-                  <label>Cover Image URL (Optional)</label>
+                  <label>Cover Image (URL or Path - Optional)</label>
                   <input
-                    type="url"
+                    type="text"
                     value={formData.imageUrl}
                     onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
+                    placeholder="https://... or leave empty"
                   />
                 </div>
 

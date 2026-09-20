@@ -3,7 +3,7 @@ import SEOHead from "../components/SEOHead";
 import DonationCard from "../components/DonationCard";
 import AppPromoSection from "../components/AppPromoSection";
 import { CardsGridSkeleton } from "../components/Skeletons";
-import { getActiveDonationTypes } from "../services/donationService";
+import { getActiveDonationTypes, subscribeToActiveDonationTypes } from "../services/donationService";
 import type { DonationType } from "../types";
 
 export default function DonationsPage() {
@@ -21,6 +21,13 @@ export default function DonationsPage() {
         setError("Unable to load donation funds at this moment. Please try again later.");
       })
       .finally(() => setLoading(false));
+
+    const unsubscribe = subscribeToActiveDonationTypes((data) => {
+      setDonationTypes(data);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   return (

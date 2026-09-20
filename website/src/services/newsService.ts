@@ -1,43 +1,58 @@
-import { collection, getDocs, doc, getDoc, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import type { News } from "../types";
 
 const NEWS_COLLECTION = collection(db, "news");
 
+function sortNews(items: News[]): News[] {
+  return items.sort((a, b) => {
+    const timeA = a.publishedAt?.seconds || a.createdAt?.seconds || 0;
+    const timeB = b.publishedAt?.seconds || b.createdAt?.seconds || 0;
+    return timeB - timeA;
+  });
+}
+
 export async function getPublishedNews(): Promise<News[]> {
   try {
     const q = query(
       NEWS_COLLECTION,
-      where("isPublished", "==", true),
-      orderBy("publishedAt", "desc")
+      where("isPublished", "==", true)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => ({
+    const items = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as News[];
+    return sortNews(items);
   } catch (error) {
     console.error("Error fetching published news:", error);
-    // Fallback in case some published items don't have publishedAt populated
-    try {
-      const fallbackQuery = query(
-        NEWS_COLLECTION,
-        where("isPublished", "==", true)
-      );
-      const snapshot = await getDocs(fallbackQuery);
-      const items = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as News[];
-      return items.sort((a, b) => {
-        const timeA = a.publishedAt?.seconds || a.createdAt?.seconds || 0;
-        const timeB = b.publishedAt?.seconds || b.createdAt?.seconds || 0;
-        return timeB - timeA;
-      });
-    } catch (fallbackErr) {
-      console.error("Fallback news fetch failed:", fallbackErr);
-      return [];
-    }
+    return [];
+  }
+}
+
+/** Real-time subscription to published news from Admin Dashboard */
+export function subscribeToPublishedNews(callback: (items: News[]) => void): () => void {
+  try {
+    const q = query(
+      NEWS_COLLECTION,
+      where("isPublished", "==", true)
+    );
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const items = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as News[];
+        callback(sortNews(items));
+      },
+      (error) => {
+        console.error("Error in news subscription:", error);
+      }
+    );
+  } catch (err) {
+    console.error("Error setting up news listener:", err);
+    return () => {};
   }
 }
 

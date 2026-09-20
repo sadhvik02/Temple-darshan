@@ -3,8 +3,8 @@ import SEOHead from "../components/SEOHead";
 import DarshanCard from "../components/DarshanCard";
 import AppPromoSection from "../components/AppPromoSection";
 import { CardsGridSkeleton } from "../components/Skeletons";
-import { getActiveDarshans } from "../services/darshanService";
-import { getTempleInfo } from "../services/templeService";
+import { getActiveDarshans, subscribeToActiveDarshans } from "../services/darshanService";
+import { getTempleInfo, subscribeToTempleInfo } from "../services/templeService";
 import type { Darshan, TempleInfo } from "../types";
 
 export default function DarshanPage() {
@@ -24,6 +24,19 @@ export default function DarshanPage() {
         setError("Unable to load darshan details right now. Please try again later.");
       })
       .finally(() => setLoading(false));
+
+    const unsubDarshans = subscribeToActiveDarshans((data) => {
+      setDarshans(data);
+      setLoading(false);
+    });
+    const unsubTemple = subscribeToTempleInfo((info) => {
+      setTempleInfo(info);
+    });
+
+    return () => {
+      unsubDarshans();
+      unsubTemple();
+    };
   }, []);
 
   return (

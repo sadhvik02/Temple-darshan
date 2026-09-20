@@ -4,8 +4,8 @@ import NewsCard from "../components/NewsCard";
 import EventCard from "../components/EventCard";
 import AppPromoSection from "../components/AppPromoSection";
 import { CardsGridSkeleton } from "../components/Skeletons";
-import { getPublishedNews } from "../services/newsService";
-import { getPublishedEvents } from "../services/eventService";
+import { getPublishedNews, subscribeToPublishedNews } from "../services/newsService";
+import { getPublishedEvents, subscribeToPublishedEvents } from "../services/eventService";
 import type { News, Event as TempleEvent } from "../types";
 
 export default function NewsEventsPage() {
@@ -27,6 +27,20 @@ export default function NewsEventsPage() {
         setError("Unable to load news and events right now. Please try again later.");
       })
       .finally(() => setLoading(false));
+
+    const unsubNews = subscribeToPublishedNews((news) => {
+      setNewsList(news);
+      setLoading(false);
+    });
+    const unsubEvents = subscribeToPublishedEvents((events) => {
+      setEventsList(events);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubNews();
+      unsubEvents();
+    };
   }, []);
 
   // Filtered lists based on search

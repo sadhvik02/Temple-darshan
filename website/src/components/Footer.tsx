@@ -67,15 +67,23 @@ export default function Footer({ templeInfo }: FooterProps) {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.885rem" }}>
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <span style={{ color: "var(--color-saffron)" }}>📍</span>
-                <span>Sri Kedareshwara Ashramam, Navasiddula Gutta, Nandipet, Nizamabad</span>
+                <span>
+                  {templeInfo
+                    ? `${templeInfo.name ? `${templeInfo.name}, ` : ""}${templeInfo.address ? `${templeInfo.address}, ` : ""}${templeInfo.city}${templeInfo.state ? `, ${templeInfo.state}` : ""}${templeInfo.pincode ? ` - ${templeInfo.pincode}` : ""}`
+                    : "Sri Kedareshwara Ashramam, Navasiddula Gutta, Nandipet, Nizamabad"}
+                </span>
               </div>
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <span style={{ color: "var(--color-saffron)" }}>📞</span>
-                <a href="tel:+918462271418" style={{ color: "#E7E5E4" }}>+918462-271418</a>
+                <a href={`tel:${(templeInfo?.phone || "+918462-271418").replace(/\s+/g, "")}`} style={{ color: "#E7E5E4" }}>
+                  {templeInfo?.phone || "+918462-271418"}
+                </a>
               </div>
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <span style={{ color: "var(--color-saffron)" }}>✉️</span>
-                <a href="mailto:services@kedari.org" style={{ color: "#E7E5E4" }}>services@kedari.org</a>
+                <a href={`mailto:${templeInfo?.email || "services@kedari.org"}`} style={{ color: "#E7E5E4" }}>
+                  {templeInfo?.email || "services@kedari.org"}
+                </a>
               </div>
               <div style={{ marginTop: "0.5rem" }}>
                 <a href="#download-app" className="btn btn-sm btn-primary" style={{ width: "100%" }}>

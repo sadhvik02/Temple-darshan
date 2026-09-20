@@ -169,15 +169,15 @@ export default function TempleInfoPage() {
                 </div>
 
                 <div className="form-group span-full">
-                  <label>Temple Image URL</label>
+                  <label>Temple Image (URL or Path)</label>
                   <input
-                    type="url"
+                    type="text"
                     value={formData.imageUrl}
                     onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
+                    placeholder="https://... or /annadanam_seva.jpg"
                   />
                   <span className="form-help">
-                    Enter a high-resolution temple image URL to display as header hero on mobile & web.
+                    Enter a high-resolution temple image URL or local asset path to display as header hero on mobile &amp; web.
                   </span>
                 </div>
               </div>
@@ -211,10 +211,10 @@ export default function TempleInfoPage() {
                 <div className="form-group span-full">
                   <label>Website URL</label>
                   <input
-                    type="url"
+                    type="text"
                     value={formData.website}
                     onChange={(e) => handleInputChange("website", e.target.value)}
-                    placeholder="https://templedarshan.org"
+                    placeholder="https://share.google/... or https://kedari.org"
                   />
                 </div>
               </div>

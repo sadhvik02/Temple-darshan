@@ -424,24 +424,24 @@ export default function BannersPage() {
                 </div>
 
                 <div className="form-group">
-                  <label>Image URL *</label>
+                  <label>Image (URL or Path) *</label>
                   <input
                     required
-                    type="url"
+                    type="text"
                     value={formData.imageUrl}
                     onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
+                    placeholder="https://... or /guruji.png"
                   />
-                  <span className="form-help">Enter a high-resolution 16:9 banner image link.</span>
+                  <span className="form-help">Enter a high-resolution banner image link or path.</span>
                 </div>
 
                 <div className="form-group">
                   <label>Action / Navigation URL (Optional)</label>
                   <input
-                    type="url"
+                    type="text"
                     value={formData.actionUrl}
                     onChange={(e) => handleInputChange("actionUrl", e.target.value)}
-                    placeholder="https://templedarshan.org/event"
+                    placeholder="/donations, /darshan, or https://..."
                   />
                 </div>
 

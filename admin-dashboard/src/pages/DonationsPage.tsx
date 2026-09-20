@@ -871,13 +871,46 @@ export default function DonationsPage() {
                 </div>
 
                 <div className="form-group">
-                  <label>Cover Image URL (Optional)</label>
+                  <label>Cover Image (URL or Path - Optional)</label>
                   <input
-                    type="url"
+                    type="text"
                     value={formData.imageUrl}
                     onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
+                    placeholder="/annadanam_seva.jpg, https://..., or leave empty"
                   />
+                  <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Presets:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange("imageUrl", "/annadanam_seva.jpg")}
+                      style={{ fontSize: "0.75rem", background: "rgba(217,119,6,0.1)", border: "1px solid rgba(217,119,6,0.3)", borderRadius: "4px", padding: "2px 8px", color: "var(--color-primary)", cursor: "pointer", fontWeight: "600" }}
+                    >
+                      🍲 Annadanam
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange("imageUrl", "/goshala_seva.jpg")}
+                      style={{ fontSize: "0.75rem", background: "rgba(217,119,6,0.1)", border: "1px solid rgba(217,119,6,0.3)", borderRadius: "4px", padding: "2px 8px", color: "var(--color-primary)", cursor: "pointer", fontWeight: "600" }}
+                    >
+                      🐄 Goshala
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange("imageUrl", "/mandir_nirman.jpg")}
+                      style={{ fontSize: "0.75rem", background: "rgba(217,119,6,0.1)", border: "1px solid rgba(217,119,6,0.3)", borderRadius: "4px", padding: "2px 8px", color: "var(--color-primary)", cursor: "pointer", fontWeight: "600" }}
+                    >
+                      🛕 Mandir Nirman
+                    </button>
+                    {formData.imageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange("imageUrl", "")}
+                        style={{ fontSize: "0.75rem", background: "none", border: "none", color: "#EF4444", cursor: "pointer" }}
+                      >
+                        ✕ Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="form-group">

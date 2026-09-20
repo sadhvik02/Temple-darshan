@@ -13,7 +13,7 @@ import EventDetailPage from "./pages/EventDetailPage";
 import ContactPage from "./pages/ContactPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
-import { getTempleInfo } from "./services/templeService";
+import { getTempleInfo, subscribeToTempleInfo } from "./services/templeService";
 import type { TempleInfo } from "./types";
 
 /** Automatically scrolls window to top on route navigation */
@@ -31,7 +31,12 @@ export default function App() {
   const [templeInfo, setTempleInfo] = useState<TempleInfo | null>(null);
 
   useEffect(() => {
+    // Initial fetch + real-time subscription from Firestore
     getTempleInfo().then(setTempleInfo);
+    const unsubscribe = subscribeToTempleInfo((info) => {
+      setTempleInfo(info);
+    });
+    return () => unsubscribe();
   }, []);
 
   return (
