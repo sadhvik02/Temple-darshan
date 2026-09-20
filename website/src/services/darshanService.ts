@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, getDoc, onSnapshot, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import type { Darshan } from "../types";
 
@@ -57,18 +57,15 @@ function formatDarshanDoc(doc: any): Darshan {
 
 export async function getActiveDarshans(): Promise<Darshan[]> {
   try {
-    const q = query(
-      DARSHANS_COLLECTION,
-      where("isActive", "==", true),
-      orderBy("displayOrder", "asc")
-    );
+    const q = query(DARSHANS_COLLECTION, where("isActive", "==", true));
     const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      return DEFAULT_DARSHANS;
+    if (!snapshot.empty) {
+      const items = snapshot.docs.map(formatDarshanDoc);
+      return items.sort((a, b) => a.displayOrder - b.displayOrder);
     }
-    return snapshot.docs.map(formatDarshanDoc);
+    return DEFAULT_DARSHANS;
   } catch (error) {
-    console.error("Error fetching active darshans:", error);
+    console.warn("Error fetching active darshans, using defaults:", error);
     return DEFAULT_DARSHANS;
   }
 }
@@ -78,26 +75,25 @@ export function subscribeToActiveDarshans(
   callback: (items: Darshan[]) => void
 ): () => void {
   try {
-    const q = query(
-      DARSHANS_COLLECTION,
-      where("isActive", "==", true),
-      orderBy("displayOrder", "asc")
-    );
+    const q = query(DARSHANS_COLLECTION, where("isActive", "==", true));
     return onSnapshot(
       q,
       (snapshot) => {
-        if (snapshot.empty) {
-          callback(DEFAULT_DARSHANS);
+        if (!snapshot.empty) {
+          const items = snapshot.docs.map(formatDarshanDoc);
+          callback(items.sort((a, b) => a.displayOrder - b.displayOrder));
         } else {
-          callback(snapshot.docs.map(formatDarshanDoc));
+          callback(DEFAULT_DARSHANS);
         }
       },
       (error) => {
-        console.error("Error in real-time darshans subscription:", error);
+        console.warn("Real-time darshans subscription warning, using defaults:", error);
+        callback(DEFAULT_DARSHANS);
       }
     );
   } catch (err) {
-    console.error("Error setting up darshans listener:", err);
+    console.warn("Error setting up darshans listener, using defaults:", err);
+    callback(DEFAULT_DARSHANS);
     return () => {};
   }
 }

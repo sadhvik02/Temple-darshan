@@ -1,4 +1,4 @@
-import { collection, getDocs, onSnapshot, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import type { DonationType } from "../types";
 
@@ -62,18 +62,15 @@ function formatDonationDoc(doc: any): DonationType {
 
 export async function getActiveDonationTypes(): Promise<DonationType[]> {
   try {
-    const q = query(
-      DONATION_TYPES_COLLECTION,
-      where("isActive", "==", true),
-      orderBy("displayOrder", "asc")
-    );
+    const q = query(DONATION_TYPES_COLLECTION, where("isActive", "==", true));
     const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      return DEFAULT_DONATION_TYPES;
+    if (!snapshot.empty) {
+      const items = snapshot.docs.map(formatDonationDoc);
+      return items.sort((a, b) => a.displayOrder - b.displayOrder);
     }
-    return snapshot.docs.map(formatDonationDoc);
+    return DEFAULT_DONATION_TYPES;
   } catch (error) {
-    console.error("Error fetching active donation types:", error);
+    console.warn("Error fetching active donation types, using defaults:", error);
     return DEFAULT_DONATION_TYPES;
   }
 }
@@ -83,26 +80,25 @@ export function subscribeToActiveDonationTypes(
   callback: (items: DonationType[]) => void
 ): () => void {
   try {
-    const q = query(
-      DONATION_TYPES_COLLECTION,
-      where("isActive", "==", true),
-      orderBy("displayOrder", "asc")
-    );
+    const q = query(DONATION_TYPES_COLLECTION, where("isActive", "==", true));
     return onSnapshot(
       q,
       (snapshot) => {
-        if (snapshot.empty) {
-          callback(DEFAULT_DONATION_TYPES);
+        if (!snapshot.empty) {
+          const items = snapshot.docs.map(formatDonationDoc);
+          callback(items.sort((a, b) => a.displayOrder - b.displayOrder));
         } else {
-          callback(snapshot.docs.map(formatDonationDoc));
+          callback(DEFAULT_DONATION_TYPES);
         }
       },
       (error) => {
-        console.error("Error in real-time donation types subscription:", error);
+        console.warn("Real-time donation types subscription warning, using defaults:", error);
+        callback(DEFAULT_DONATION_TYPES);
       }
     );
   } catch (err) {
-    console.error("Error setting up donation types listener:", err);
+    console.warn("Error setting up donation types listener, using defaults:", err);
+    callback(DEFAULT_DONATION_TYPES);
     return () => {};
   }
 }

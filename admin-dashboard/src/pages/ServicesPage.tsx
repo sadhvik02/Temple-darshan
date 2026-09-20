@@ -514,10 +514,31 @@ export default function ServicesPage() {
                     <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Presets:</span>
                     <button
                       type="button"
+                      onClick={() => handleInputChange("imageUrl", "/shiva_seva.jpg")}
+                      style={{ fontSize: "0.75rem", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.3)", borderRadius: "4px", padding: "2px 8px", color: "#2563eb", cursor: "pointer", fontWeight: "600" }}
+                    >
+                      🔱 Shiva Seva
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleInputChange("imageUrl", "/ganesh_seva.jpg")}
                       style={{ fontSize: "0.75rem", background: "rgba(217,119,6,0.1)", border: "1px solid rgba(217,119,6,0.3)", borderRadius: "4px", padding: "2px 8px", color: "var(--color-primary)", cursor: "pointer", fontWeight: "600" }}
                     >
                       🐘 Ganesh Seva
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange("imageUrl", "/annadanam_seva.jpg")}
+                      style={{ fontSize: "0.75rem", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: "4px", padding: "2px 8px", color: "#16a34a", cursor: "pointer", fontWeight: "600" }}
+                    >
+                      🍚 Annadanam
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange("imageUrl", "/goshala_seva.jpg")}
+                      style={{ fontSize: "0.75rem", background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: "4px", padding: "2px 8px", color: "#9333ea", cursor: "pointer", fontWeight: "600" }}
+                    >
+                      🐄 Goshala
                     </button>
                     {formData.imageUrl && (
                       <button

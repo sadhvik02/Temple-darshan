@@ -10,8 +10,17 @@ function getServiceImage(service: Service): string {
     return service.imageUrl;
   }
   const upper = (service.name || "").toUpperCase();
-  if (upper.includes("GANESH")) {
+  if (upper.includes("SHIVA") || upper.includes("SIVA") || upper.includes("RUDRA") || upper.includes("BILVA")) {
+    return "/shiva_seva.jpg";
+  }
+  if (upper.includes("GANESH") || upper.includes("VINAYAKA") || upper.includes("MODAK")) {
     return "/ganesh_seva.jpg";
+  }
+  if (upper.includes("ANNADAN") || upper.includes("PRASAD")) {
+    return "/annadanam_seva.jpg";
+  }
+  if (upper.includes("GOSHALA") || upper.includes("COW")) {
+    return "/goshala_seva.jpg";
   }
   return "";
 }
@@ -55,6 +64,7 @@ export default function SevaCard({ service }: SevaCardProps) {
               alt={service.name}
               className="card-img"
               loading="lazy"
+              style={{ objectPosition: "center top" }}
               onError={() => setImgError(true)}
             />
           ) : (
@@ -137,7 +147,12 @@ export default function SevaCard({ service }: SevaCardProps) {
 
             {displayImage && !imgError ? (
               <div className="modal-img-wrapper">
-                <img src={displayImage} alt={service.name} className="modal-img-top" />
+                <img
+                  src={displayImage}
+                  alt={service.name}
+                  className="modal-img-top"
+                  style={{ objectPosition: "center top" }}
+                />
                 <div className="modal-img-vignette" />
               </div>
             ) : (
