@@ -23,24 +23,22 @@ export default function ContactPage() {
 
   const templeName = templeInfo?.name || "Sri Kedareshwara Ashramam";
   const address = templeInfo
-    ? `${templeInfo.address}, ${templeInfo.city}, ${templeInfo.state} - ${templeInfo.pincode}`
-    : "";
-  const phone = templeInfo?.phone || "";
-  const email = templeInfo?.email || "";
+    ? `${templeInfo.address ? `${templeInfo.address}, ` : ""}${templeInfo.city}, ${templeInfo.state}${templeInfo.pincode ? ` - ${templeInfo.pincode}` : ""}`
+    : "Sri Kedareshwara Ashramam, Navasiddula Gutta, Nandipet, Nizamabad";
+  const phone = templeInfo?.phone || "+918462-271418";
+  const email = templeInfo?.email || "services@kedari.org";
 
   // Maps URL generated directly from actual address
-  const googleMapsUrl = address
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        `${templeName}, ${address}`
-      )}`
-    : "";
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    `Sri Kedareshwara Ashramam, Navasiddula Gutta, Nandipet, Nizamabad`
+  )}`;
 
   const handleFormSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!formName || !formMessage) return;
 
     // Use safe client mailto link to avoid insecure public Firestore writes
-    const targetEmail = email || "info@ashramam.org";
+    const targetEmail = email || "services@kedari.org";
     const mailtoSubject = encodeURIComponent(
       `[Devotee Inquiry] ${formSubject || "General Inquiry"} - from ${formName}`
     );
@@ -134,13 +132,13 @@ export default function ContactPage() {
                   <h2 style={{ fontSize: "1.45rem" }}>Temple Schedule Summary</h2>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.25rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem" }}>
                   <div style={{ background: "var(--bg-surface)", padding: "1.2rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
                     <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>
                       Morning Darshan
                     </span>
-                    <h4 style={{ color: "var(--color-maroon)", fontSize: "1.15rem", marginTop: "0.35rem" }}>
-                      {templeInfo?.timings?.morning || "6:00 AM - 12:00 PM"}
+                    <h4 style={{ color: "var(--color-maroon)", fontSize: "1.1rem", marginTop: "0.35rem" }}>
+                      {templeInfo?.timings?.morning || "6:00 AM – 3:00 PM"}
                     </h4>
                   </div>
 
@@ -148,8 +146,17 @@ export default function ContactPage() {
                     <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>
                       Evening Darshan
                     </span>
-                    <h4 style={{ color: "var(--color-maroon)", fontSize: "1.15rem", marginTop: "0.35rem" }}>
-                      {templeInfo?.timings?.evening || "4:00 PM - 9:00 PM"}
+                    <h4 style={{ color: "var(--color-maroon)", fontSize: "1.1rem", marginTop: "0.35rem" }}>
+                      {templeInfo?.timings?.evening || "4:00 PM – 11:00 PM"}
+                    </h4>
+                  </div>
+
+                  <div style={{ background: "var(--bg-surface)", padding: "1.2rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
+                    <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>
+                      Maharaj Special Darshan
+                    </span>
+                    <h4 style={{ color: "var(--color-saffron)", fontSize: "1.05rem", marginTop: "0.35rem" }}>
+                      {templeInfo?.timings?.maharajSpecial || "Pournami & Amavasya night"}
                     </h4>
                   </div>
 
@@ -157,8 +164,8 @@ export default function ContactPage() {
                     <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>
                       Prasadam (Annadanam)
                     </span>
-                    <h4 style={{ color: "var(--color-maroon)", fontSize: "1.15rem", marginTop: "0.35rem" }}>
-                      12:30 PM - 2:00 PM
+                    <h4 style={{ color: "var(--color-maroon)", fontSize: "1.1rem", marginTop: "0.35rem" }}>
+                      12:30 PM – 2:00 PM
                     </h4>
                   </div>
                 </div>

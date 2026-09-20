@@ -7,9 +7,6 @@ interface FooterProps {
 
 export default function Footer({ templeInfo }: FooterProps) {
   const templeName = templeInfo?.name || "Sri Kedareshwara Ashramam";
-  const address = templeInfo ? `${templeInfo.address}, ${templeInfo.city}, ${templeInfo.state} - ${templeInfo.pincode}` : "";
-  const phone = templeInfo?.phone || "";
-  const email = templeInfo?.email || "";
 
   return (
     <footer className="site-footer">
@@ -68,24 +65,18 @@ export default function Footer({ templeInfo }: FooterProps) {
           <div className="footer-col">
             <h4>Reach Us</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.885rem" }}>
-              {address && (
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <span style={{ color: "var(--color-saffron)" }}>📍</span>
-                  <span>{address}</span>
-                </div>
-              )}
-              {phone && (
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <span style={{ color: "var(--color-saffron)" }}>📞</span>
-                  <a href={`tel:${phone}`} style={{ color: "#E7E5E4" }}>{phone}</a>
-                </div>
-              )}
-              {email && (
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <span style={{ color: "var(--color-saffron)" }}>✉️</span>
-                  <a href={`mailto:${email}`} style={{ color: "#E7E5E4" }}>{email}</a>
-                </div>
-              )}
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <span style={{ color: "var(--color-saffron)" }}>📍</span>
+                <span>Sri Kedareshwara Ashramam, Navasiddula Gutta, Nandipet, Nizamabad</span>
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <span style={{ color: "var(--color-saffron)" }}>📞</span>
+                <a href="tel:+918462271418" style={{ color: "#E7E5E4" }}>+918462-271418</a>
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <span style={{ color: "var(--color-saffron)" }}>✉️</span>
+                <a href="mailto:services@kedari.org" style={{ color: "#E7E5E4" }}>services@kedari.org</a>
+              </div>
               <div style={{ marginTop: "0.5rem" }}>
                 <a href="#download-app" className="btn btn-sm btn-primary" style={{ width: "100%" }}>
                   📱 Get Android App

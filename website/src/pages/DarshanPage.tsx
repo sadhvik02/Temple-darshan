@@ -58,15 +58,21 @@ export default function DarshanPage() {
 
             <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
               <div style={{ background: "var(--bg-surface)", padding: "0.75rem 1.25rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
-                <span style={{ fontSize: "0.785rem", color: "var(--text-muted)", display: "block", textTransform: "uppercase" }}>Morning</span>
-                <span style={{ fontWeight: 700, color: "var(--color-maroon)", fontSize: "1.1rem" }}>
-                  {templeInfo?.timings?.morning || "6:00 AM - 12:00 PM"}
+                <span style={{ fontSize: "0.785rem", color: "var(--text-muted)", display: "block", textTransform: "uppercase" }}>Morning Session</span>
+                <span style={{ fontWeight: 700, color: "var(--color-maroon)", fontSize: "1.05rem" }}>
+                  {templeInfo?.timings?.morning || "6:00 AM – 3:00 PM"}
                 </span>
               </div>
               <div style={{ background: "var(--bg-surface)", padding: "0.75rem 1.25rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
-                <span style={{ fontSize: "0.785rem", color: "var(--text-muted)", display: "block", textTransform: "uppercase" }}>Evening</span>
-                <span style={{ fontWeight: 700, color: "var(--color-maroon)", fontSize: "1.1rem" }}>
-                  {templeInfo?.timings?.evening || "4:00 PM - 9:00 PM"}
+                <span style={{ fontSize: "0.785rem", color: "var(--text-muted)", display: "block", textTransform: "uppercase" }}>Evening Session</span>
+                <span style={{ fontWeight: 700, color: "var(--color-maroon)", fontSize: "1.05rem" }}>
+                  {templeInfo?.timings?.evening || "4:00 PM – 11:00 PM"}
+                </span>
+              </div>
+              <div style={{ background: "var(--bg-surface)", padding: "0.75rem 1.25rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "0.785rem", color: "var(--text-muted)", display: "block", textTransform: "uppercase" }}>Maharaj Special Darshan</span>
+                <span style={{ fontWeight: 700, color: "var(--color-saffron)", fontSize: "1.05rem" }}>
+                  {templeInfo?.timings?.maharajSpecial || "Pournami & Amavasya night"}
                 </span>
               </div>
             </div>

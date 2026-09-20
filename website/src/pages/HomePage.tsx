@@ -83,54 +83,80 @@ export default function HomePage() {
       <Hero templeInfo={templeInfo} />
 
       {/* Quick Access Section */}
-      <section className="container" style={{ marginBottom: "3rem" }}>
-        <div className="quick-access-grid">
-          {/* Quick Access 1: Ashrama Seva */}
-          <div className="quick-card">
-            <div className="quick-card-icon">🕉️</div>
-            <h3 className="quick-card-title">Ashrama Seva</h3>
-            <p className="quick-card-desc">
-              Sacred daily offerings and traditional community seva performed with devotion. Open and free for all devotees.
+      <section className="section" style={{ paddingTop: "3.5rem", paddingBottom: "3.5rem" }}>
+        <div className="container">
+          <div className="section-header" style={{ marginBottom: "2.5rem" }}>
+            <span className="section-badge">Direct Access</span>
+            <h2 className="section-title">Sacred Offerings &amp; Darshan</h2>
+            <p className="section-subtitle">
+              Choose your path of devotion. Access daily darshan, traditional pujas, and charitable seva.
             </p>
-            <Link to="/sevas" className="quick-card-link">
-              View Sevas →
-            </Link>
           </div>
 
-          {/* Quick Access 2: Arjita Seva */}
-          <div className="quick-card">
-            <div className="quick-card-icon">🪔</div>
-            <h3 className="quick-card-title">Arjita Seva</h3>
-            <p className="quick-card-desc">
-              Special pujas, archana, and abhishekam performed with prescribed Vedic rituals and personal sankalpam.
-            </p>
-            <Link to="/sevas" className="quick-card-link">
-              View Pujas →
-            </Link>
-          </div>
+          <div className="quick-access-grid">
+            {/* Quick Access 1: Ashrama Seva */}
+            <div className="quick-card">
+              <div className="quick-card-top">
+                <div className="quick-card-icon">🕉️</div>
+                <span className="badge badge-free">Free Seva</span>
+              </div>
+              <h3 className="quick-card-title">Ashrama Seva</h3>
+              <p className="quick-card-desc">
+                Sacred daily offerings and traditional community seva performed with devotion. Open and free for all devotees.
+              </p>
+              <Link to="/sevas" className="btn btn-secondary btn-sm quick-card-btn">
+                <span>View Free Sevas</span>
+                <span>→</span>
+              </Link>
+            </div>
 
-          {/* Quick Access 3: Darshan */}
-          <div className="quick-card">
-            <div className="quick-card-icon">🛕</div>
-            <h3 className="quick-card-title">Darshan</h3>
-            <p className="quick-card-desc">
-              Experience the divine presence. Check morning and evening darshan timings and general entry guidelines.
-            </p>
-            <Link to="/darshan" className="quick-card-link">
-              Darshan Timings →
-            </Link>
-          </div>
+            {/* Quick Access 2: Arjita Seva */}
+            <div className="quick-card">
+              <div className="quick-card-top">
+                <div className="quick-card-icon">🪔</div>
+                <span className="badge badge-price">Pujas &amp; Homam</span>
+              </div>
+              <h3 className="quick-card-title">Arjita Seva</h3>
+              <p className="quick-card-desc">
+                Special pujas, archana, and abhishekam performed with prescribed Vedic rituals and personal sankalpam.
+              </p>
+              <Link to="/sevas" className="btn btn-secondary btn-sm quick-card-btn">
+                <span>Explore Pujas</span>
+                <span>→</span>
+              </Link>
+            </div>
 
-          {/* Quick Access 4: Donation */}
-          <div className="quick-card">
-            <div className="quick-card-icon">🙏</div>
-            <h3 className="quick-card-title">Donations</h3>
-            <p className="quick-card-desc">
-              Participate in Annadanam (free food distribution), temple renovation, and sacred maintenance funds.
-            </p>
-            <Link to="/donations" className="quick-card-link">
-              Support Ashramam →
-            </Link>
+            {/* Quick Access 3: Darshan */}
+            <div className="quick-card">
+              <div className="quick-card-top">
+                <div className="quick-card-icon">🛕</div>
+                <span className="badge badge-available">Daily Darshan</span>
+              </div>
+              <h3 className="quick-card-title">Darshan</h3>
+              <p className="quick-card-desc">
+                Experience the divine presence. Check morning and evening darshan timings and general entry guidelines.
+              </p>
+              <Link to="/darshan" className="btn btn-secondary btn-sm quick-card-btn">
+                <span>Darshan Timings</span>
+                <span>→</span>
+              </Link>
+            </div>
+
+            {/* Quick Access 4: Donation */}
+            <div className="quick-card">
+              <div className="quick-card-top">
+                <div className="quick-card-icon">🙏</div>
+                <span className="badge badge-info">Annadanam</span>
+              </div>
+              <h3 className="quick-card-title">Donations</h3>
+              <p className="quick-card-desc">
+                Participate in Annadanam (free food distribution), temple renovation, and sacred maintenance funds.
+              </p>
+              <Link to="/donations" className="btn btn-secondary btn-sm quick-card-btn">
+                <span>Support Seva</span>
+                <span>→</span>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -168,39 +194,33 @@ export default function HomePage() {
               </p>
 
               <div className="contact-mini-list">
-                {templeInfo?.address && (
-                  <div className="contact-mini-item">
-                    <span className="contact-mini-icon">📍</span>
-                    <div className="contact-mini-details">
-                      <h4>Ashram Location</h4>
-                      <p>
-                        {templeInfo.address}, {templeInfo.city}, {templeInfo.state} - {templeInfo.pincode}
-                      </p>
-                    </div>
+                <div className="contact-mini-item">
+                  <span className="contact-mini-icon">📍</span>
+                  <div className="contact-mini-details">
+                    <h4>Ashram Location</h4>
+                    <p>
+                      Sri Kedareshwara Ashramam, Navasiddula Gutta, Nandipet, Nizamabad
+                    </p>
                   </div>
-                )}
-                {templeInfo?.phone && (
-                  <div className="contact-mini-item">
-                    <span className="contact-mini-icon">📞</span>
-                    <div className="contact-mini-details">
-                      <h4>Contact Phone</h4>
-                      <p>
-                        <a href={`tel:${templeInfo.phone}`}>{templeInfo.phone}</a>
-                      </p>
-                    </div>
+                </div>
+                <div className="contact-mini-item">
+                  <span className="contact-mini-icon">📞</span>
+                  <div className="contact-mini-details">
+                    <h4>Contact Phone</h4>
+                    <p>
+                      <a href="tel:+918462271418">+918462-271418</a>
+                    </p>
                   </div>
-                )}
-                {templeInfo?.email && (
-                  <div className="contact-mini-item">
-                    <span className="contact-mini-icon">✉️</span>
-                    <div className="contact-mini-details">
-                      <h4>Email Inquiries</h4>
-                      <p>
-                        <a href={`mailto:${templeInfo.email}`}>{templeInfo.email}</a>
-                      </p>
-                    </div>
+                </div>
+                <div className="contact-mini-item">
+                  <span className="contact-mini-icon">✉️</span>
+                  <div className="contact-mini-details">
+                    <h4>Email Inquiries</h4>
+                    <p>
+                      <a href="mailto:services@kedari.org">services@kedari.org</a>
+                    </p>
                   </div>
-                )}
+                </div>
               </div>
 
               <div style={{ marginTop: "2rem" }}>
@@ -229,7 +249,7 @@ export default function HomePage() {
                     <span>Morning Session</span>
                   </span>
                   <span className="timing-value">
-                    {templeInfo?.timings?.morning || "6:00 AM - 12:00 PM"}
+                    {templeInfo?.timings?.morning || "6:00 AM – 3:00 PM"}
                   </span>
                 </div>
 
@@ -239,7 +259,17 @@ export default function HomePage() {
                     <span>Evening Session</span>
                   </span>
                   <span className="timing-value">
-                    {templeInfo?.timings?.evening || "4:00 PM - 9:00 PM"}
+                    {templeInfo?.timings?.evening || "4:00 PM – 11:00 PM"}
+                  </span>
+                </div>
+
+                <div className="timing-row">
+                  <span className="timing-label">
+                    <span>✨</span>
+                    <span>Maharaj Special Darshan</span>
+                  </span>
+                  <span className="timing-value">
+                    {templeInfo?.timings?.maharajSpecial || "Pournami & Amavasya night"}
                   </span>
                 </div>
 
@@ -248,7 +278,7 @@ export default function HomePage() {
                     <span>🍲</span>
                     <span>Annadanam (Prasadam)</span>
                   </span>
-                  <span className="timing-value">12:30 PM - 2:00 PM</span>
+                  <span className="timing-value">12:30 PM – 2:00 PM</span>
                 </div>
 
                 <div className="timing-row">

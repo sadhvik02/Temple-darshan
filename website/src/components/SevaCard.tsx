@@ -5,52 +5,104 @@ interface SevaCardProps {
   service: Service;
 }
 
+function getServiceImage(service: Service): string {
+  if (service.imageUrl && service.imageUrl.trim() !== "") {
+    return service.imageUrl;
+  }
+  const upper = (service.name || "").toUpperCase();
+  if (upper.includes("GANESH")) {
+    return "/ganesh_seva.jpg";
+  }
+  return "";
+}
+
+function getEnhancedDescription(name: string, desc?: string): string {
+  const upper = (name || "").toUpperCase();
+  if (upper.includes("GANESH")) {
+    return desc && desc.length > 25
+      ? desc
+      : "Auspicious Lord Ganesha Puja performed with sacred modak offerings, durva grass, and Vedic chants to remove obstacles and invite prosperity.";
+  }
+  if (upper.includes("SHIVA")) {
+    return desc && desc.length > 25
+      ? desc
+      : "Devotional seva dedicated to Lord Shiva with holy bilva patra offerings, deepa aradhana, and sacred Rudra chanting for peace and wellbeing.";
+  }
+  if (upper.includes("ABISHEK")) {
+    return desc && desc.length > 25
+      ? desc
+      : "Sacred morning bath ritual consecrated with holy panchamritam, fresh fragrant flowers, and Vedic hymns for spiritual upliftment.";
+  }
+  return desc || "Sacred traditional ritual consecrated for spiritual wellbeing, family prosperity, and inner peace.";
+}
+
 export default function SevaCard({ service }: SevaCardProps) {
   const [showModal, setShowModal] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   const isAshramaSeva = service.category === "ashrama_seva" || service.price === 0;
+  const displayImage = getServiceImage(service);
+  const description = getEnhancedDescription(service.name, service.description);
 
   return (
     <>
-      <div className="card">
-        <div className="card-img-wrapper">
-          {service.imageUrl && !imgError ? (
+      <div className="card seva-card">
+        {/* Card Header Visual Frame */}
+        <div className="card-img-wrapper seva-img-frame">
+          {displayImage && !imgError ? (
             <img
-              src={service.imageUrl}
+              src={displayImage}
               alt={service.name}
               className="card-img"
               loading="lazy"
               onError={() => setImgError(true)}
             />
           ) : (
-            <div className="card-img-placeholder">
-              <span>{isAshramaSeva ? "🕉️ Ashrama Seva" : "🪔 Arjita Seva"}</span>
+            <div className="card-img-placeholder seva-img-fallback">
+              <span className="seva-fallback-icon">{isAshramaSeva ? "🕉️" : "🪔"}</span>
+              <span className="seva-fallback-tag">{isAshramaSeva ? "Ashrama Seva" : "Arjita Seva"}</span>
             </div>
           )}
-          <div style={{ position: "absolute", top: "0.85rem", left: "0.85rem" }}>
+
+          {/* Gentle vignette overlay */}
+          <div className="seva-img-vignette" />
+
+          {/* Top Glassmorphic Category Badge */}
+          <div className="seva-badge-container">
             {isAshramaSeva ? (
-              <span className="badge badge-free">Ashrama Seva &bull; Free</span>
+              <span className="seva-glass-badge badge-free-glass">
+                <span className="badge-glow-dot" />
+                <span>Ashrama Seva • Free</span>
+              </span>
             ) : (
-              <span className="badge badge-price">Arjita Seva</span>
+              <span className="seva-glass-badge badge-arjita-glass">
+                <span>🪔 Arjita Seva</span>
+              </span>
             )}
           </div>
         </div>
 
-        <div className="card-body">
-          <h3 className="card-title">{service.name}</h3>
-          <p className="card-desc">{service.description || "Traditional seva performed at the Ashramam."}</p>
+        {/* Card Body */}
+        <div className="card-body seva-card-body">
+          <div className="seva-category-hint">
+            {isAshramaSeva ? "Daily Ashram Offering" : "Special Arjita Puja"}
+          </div>
 
-          <div className="card-footer">
-            <div>
+          <h3 className="card-title seva-card-title">{service.name}</h3>
+          <p className="card-desc seva-card-desc">{description}</p>
+
+          {/* Card Footer: Price / Free Indicator & Action Button */}
+          <div className="card-footer seva-card-footer">
+            <div className="seva-pricing">
               {isAshramaSeva ? (
-                <span style={{ fontWeight: 700, color: "var(--color-spiritual-green)", fontSize: "1.05rem" }}>
-                  Free Offering
-                </span>
+                <div className="seva-free-indicator">
+                  <span className="seva-free-symbol">🪷</span>
+                  <span className="seva-free-text">Free Offering</span>
+                </div>
               ) : (
-                <div style={{ display: "flex", alignItems: "baseline", gap: "0.25rem" }}>
-                  <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Dakshina:</span>
-                  <span style={{ fontWeight: 700, color: "var(--color-maroon)", fontSize: "1.2rem" }}>
+                <div className="seva-dakshina-block">
+                  <span className="seva-dakshina-label">Dakshina</span>
+                  <span className="seva-dakshina-val">
                     ₹{service.price.toLocaleString("en-IN")}
                   </span>
                 </div>
@@ -59,19 +111,21 @@ export default function SevaCard({ service }: SevaCardProps) {
 
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
+              className="btn-seva-cta"
               onClick={() => setShowModal(true)}
+              aria-label={`View details for ${service.name}`}
             >
-              View Details
+              <span>View Details</span>
+              <span className="btn-arrow">→</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Details Modal */}
+      {/* Devotional Details Modal */}
       {showModal && (
         <div className="modal-backdrop" onClick={() => setShowModal(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card seva-modal-card" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               className="modal-close-btn"
@@ -81,52 +135,56 @@ export default function SevaCard({ service }: SevaCardProps) {
               ✕
             </button>
 
-            {service.imageUrl && !imgError ? (
-              <img src={service.imageUrl} alt={service.name} className="modal-img-top" />
+            {displayImage && !imgError ? (
+              <div className="modal-img-wrapper">
+                <img src={displayImage} alt={service.name} className="modal-img-top" />
+                <div className="modal-img-vignette" />
+              </div>
             ) : (
-              <div
-                style={{
-                  height: "160px",
-                  background: "linear-gradient(135deg, #FDF6E9 0%, #F5E8D3 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "3rem",
-                }}
-              >
-                🪔
+              <div className="modal-fallback-header">
+                <span>🪔</span>
               </div>
             )}
 
             <div className="modal-content">
-              <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
+              <div className="modal-badges-row">
                 {isAshramaSeva ? (
-                  <span className="badge badge-free">Ashrama Seva (Free)</span>
+                  <span className="badge badge-free">Ashrama Seva (Free Offering)</span>
                 ) : (
-                  <span className="badge badge-price">Arjita Seva (₹{service.price.toLocaleString("en-IN")})</span>
+                  <span className="badge badge-price">
+                    Arjita Seva • ₹{service.price.toLocaleString("en-IN")}
+                  </span>
                 )}
                 {service.bookingEnabled ? (
-                  <span className="badge badge-available">Booking on Mobile App</span>
+                  <span className="badge badge-available">📱 Book on Android App</span>
                 ) : (
-                  <span className="badge badge-info">Informational Seva</span>
+                  <span className="badge badge-info">Direct Ashram Entry</span>
                 )}
               </div>
 
-              <h2 style={{ fontSize: "1.5rem", marginBottom: "0.85rem" }}>{service.name}</h2>
-              <p style={{ color: "var(--text-secondary)", lineHeight: "1.65", marginBottom: "1.5rem" }}>
-                {service.description}
-              </p>
+              <h2 className="modal-title">{service.name}</h2>
+              <p className="modal-description">{description}</p>
 
-              <div style={{ background: "var(--bg-warm-tint)", padding: "1.2rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
-                <h4 style={{ fontSize: "0.95rem", color: "var(--color-maroon)", marginBottom: "0.35rem" }}>
-                  📱 How to Participate / Book
-                </h4>
-                <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", margin: 0 }}>
-                  Devotees can participate directly at the Ashramam or reserve specific dates through the official Sri Kedareshwara Ashramam Android App.
+              <div className="modal-booking-box">
+                <div className="modal-booking-header">
+                  <span className="modal-booking-icon">📱</span>
+                  <h4>How to Participate &amp; Book</h4>
+                </div>
+                <p className="modal-booking-text">
+                  Devotees are cordially welcome to participate in person at Sri Kedareshwara Ashramam. For designated family dates and advance sankalpam booking, please use our official Android app.
                 </p>
-                <div style={{ marginTop: "1rem" }}>
-                  <a href="#download-app" className="btn btn-primary btn-sm" onClick={() => setShowModal(false)}>
-                    Get Android App for Booking
+                <div className="modal-booking-action">
+                  <a
+                    href="#mobile-app"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      setShowModal(false);
+                      const el = document.getElementById("mobile-app");
+                      if (el) el.scrollIntoView({ behavior: "smooth" });
+                    }}
+                  >
+                    <span>Download Mobile App for Booking</span>
+                    <span>→</span>
                   </a>
                 </div>
               </div>

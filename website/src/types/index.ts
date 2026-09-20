@@ -12,6 +12,7 @@ export interface TempleInfo {
   timings: {
     morning: string;
     evening: string;
+    maharajSpecial?: string;
   };
   imageUrl?: string;
   updatedAt?: any;

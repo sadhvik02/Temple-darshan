@@ -7,7 +7,6 @@ interface HeroProps {
 
 export default function Hero({ templeInfo }: HeroProps) {
   const templeName = templeInfo?.name || "Sri Kedareshwara Ashramam";
-  const heroImage = templeInfo?.imageUrl || "/feature_graphic_1024x500.png";
 
   return (
     <section className="hero">
@@ -33,58 +32,87 @@ export default function Hero({ templeInfo }: HeroProps) {
                 <span>Explore Sevas</span>
                 <span>→</span>
               </Link>
-              <Link to="/about" className="btn btn-secondary btn-lg">
+              <Link to="/about" className="btn btn-primary btn-lg">
                 <span>Plan Your Visit</span>
               </Link>
             </div>
-
-            {/* Timing highlights banner */}
-            {templeInfo?.timings && (
-              <div className="hero-stats-banner">
-                <div className="hero-stat-item">
-                  <span className="hero-stat-val">{templeInfo.timings.morning}</span>
-                  <span className="hero-stat-label">Morning Darshan</span>
-                </div>
-                <div className="hero-stat-item">
-                  <span className="hero-stat-val">{templeInfo.timings.evening}</span>
-                  <span className="hero-stat-label">Evening Darshan</span>
-                </div>
-                {templeInfo.city && (
-                  <div className="hero-stat-item">
-                    <span className="hero-stat-val">{templeInfo.city}, {templeInfo.state}</span>
-                    <span className="hero-stat-label">Location</span>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
-          {/* Right: Sacred Visual Display */}
+          {/* Right: Sacred Visual Display featuring Guruji */}
           <div className="hero-visual">
             <div className="hero-image-card">
               <div className="hero-img-frame">
                 <img
-                  src={heroImage}
-                  alt={`${templeName} Sanctuary`}
+                  src="/guruji.png"
+                  alt="Poojya Sri Kedarananda Maharaj"
                   className="hero-main-img"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    if (!target.src.endsWith("/feature_graphic_1024x500.png")) {
-                      target.src = "/feature_graphic_1024x500.png";
+                    if (templeInfo?.imageUrl && target.src !== templeInfo.imageUrl) {
+                      target.src = templeInfo.imageUrl;
                     }
                   }}
                 />
+                <span
+                  className="badge badge-price"
+                  style={{
+                    position: "absolute",
+                    top: "0.75rem",
+                    left: "0.75rem",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+                    zIndex: 2,
+                  }}
+                >
+                  🕉️ Poojya Guruji
+                </span>
               </div>
               <div className="hero-card-caption">
-                <div className="hero-badge-icon">🛕</div>
+                <div className="hero-badge-icon">🙏</div>
                 <div className="hero-badge-text">
-                  <h4>Daily Darshan &amp; Sevas</h4>
-                  <p>Open for all devotees and spiritual seekers</p>
+                  <h4>Poojya Sri Kedarananda Maharaj</h4>
+                  <p>Spiritual Guide &bull; Sri Kedareshwara Ashramam</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Sacred Full-Width Pilgrim Info Ribbon */}
+        {templeInfo?.timings && (
+          <div className="hero-info-ribbon">
+            <div className="hero-ribbon-item">
+              <span className="hero-ribbon-icon">🌅</span>
+              <div className="hero-ribbon-text">
+                <span className="hero-ribbon-label">Morning Darshan</span>
+                <span className="hero-ribbon-val">{templeInfo.timings.morning}</span>
+              </div>
+            </div>
+
+            <div className="hero-ribbon-item">
+              <span className="hero-ribbon-icon">🌇</span>
+              <div className="hero-ribbon-text">
+                <span className="hero-ribbon-label">Evening Darshan</span>
+                <span className="hero-ribbon-val">{templeInfo.timings.evening}</span>
+              </div>
+            </div>
+
+            <div className="hero-ribbon-item">
+              <span className="hero-ribbon-icon">✨</span>
+              <div className="hero-ribbon-text">
+                <span className="hero-ribbon-label">Maharaj Darshan</span>
+                <span className="hero-ribbon-val">{templeInfo?.timings?.maharajSpecial || "Pournami & Amavasya Night"}</span>
+              </div>
+            </div>
+
+            <div className="hero-ribbon-item">
+              <span className="hero-ribbon-icon">📍</span>
+              <div className="hero-ribbon-text">
+                <span className="hero-ribbon-label">Ashram Location</span>
+                <span className="hero-ribbon-val">{templeInfo.city ? `${templeInfo.city}, ${templeInfo.state}` : "Nandipet, Nizamabad"}</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

@@ -64,19 +64,23 @@ export default function AboutPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "1rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", background: "var(--bg-warm-tint)", borderRadius: "var(--radius-md)" }}>
                   <span style={{ fontWeight: 600, color: "var(--color-maroon)" }}>🌅 Morning Darshan</span>
-                  <span style={{ fontWeight: 700 }}>{templeInfo?.timings?.morning || "6:00 AM - 12:00 PM"}</span>
+                  <span style={{ fontWeight: 700 }}>{templeInfo?.timings?.morning || "6:00 AM – 3:00 PM"}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", background: "var(--bg-warm-tint)", borderRadius: "var(--radius-md)" }}>
                   <span style={{ fontWeight: 600, color: "var(--color-maroon)" }}>🍲 Annadanam / Holy Prasadam</span>
-                  <span style={{ fontWeight: 700 }}>12:30 PM - 2:00 PM</span>
+                  <span style={{ fontWeight: 700 }}>12:30 PM – 2:00 PM</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", background: "var(--bg-warm-tint)", borderRadius: "var(--radius-md)" }}>
                   <span style={{ fontWeight: 600, color: "var(--color-maroon)" }}>🌇 Evening Darshan</span>
-                  <span style={{ fontWeight: 700 }}>{templeInfo?.timings?.evening || "4:00 PM - 9:00 PM"}</span>
+                  <span style={{ fontWeight: 700 }}>{templeInfo?.timings?.evening || "4:00 PM – 11:00 PM"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", background: "var(--bg-warm-tint)", borderRadius: "var(--radius-md)" }}>
+                  <span style={{ fontWeight: 600, color: "var(--color-maroon)" }}>✨ Maharaj Special Darshan</span>
+                  <span style={{ fontWeight: 700 }}>{templeInfo?.timings?.maharajSpecial || "Pournami & Amavasya night"}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", background: "var(--bg-warm-tint)", borderRadius: "var(--radius-md)" }}>
                   <span style={{ fontWeight: 600, color: "var(--color-maroon)" }}>🔔 Evening Maha Mangala Harathi</span>
-                  <span style={{ fontWeight: 700 }}>7:00 PM</span>
+                  <span style={{ fontWeight: 700 }}>7:00 PM Daily</span>
                 </div>
               </div>
             </div>
@@ -133,20 +137,14 @@ export default function AboutPage() {
                 <h2 style={{ fontSize: "1.6rem" }}>Location &amp; Visiting Assistance</h2>
               </div>
 
-              {templeInfo?.address ? (
                 <div style={{ marginBottom: "1.5rem" }}>
                   <p style={{ fontSize: "1rem", color: "var(--text-primary)", fontWeight: 500 }}>
-                    {templeInfo.address}, {templeInfo.city}, {templeInfo.state} - {templeInfo.pincode}
+                    Sri Kedareshwara Ashramam, Navasiddula Gutta, Nandipet, Nizamabad
                   </p>
                   <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
-                    {templeInfo.phone ? `Phone: ${templeInfo.phone}` : ""} {templeInfo.email ? `| Email: ${templeInfo.email}` : ""}
+                    Phone: <a href="tel:+918462271418" style={{ color: "var(--color-saffron)" }}>+918462-271418</a> | Email: <a href="mailto:services@kedari.org" style={{ color: "var(--color-saffron)" }}>services@kedari.org</a>
                   </p>
                 </div>
-              ) : (
-                <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>
-                  Detailed address is maintained in the Ashramam information directory.
-                </p>
-              )}
 
               <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
                 <Link to="/contact" className="btn btn-primary">

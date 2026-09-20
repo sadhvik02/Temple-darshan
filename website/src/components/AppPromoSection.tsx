@@ -58,15 +58,20 @@ export default function AppPromoSection() {
             <div className="app-visual-wrap">
               <div className="app-phone-mockup">
                 <img
-                  src="/feature_graphic_1024x500.png"
-                  alt="Sri Kedareshwara Ashramam Mobile App Preview"
-                  style={{ width: "100%", height: "260px", objectFit: "cover" }}
+                  src="/om_mandala.jpg"
+                  alt="Sri Kedareshwara Ashramam Sacred Emblem"
+                  style={{
+                    width: "100%",
+                    aspectRatio: "1 / 1",
+                    objectFit: "cover",
+                    borderRadius: "18px",
+                  }}
                 />
                 <div style={{ padding: "1rem 0.5rem 0.5rem 0.5rem", textAlign: "center" }}>
-                  <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--color-maroon-dark)", display: "block" }}>
+                  <span style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-maroon-dark)", display: "block" }}>
                     Sri Kedareshwara Ashramam
                   </span>
-                  <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                  <span style={{ fontSize: "0.825rem", color: "var(--text-secondary)", marginTop: "0.25rem", display: "block" }}>
                     Digital Platform for Devotees
                   </span>
                 </div>
