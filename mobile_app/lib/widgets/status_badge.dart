@@ -37,6 +37,11 @@ class StatusBadge extends StatelessWidget {
         bgColor = AppColors.statusConfirmedBg;
         displayLabel = 'Paid';
         break;
+      case 'pay_at_counter':
+        textColor = const Color(0xFFE65100);
+        bgColor = const Color(0xFFFFF3E0);
+        displayLabel = 'Pay at Counter';
+        break;
       case 'pending':
       default:
         textColor = AppColors.statusPending;

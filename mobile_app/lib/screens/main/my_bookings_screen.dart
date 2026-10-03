@@ -164,7 +164,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                StatusBadge(status: booking.status),
+                                Row(
+                                  children: [
+                                    StatusBadge(status: booking.status),
+                                    if (booking.paymentStatus.toLowerCase() == 'pay_at_counter') ...[
+                                      const SizedBox(width: 6),
+                                      StatusBadge(status: booking.paymentStatus),
+                                    ],
+                                  ],
+                                ),
                               ],
                             ),
                             const Divider(height: 20),

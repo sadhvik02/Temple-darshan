@@ -1,16 +1,25 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { Navigate } from "react-router-dom";
 import { auth } from "../lib/firebase";
 import { useAuth } from "../hooks/useAuth";
 
 export default function LoginPage() {
-  const { loading, isAdmin, firebaseUser } = useAuth();
+  const { loading, isAdmin, firebaseUser, error: authError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync auth errors to local error state
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    } else if (!loading && firebaseUser && !isAdmin) {
+      setError("Your account does not have administrator privileges.");
+    }
+  }, [authError, loading, firebaseUser, isAdmin]);
 
   // If already authenticated as admin, redirect to dashboard
   if (!loading && firebaseUser && isAdmin) {

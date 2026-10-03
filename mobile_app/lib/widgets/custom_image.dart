@@ -32,40 +32,54 @@ class CustomImage extends StatelessWidget {
       return _buildFallback(effectiveBorderRadius, effectiveBg);
     }
 
+    final String url = imageUrl!.trim();
+    final bool isAsset = url.startsWith('/');
+
     return ClipRRect(
       borderRadius: effectiveBorderRadius,
-      child: Image.network(
-        imageUrl!.trim(),
-        width: width,
-        height: height,
-        fit: fit,
-        alignment: alignment,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Container(
-            width: width,
-            height: height,
-            color: effectiveBg,
-            child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          (loadingProgress.expectedTotalBytes ?? 1)
-                      : null,
-                  color: AppColors.primaryLight,
-                ),
-              ),
+      child: isAsset
+          ? Image.asset(
+              'assets/images$url',
+              width: width,
+              height: height,
+              fit: fit,
+              alignment: alignment,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildFallback(effectiveBorderRadius, effectiveBg);
+              },
+            )
+          : Image.network(
+              url,
+              width: width,
+              height: height,
+              fit: fit,
+              alignment: alignment,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: width,
+                  height: height,
+                  color: effectiveBg,
+                  child: Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                (loadingProgress.expectedTotalBytes ?? 1)
+                            : null,
+                        color: AppColors.primaryLight,
+                      ),
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return _buildFallback(effectiveBorderRadius, effectiveBg);
+              },
             ),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) {
-          return _buildFallback(effectiveBorderRadius, effectiveBg);
-        },
-      ),
     );
   }
 

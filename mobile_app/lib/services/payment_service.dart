@@ -1,6 +1,8 @@
 
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
@@ -135,27 +137,110 @@ class PaymentService {
     String? donorEmail,
     void Function(PaymentUIState state)? onStateChange,
   }) async {
-    return _startPaymentFlow(
-      payload: {
-        'sourceType': 'seva',
-        'offeringId': serviceId,
-        'offeringName': serviceName,
-        'slotId': slotId,
+    if (_isProcessing) {
+      debugPrint('[PaymentService] Booking already in progress.');
+      return PaymentResult.failed('A booking is already in progress. Please wait.');
+    }
+
+    _isProcessing = true;
+    onStateChange?.call(PaymentUIState.creatingOrder);
+
+    try {
+      // ============================================================
+      // PAY AT COUNTER MODE (No payment gateway keys yet)
+      // Write booking directly to Firestore instead of Cloud Function.
+      // TODO: Replace with real bookPayAtCounter call once payment
+      //       gateway keys are provided by the temple client.
+      // ============================================================
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _isProcessing = false;
+        return PaymentResult.failed('You must be logged in to book.');
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final bookingRef = 'BK-${timestamp.substring(timestamp.length - 6)}';
+
+      final bookingData = {
+        'userId': user.uid,
+        'serviceId': serviceId,
+        'serviceName': serviceName,
+        'bookingRef': bookingRef,
         'bookingDate': date,
-        'timeRange': timeRange,
         'quantity': quantity,
-        'expectedTotal': expectedTotal,
+        'status': 'confirmed',
+        'paymentStatus': 'pay_at_counter',
+        'totalAmount': expectedTotal,
+        'sourceType': 'seva',
+        'slotId': slotId,
+        'timeSlot': timeRange,
         'devotees': devoteeDetails,
-        'devoteeName': donorName,
-        'devoteePhone': donorPhone,
-        'devoteeEmail': donorEmail,
-      },
-      offeringTitle: serviceName,
-      donorName: donorName,
-      donorPhone: donorPhone,
-      donorEmail: donorEmail,
-      onStateChange: onStateChange,
-    );
+        'donorName': donorName,
+        'donorPhone': donorPhone,
+        'donorEmail': donorEmail,
+        'payAtCounter': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        if (slotId != null) {
+          final slotRef = FirebaseFirestore.instance.collection('slots').doc(slotId);
+          final slotDoc = await transaction.get(slotRef);
+          
+          if (slotDoc.exists) {
+            final currentBooked = (slotDoc.data()?['bookedCount'] as num?)?.toInt() ?? 0;
+            final capacity = (slotDoc.data()?['capacity'] as num?)?.toInt() ?? 0;
+
+            if (currentBooked + quantity > capacity) {
+              throw Exception("Capacity exceeded. Only ${capacity - currentBooked} spots remain.");
+            }
+
+            transaction.update(slotRef, {
+              'bookedCount': currentBooked + quantity,
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          } else {
+            // Materialize the auto slot so it can be tracked
+            final parts = timeRange?.split('-') ?? [];
+            final startTime = parts.isNotEmpty ? parts.first.trim() : '';
+            final endTime = parts.length > 1 ? parts.last.trim() : '';
+
+            transaction.set(slotRef, {
+              'serviceId': serviceId,
+              'date': date,
+              'startTime': startTime,
+              'endTime': endTime,
+              'capacity': 50,
+              'bookedCount': quantity,
+              'isActive': true,
+              'createdAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          }
+        }
+
+        final bookingDocRef = FirebaseFirestore.instance.collection('bookings').doc();
+        transaction.set(bookingDocRef, bookingData);
+      });
+
+      _isProcessing = false;
+      onStateChange?.call(PaymentUIState.success);
+      return PaymentResult(
+        isSuccess: true,
+        bookingRef: bookingRef,
+        totalAmount: expectedTotal,
+        message: 'Booking confirmed! Please pay ₹$expectedTotal at the temple counter.',
+      );
+    } catch (e) {
+      _isProcessing = false;
+      debugPrint('[PaymentService] Error creating booking: $e');
+      onStateChange?.call(PaymentUIState.networkError);
+      return PaymentResult.failed(
+        'Failed to save booking. Please try again.',
+        isNetworkError: true,
+      );
+    }
   }
 
   /// Start Darshan Payment
@@ -173,27 +258,110 @@ class PaymentService {
     String? devoteeEmail,
     void Function(PaymentUIState state)? onStateChange,
   }) async {
-    return _startPaymentFlow(
-      payload: {
-        'sourceType': 'darshan',
-        'offeringId': darshanId,
-        'offeringName': darshanName,
-        'slotId': slotId,
+    if (_isProcessing) {
+      debugPrint('[PaymentService] Booking already in progress.');
+      return PaymentResult.failed('A booking is already in progress. Please wait.');
+    }
+
+    _isProcessing = true;
+    onStateChange?.call(PaymentUIState.creatingOrder);
+
+    try {
+      // ============================================================
+      // PAY AT COUNTER MODE (No payment gateway keys yet)
+      // Write booking directly to Firestore instead of Cloud Function.
+      // TODO: Replace with real bookPayAtCounter call once payment
+      //       gateway keys are provided by the temple client.
+      // ============================================================
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _isProcessing = false;
+        return PaymentResult.failed('You must be logged in to book.');
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final bookingRef = 'BK-${timestamp.substring(timestamp.length - 6)}';
+
+      final bookingData = {
+        'userId': user.uid,
+        'serviceId': darshanId,
+        'serviceName': darshanName,
+        'bookingRef': bookingRef,
         'bookingDate': date,
-        'timeRange': timeRange,
         'quantity': quantity,
-        'expectedTotal': expectedTotal,
+        'status': 'confirmed',
+        'paymentStatus': 'pay_at_counter',
+        'totalAmount': expectedTotal,
+        'sourceType': 'darshan',
+        'slotId': slotId,
+        'timeSlot': timeRange,
         'devotees': devoteeDetails,
-        'devoteeName': devoteeName,
-        'devoteePhone': devoteePhone,
-        'devoteeEmail': devoteeEmail,
-      },
-      offeringTitle: darshanName,
-      donorName: devoteeName,
-      donorPhone: devoteePhone,
-      donorEmail: devoteeEmail,
-      onStateChange: onStateChange,
-    );
+        'donorName': devoteeName,
+        'donorPhone': devoteePhone,
+        'donorEmail': devoteeEmail,
+        'payAtCounter': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        if (slotId != null) {
+          final slotRef = FirebaseFirestore.instance.collection('slots').doc(slotId);
+          final slotDoc = await transaction.get(slotRef);
+          
+          if (slotDoc.exists) {
+            final currentBooked = (slotDoc.data()?['bookedCount'] as num?)?.toInt() ?? 0;
+            final capacity = (slotDoc.data()?['capacity'] as num?)?.toInt() ?? 0;
+
+            if (currentBooked + quantity > capacity) {
+              throw Exception("Capacity exceeded. Only ${capacity - currentBooked} spots remain.");
+            }
+
+            transaction.update(slotRef, {
+              'bookedCount': currentBooked + quantity,
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          } else {
+            // Materialize the auto slot so it can be tracked
+            final parts = timeRange?.split('-') ?? [];
+            final startTime = parts.isNotEmpty ? parts.first.trim() : '';
+            final endTime = parts.length > 1 ? parts.last.trim() : '';
+
+            transaction.set(slotRef, {
+              'serviceId': darshanId,
+              'date': date,
+              'startTime': startTime,
+              'endTime': endTime,
+              'capacity': 50,
+              'bookedCount': quantity,
+              'isActive': true,
+              'createdAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          }
+        }
+
+        final bookingDocRef = FirebaseFirestore.instance.collection('bookings').doc();
+        transaction.set(bookingDocRef, bookingData);
+      });
+
+      _isProcessing = false;
+      onStateChange?.call(PaymentUIState.success);
+      return PaymentResult(
+        isSuccess: true,
+        bookingRef: bookingRef,
+        totalAmount: expectedTotal,
+        message: 'Booking confirmed! Please pay ₹$expectedTotal at the temple counter.',
+      );
+    } catch (e) {
+      _isProcessing = false;
+      debugPrint('[PaymentService] Error creating booking: $e');
+      onStateChange?.call(PaymentUIState.networkError);
+      return PaymentResult.failed(
+        'Failed to save booking. Please try again.',
+        isNetworkError: true,
+      );
+    }
   }
 
   /// Start Donation Payment
@@ -207,23 +375,7 @@ class PaymentService {
     String? panNumber,
     void Function(PaymentUIState state)? onStateChange,
   }) async {
-    return _startPaymentFlow(
-      payload: {
-        'sourceType': 'donation',
-        'offeringId': donationTypeId,
-        'offeringName': donationTitle,
-        'donationAmount': amount,
-        'donorName': donorName,
-        'donorPhone': donorPhone,
-        'donorEmail': donorEmail,
-        'panNumber': panNumber,
-      },
-      offeringTitle: 'Donation: $donationTitle',
-      donorName: donorName,
-      donorPhone: donorPhone,
-      donorEmail: donorEmail,
-      onStateChange: onStateChange,
-    );
+    return PaymentResult.cancelled('Online donations are temporarily disabled. Please make your donation at the Temple counter.');
   }
 
   /// Master payment flow orchestrator

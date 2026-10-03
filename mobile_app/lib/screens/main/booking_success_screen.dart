@@ -25,7 +25,7 @@ class BookingSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isPaid = totalAmount > 0;
+    final bool hasCost = totalAmount > 0;
     
     return PopScope(
       canPop: false,
@@ -156,7 +156,7 @@ class BookingSuccessScreen extends StatelessWidget {
                                 color: AppColors.textPrimary,
                               ),
                             ),
-                            StatusBadge(status: isPaid ? 'paid' : 'confirmed'),
+                            StatusBadge(status: hasCost ? 'pay_at_counter' : 'confirmed'),
                           ],
                         ),
                         const Divider(height: 24),
@@ -175,25 +175,25 @@ class BookingSuccessScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: isPaid ? AppColors.statusConfirmedBg : AppColors.statusPendingBg,
+                            color: hasCost ? const Color(0xFFFFF3E0) : AppColors.statusConfirmedBg,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
                               Icon(
-                                isPaid ? Icons.check_circle_outline : Icons.info_outline, 
+                                hasCost ? Icons.account_balance_outlined : Icons.check_circle_outline, 
                                 size: 16, 
-                                color: isPaid ? AppColors.statusConfirmed : AppColors.statusPending
+                                color: hasCost ? const Color(0xFFE65100) : AppColors.statusConfirmed
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  isPaid 
-                                      ? 'Payment successful. Receipt sent to email.'
-                                      : 'Dakshina/Payment to be offered at the counter.',
+                                  hasCost 
+                                      ? 'Please pay ₹$totalAmount at the temple counter to confirm your entry.'
+                                      : 'No payment required. Show your booking reference at the counter.',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: isPaid ? AppColors.statusConfirmed : AppColors.statusPending,
+                                    color: hasCost ? const Color(0xFFE65100) : AppColors.statusConfirmed,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
