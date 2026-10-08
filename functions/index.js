@@ -594,17 +594,52 @@ exports.sendPushOnNotificationCreate = onDocumentCreated(
     }
 
     if (isGlobal) {
-      // For all devotees, broadcast via topic 'all_devotees' ONLY.
-      // Every device subscribes to this topic on app launch.
-      // Do NOT send to individual tokens to avoid duplicate notifications on devices.
+      // 1. Broadcast via topic 'all_devotees'
       try {
         const response = await getMessaging().send({
           ...messagePayload,
           topic: "all_devotees",
         });
-        console.log(`[FCM] Global broadcast push sent successfully to topic 'all_devotees': ${response}`);
+        console.log(`[FCM] Global broadcast push sent to topic 'all_devotees': ${response}`);
       } catch (topicErr) {
         console.error("[FCM] Topic broadcast error:", topicErr.message);
+      }
+
+      // 2. Deliver directly to registered device tokens to guarantee instantaneous delivery
+      try {
+        const tokensSnap = await db.collectionGroup("tokens").get();
+        const seenTokens = new Set();
+        const tokenDocs = [];
+        tokensSnap.forEach((tDoc) => {
+          const t = tDoc.data().token;
+          if (t && !seenTokens.has(t)) {
+            seenTokens.add(t);
+            tokenDocs.push({ token: t, tokenDocRef: tDoc.ref });
+          }
+        });
+
+        if (tokenDocs.length > 0) {
+          console.log(`[FCM] Delivering directly to ${tokenDocs.length} registered device token(s)`);
+          await Promise.allSettled(
+            tokenDocs.map(async ({ token, tokenDocRef }) => {
+              try {
+                await getMessaging().send({
+                  ...messagePayload,
+                  token: token,
+                });
+              } catch (error) {
+                if (
+                  error.code === "messaging/invalid-registration-token" ||
+                  error.code === "messaging/registration-token-not-registered"
+                ) {
+                  await tokenDocRef.delete().catch(() => {});
+                }
+              }
+            })
+          );
+        }
+      } catch (tokenErr) {
+        console.error("[FCM] Error sending to user tokens:", tokenErr.message);
       }
     } else {
       // For targeted notifications, collect unique tokens for target users only

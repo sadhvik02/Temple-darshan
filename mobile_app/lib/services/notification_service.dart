@@ -86,17 +86,125 @@ class NotificationService {
     if (initialMessage != null) {
       debugPrint('[FCM] App opened from terminated state via notification');
     }
+
+    // 9. Start robust real-time Firestore notification listener
+    startFirestoreNotificationListener();
   }
 
-  /// Deprecated: Local Firestore listener is no longer needed since
-  /// the server-side Cloud Function handles push notifications via FCM directly.
+  static StreamSubscription<QuerySnapshot>? _firestoreNotificationSub;
+  static bool _isListening = false;
+  static bool _initialSnapshotReceived = false;
+  static final Set<String> _seenDocIds = <String>{};
+
+  /// Start listening to Firestore notifications collection and show local
+  /// notifications for any NEW documents created after the app started.
+  /// Delivers instant heads-up banners on mobile devices.
   static void startFirestoreNotificationListener() {
-    // No-op: FCM push notifications are now handled by Cloud Functions.
+    if (_isListening) {
+      return;
+    }
+
+    _firestoreNotificationSub?.cancel();
+    _isListening = true;
+    _initialSnapshotReceived = false;
+    _seenDocIds.clear();
+
+    debugPrint('[Notifications] Starting real-time Firestore notification listener');
+
+    _firestoreNotificationSub = FirebaseFirestore.instance
+        .collection('notifications')
+        .snapshots()
+        .listen((snapshot) {
+      // First snapshot: record existing doc IDs so we don't spam old notifications
+      if (!_initialSnapshotReceived) {
+        for (final doc in snapshot.docs) {
+          _seenDocIds.add(doc.id);
+        }
+        _initialSnapshotReceived = true;
+        debugPrint('[Notifications] Initialized listener with ${_seenDocIds.length} existing notification(s)');
+        return;
+      }
+
+      // Subsequent snapshots: notify for any newly added documents in real-time
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final docId = change.doc.id;
+          if (_seenDocIds.contains(docId)) continue;
+          _seenDocIds.add(docId);
+
+          final data = change.doc.data();
+          if (data == null) continue;
+
+          final title = data['title'] as String? ?? '';
+          final body = data['body'] as String? ?? '';
+          final type = data['type'] as String? ?? 'announcement';
+
+          if (title.isEmpty) continue;
+
+          // Prevent duplicate if FCM foreground message already displayed it
+          if (_displayedForegroundIds.contains(docId)) continue;
+          _displayedForegroundIds.add(docId);
+
+          debugPrint('[Notifications] Real-time notification received from dashboard: "$title"');
+
+          // Get emoji prefix based on type
+          String prefix = '';
+          switch (type) {
+            case 'urgent':
+              prefix = '⚠️ ';
+              break;
+            case 'puja':
+              prefix = '🪔 ';
+              break;
+            case 'darshan':
+              prefix = '🙏 ';
+              break;
+            case 'event':
+              prefix = '🎉 ';
+              break;
+            case 'general':
+              prefix = '🕊️ ';
+              break;
+            case 'announcement':
+              prefix = '📢 ';
+              break;
+          }
+
+          // Show local notification with heads-up popup
+          _localNotifications.show(
+            docId.hashCode,
+            '$prefix$title',
+            body,
+            NotificationDetails(
+              android: AndroidNotificationDetails(
+                _channel.id,
+                _channel.name,
+                channelDescription: _channel.description,
+                importance: Importance.max,
+                priority: Priority.max,
+                icon: '@mipmap/ic_launcher',
+                playSound: true,
+                enableVibration: true,
+                styleInformation: BigTextStyleInformation(body),
+              ),
+            ),
+            payload: data['actionRoute'] as String?,
+          );
+        }
+      }
+    }, onError: (e) {
+      debugPrint('[Notifications] Firestore listener error: $e');
+    });
   }
 
   /// Stop the Firestore notification listener
   static void stopFirestoreNotificationListener() {
-    // No-op
+    _firestoreNotificationSub?.cancel();
+    _firestoreNotificationSub = null;
+    _isListening = false;
+    _initialSnapshotReceived = false;
+    _seenDocIds.clear();
+    debugPrint('[Notifications] Stopped Firestore notification listener');
   }
 
   /// Save or refresh the FCM token for the currently logged-in user.

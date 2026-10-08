@@ -139,13 +139,13 @@ export default function DonationsPage() {
       }
 
       const payload = {
-        title: formData.title,
-        description: formData.description,
-        imageUrl: formData.imageUrl || undefined,
-        category: formData.category,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        imageUrl: formData.imageUrl?.trim() || "",
+        category: formData.category || "general",
         suggestedAmounts: amounts,
         isActive: formData.isActive,
-        displayOrder: formData.displayOrder,
+        displayOrder: Number(formData.displayOrder) || 1,
       };
 
       if (editingId) {
@@ -155,9 +155,9 @@ export default function DonationsPage() {
       }
       await loadDonationTypes();
       handleCloseModal();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving donation type:", err);
-      alert("Failed to save donation type.");
+      alert(err?.message || "Failed to save donation type.");
     } finally {
       setSaving(false);
     }
