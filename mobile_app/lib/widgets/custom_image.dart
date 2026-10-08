@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
@@ -33,6 +34,31 @@ class CustomImage extends StatelessWidget {
     }
 
     final String url = imageUrl!.trim();
+
+    // Support in-memory Base64 data URLs uploaded from dashboard
+    if (url.startsWith('data:image')) {
+      try {
+        final commaIndex = url.indexOf(',');
+        final base64String = commaIndex != -1 ? url.substring(commaIndex + 1) : url;
+        final bytes = base64Decode(base64String);
+        return ClipRRect(
+          borderRadius: effectiveBorderRadius,
+          child: Image.memory(
+            bytes,
+            width: width,
+            height: height,
+            fit: fit,
+            alignment: alignment,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildFallback(effectiveBorderRadius, effectiveBg);
+            },
+          ),
+        );
+      } catch (_) {
+        return _buildFallback(effectiveBorderRadius, effectiveBg);
+      }
+    }
+
     final bool isAsset = url.startsWith('/');
 
     return ClipRRect(

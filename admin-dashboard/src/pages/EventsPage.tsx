@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { getEvents, createEvent, updateEvent, deleteEvent } from "../services/eventService";
 import type { Event } from "../types";
+import ImageUploadInput from "../components/ImageUploadInput";
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -510,15 +511,18 @@ export default function EventsPage() {
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label>Cover Image (URL or Path - Optional)</label>
-                  <input
-                    type="text"
-                    value={formData.imageUrl}
-                    onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                    placeholder="https://... or leave empty"
-                  />
-                </div>
+                <ImageUploadInput
+                  value={formData.imageUrl}
+                  onChange={(url) => handleInputChange("imageUrl", url)}
+                  folder="events"
+                  label="Cover Image"
+                  placeholder="https://... or choose from computer"
+                  presets={[
+                    { label: "🪔 Temple Festival", url: "/darshan_special.jpg" },
+                    { label: "🕉️ Puja Celebration", url: "/darshan_vip.jpg" },
+                  ]}
+                  helperText="Upload event poster from your computer or paste a direct image URL."
+                />
 
                 <div className="form-group flex-checkbox" style={{ marginTop: "10px" }}>
                   <label className="checkbox-label">

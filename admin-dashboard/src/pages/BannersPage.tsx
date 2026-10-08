@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { getBanners, createBanner, updateBanner, deleteBanner } from "../services/bannerService";
 import type { Banner } from "../types";
+import ImageUploadInput from "../components/ImageUploadInput";
 
 export default function BannersPage() {
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -383,36 +384,6 @@ export default function BannersPage() {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
-                {/* Live Image Preview */}
-                {formData.imageUrl && (
-                  <div
-                    style={{
-                      height: "220px",
-                      borderRadius: "12px",
-                      background: "#0f172a",
-                      border: "1px solid var(--color-border)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <img
-                      src={formData.imageUrl}
-                      alt="Preview"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "contain",
-                        borderRadius: "12px",
-                      }}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  </div>
-                )}
-
                 <div className="form-group">
                   <label>Banner Title *</label>
                   <input
@@ -423,17 +394,19 @@ export default function BannersPage() {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label>Image (URL or Path) *</label>
-                  <input
-                    required
-                    type="text"
-                    value={formData.imageUrl}
-                    onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                    placeholder="https://... or /guruji.png"
-                  />
-                  <span className="form-help">Enter a high-resolution banner image link or path.</span>
-                </div>
+                <ImageUploadInput
+                  value={formData.imageUrl}
+                  onChange={(url) => handleInputChange("imageUrl", url)}
+                  folder="banners"
+                  label="Banner Image *"
+                  placeholder="https://... or choose from computer"
+                  presets={[
+                    { label: "🚩 Temple Hero", url: "/darshan_general.jpg" },
+                    { label: "🪔 Sanctum Darshan", url: "/darshan_special.jpg" },
+                    { label: "🙏 Guruji Blessing", url: "/guruji.png" },
+                  ]}
+                  helperText="Upload banner image from computer (1920x800 recommended) or paste a link."
+                />
 
                 <div className="form-group">
                   <label>Action / Navigation URL (Optional)</label>

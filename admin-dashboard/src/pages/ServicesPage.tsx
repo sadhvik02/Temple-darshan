@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { getServices, createService, updateService, deleteService } from "../services/serviceService";
 import type { Service } from "../types";
+import ImageUploadInput from "../components/ImageUploadInput";
 
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
@@ -436,35 +437,6 @@ export default function ServicesPage() {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
-                {/* Live Image Preview */}
-                {formData.imageUrl && (
-                  <div
-                    style={{
-                      height: "220px",
-                      borderRadius: "12px",
-                      background: "#0f172a",
-                      border: "1px solid var(--color-border)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <img
-                      src={formData.imageUrl}
-                      alt="Preview"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "contain",
-                        borderRadius: "12px",
-                      }}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  </div>
-                )}
 
                 <div className="form-group">
                   <label>Seva Category *</label>
@@ -473,11 +445,11 @@ export default function ServicesPage() {
                     value={formData.category}
                     onChange={(e) => handleInputChange("category", e.target.value)}
                   >
-                    <option value="ashrama_seva">Ashrama Seva (Free)</option>
-                    <option value="arjita_seva">Arjita Seva (Paid via Razorpay)</option>
+                    <option value="ashrama_seva">🕉️ Ashrama Seva</option>
+                    <option value="arjita_seva">🪔 Arjita Seva</option>
                   </select>
                   <small style={{ color: "var(--color-text-muted)" }}>
-                    Ashrama Sevas are completely free and bypass Razorpay. Arjita Sevas require payment.
+                    Select the category under which this seva appears in the Dashboard and Mobile App.
                   </small>
                 </div>
 
@@ -502,55 +474,21 @@ export default function ServicesPage() {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label>Cover Image (URL or Path - Optional)</label>
-                  <input
-                    type="text"
-                    value={formData.imageUrl}
-                    onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                    placeholder="/ganesh_seva.jpg, https://..., or leave empty"
-                  />
-                  <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                    <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Presets:</span>
-                    <button
-                      type="button"
-                      onClick={() => handleInputChange("imageUrl", "/shiva_seva.jpg")}
-                      style={{ fontSize: "0.75rem", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.3)", borderRadius: "4px", padding: "2px 8px", color: "#2563eb", cursor: "pointer", fontWeight: "600" }}
-                    >
-                      🔱 Shiva Seva
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInputChange("imageUrl", "/ganesh_seva.jpg")}
-                      style={{ fontSize: "0.75rem", background: "rgba(217,119,6,0.1)", border: "1px solid rgba(217,119,6,0.3)", borderRadius: "4px", padding: "2px 8px", color: "var(--color-primary)", cursor: "pointer", fontWeight: "600" }}
-                    >
-                      🐘 Ganesh Seva
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInputChange("imageUrl", "/annadanam_seva.jpg")}
-                      style={{ fontSize: "0.75rem", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: "4px", padding: "2px 8px", color: "#16a34a", cursor: "pointer", fontWeight: "600" }}
-                    >
-                      🍚 Annadanam
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInputChange("imageUrl", "/goshala_seva.jpg")}
-                      style={{ fontSize: "0.75rem", background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: "4px", padding: "2px 8px", color: "#9333ea", cursor: "pointer", fontWeight: "600" }}
-                    >
-                      🐄 Goshala
-                    </button>
-                    {formData.imageUrl && (
-                      <button
-                        type="button"
-                        onClick={() => handleInputChange("imageUrl", "")}
-                        style={{ fontSize: "0.75rem", background: "none", border: "none", color: "#EF4444", cursor: "pointer" }}
-                      >
-                        ✕ Clear
-                      </button>
-                    )}
-                  </div>
-                </div>
+                <ImageUploadInput
+                  value={formData.imageUrl}
+                  onChange={(url) => handleInputChange("imageUrl", url)}
+                  folder="services"
+                  label="Cover Image"
+                  placeholder="/shiva_seva.jpg, https://... or choose from computer"
+                  presets={[
+                    { label: "🔱 Shiva Seva", url: "/shiva_seva.jpg", color: "59, 130, 246" },
+                    { label: "🐘 Ganesh Seva", url: "/ganesh_seva.jpg", color: "217, 119, 6" },
+                    { label: "🍚 Annadanam", url: "/annadanam_seva.jpg", color: "34, 197, 94" },
+                    { label: "🐄 Goshala", url: "/goshala_seva.jpg", color: "168, 85, 247" },
+                    { label: "🏛️ Mandir Nirman", url: "/mandir_nirman.jpg", color: "234, 88, 12" },
+                  ]}
+                  helperText="Upload image directly from your computer, choose a sacred preset, or paste an image link."
+                />
 
                 <div className="form-grid">
                   <div className="form-group">

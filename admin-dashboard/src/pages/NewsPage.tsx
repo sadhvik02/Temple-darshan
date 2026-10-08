@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { getNews, createNews, updateNews, deleteNews } from "../services/newsService";
 import type { News } from "../types";
+import ImageUploadInput from "../components/ImageUploadInput";
 
 export default function NewsPage() {
   const [newsList, setNewsList] = useState<News[]>([]);
@@ -451,15 +452,18 @@ export default function NewsPage() {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label>Cover Image (URL or Path - Optional)</label>
-                  <input
-                    type="text"
-                    value={formData.imageUrl}
-                    onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                    placeholder="https://... or leave empty"
-                  />
-                </div>
+                <ImageUploadInput
+                  value={formData.imageUrl}
+                  onChange={(url) => handleInputChange("imageUrl", url)}
+                  folder="news"
+                  label="Cover Image"
+                  placeholder="https://... or choose from computer"
+                  presets={[
+                    { label: "📰 Ashram Announcement", url: "/darshan_general.jpg" },
+                    { label: "🪔 Spiritual Satsang", url: "/guruji.png" },
+                  ]}
+                  helperText="Upload news photo directly from your computer or paste a direct image URL."
+                />
 
                 <div className="form-group flex-checkbox" style={{ marginTop: "10px" }}>
                   <label className="checkbox-label">

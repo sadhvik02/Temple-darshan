@@ -346,7 +346,7 @@ class _SlotsScreenState extends State<SlotsScreen> {
 
   // Seva Details Hero Banner
   Widget _buildSevaHeaderCard() {
-    final isAshrama = widget.service.category == 'ashrama_seva' || widget.service.price == 0;
+    final isAshrama = widget.service.price == 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
