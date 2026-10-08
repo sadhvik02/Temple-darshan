@@ -13,34 +13,13 @@ class BookingDetailsScreen extends StatelessWidget {
   String get offeringTypeLabel => isDarshan ? 'Darshan' : 'Seva';
 
   String get instructionsTitle => isDarshan ? 'Darshan Instructions' : 'Seva Instructions';
-
-  bool get isPayAtCounter => booking.paymentStatus.toLowerCase() == 'pay_at_counter';
-
-  String get paymentDisplayLabel {
-    final ps = booking.paymentStatus.toLowerCase();
-    if (ps == 'pay_at_counter') return 'Pay at Counter';
-    if (ps == 'paid') return 'Paid';
-    return ps.toUpperCase();
-  }
-
-  String get instructionsBody {
-    final base = isDarshan 
-      ? '• Show this booking reference at the darshan entrance.\n'
-        '• Arrive 15 minutes prior to the slot timing.\n'
-        '• Follow temple sanctity and traditional dress etiquette.'
-      : '• Show this booking reference at the seva verification counter.\n'
-        '• Arrive 15 minutes prior to the seva timing.\n'
-        '• Follow temple sanctity and traditional dress etiquette.';
-    
-    if (isPayAtCounter) {
-      return '$base\n\n'
-        '⚠ PAYMENT REQUIRED:\n'
-        '• Please pay ₹${booking.formattedTotal} at the temple counter before the booking date.\n'
-        '• If payment is not made, this booking will be automatically cancelled.\n'
-        '• Carry this booking reference for payment verification.';
-    }
-    return base;
-  }
+  String get instructionsBody => isDarshan 
+    ? '• Show this booking reference at the darshan entrance.\n'
+      '• Arrive 15 minutes prior to the slot timing.\n'
+      '• Follow temple sanctity and traditional dress etiquette.'
+    : '• Show this booking reference at the seva verification counter.\n'
+      '• Arrive 15 minutes prior to the seva timing.\n'
+      '• Follow temple sanctity and traditional dress etiquette.';
 
   @override
   Widget build(BuildContext context) {
@@ -150,16 +129,7 @@ class BookingDetailsScreen extends StatelessWidget {
                       isBold: true,
                       valueColor: AppColors.primary,
                     ),
-                    _buildRow(
-                      'Payment',
-                      paymentDisplayLabel,
-                      isBold: true,
-                      valueColor: isPayAtCounter 
-                        ? const Color(0xFFE65100) 
-                        : (booking.paymentStatus.toLowerCase() == 'paid' 
-                          ? AppColors.statusConfirmed 
-                          : AppColors.textPrimary),
-                    ),
+                    _buildRow('Payment', booking.paymentStatus.toUpperCase()),
                     if (booking.createdAt != null)
                       _buildRow(
                         'Booked On',

@@ -189,8 +189,8 @@ service cloud.firestore {
         && request.resource.data.bookingDate is string
         && request.resource.data.quantity is int
         && request.resource.data.quantity > 0
-        && request.resource.data.status in ['pending', 'confirmed']
-        && request.resource.data.paymentStatus in ['pending', 'pay_at_counter']
+        && request.resource.data.status == 'pending'
+        && request.resource.data.paymentStatus == 'pending'
         && request.resource.data.totalAmount is number
         && request.resource.data.sourceType is string
         && request.resource.data.sourceType in ['seva', 'darshan']
