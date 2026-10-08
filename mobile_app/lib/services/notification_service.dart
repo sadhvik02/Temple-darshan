@@ -87,124 +87,19 @@ class NotificationService {
       debugPrint('[FCM] App opened from terminated state via notification');
     }
 
-    // 9. Start robust real-time Firestore notification listener
-    startFirestoreNotificationListener();
+    // Real-time notifications are handled directly by Firebase Cloud Messaging (FCM).
+    // The Firestore listener is not used to prevent duplicate system alerts.
   }
 
-  static StreamSubscription<QuerySnapshot>? _firestoreNotificationSub;
-  static bool _isListening = false;
-  static bool _initialSnapshotReceived = false;
-  static final Set<String> _seenDocIds = <String>{};
-
-  /// Start listening to Firestore notifications collection and show local
-  /// notifications for any NEW documents created after the app started.
-  /// Delivers instant heads-up banners on mobile devices.
+  /// Deprecated: Local Firestore listener is disabled because Firebase Cloud Messaging (FCM)
+  /// triggers notifications for background, terminated, and foreground states.
   static void startFirestoreNotificationListener() {
-    if (_isListening) {
-      return;
-    }
-
-    _firestoreNotificationSub?.cancel();
-    _isListening = true;
-    _initialSnapshotReceived = false;
-    _seenDocIds.clear();
-
-    debugPrint('[Notifications] Starting real-time Firestore notification listener');
-
-    _firestoreNotificationSub = FirebaseFirestore.instance
-        .collection('notifications')
-        .snapshots()
-        .listen((snapshot) {
-      // First snapshot: record existing doc IDs so we don't spam old notifications
-      if (!_initialSnapshotReceived) {
-        for (final doc in snapshot.docs) {
-          _seenDocIds.add(doc.id);
-        }
-        _initialSnapshotReceived = true;
-        debugPrint('[Notifications] Initialized listener with ${_seenDocIds.length} existing notification(s)');
-        return;
-      }
-
-      // Subsequent snapshots: notify for any newly added documents in real-time
-      for (final change in snapshot.docChanges) {
-        if (change.type == DocumentChangeType.added) {
-          final docId = change.doc.id;
-          if (_seenDocIds.contains(docId)) continue;
-          _seenDocIds.add(docId);
-
-          final data = change.doc.data();
-          if (data == null) continue;
-
-          final title = data['title'] as String? ?? '';
-          final body = data['body'] as String? ?? '';
-          final type = data['type'] as String? ?? 'announcement';
-
-          if (title.isEmpty) continue;
-
-          // Prevent duplicate if FCM foreground message already displayed it
-          if (_displayedForegroundIds.contains(docId)) continue;
-          _displayedForegroundIds.add(docId);
-
-          debugPrint('[Notifications] Real-time notification received from dashboard: "$title"');
-
-          // Get emoji prefix based on type
-          String prefix = '';
-          switch (type) {
-            case 'urgent':
-              prefix = '⚠️ ';
-              break;
-            case 'puja':
-              prefix = '🪔 ';
-              break;
-            case 'darshan':
-              prefix = '🙏 ';
-              break;
-            case 'event':
-              prefix = '🎉 ';
-              break;
-            case 'general':
-              prefix = '🕊️ ';
-              break;
-            case 'announcement':
-              prefix = '📢 ';
-              break;
-          }
-
-          // Show local notification with heads-up popup
-          _localNotifications.show(
-            docId.hashCode,
-            '$prefix$title',
-            body,
-            NotificationDetails(
-              android: AndroidNotificationDetails(
-                _channel.id,
-                _channel.name,
-                channelDescription: _channel.description,
-                importance: Importance.max,
-                priority: Priority.max,
-                icon: '@mipmap/ic_launcher',
-                playSound: true,
-                enableVibration: true,
-                styleInformation: BigTextStyleInformation(body),
-              ),
-            ),
-            payload: data['actionRoute'] as String?,
-          );
-        }
-      }
-    }, onError: (e) {
-      debugPrint('[Notifications] Firestore listener error: $e');
-    });
+    // No-op: FCM handles notifications cleanly without duplicates.
   }
 
   /// Stop the Firestore notification listener
   static void stopFirestoreNotificationListener() {
-    _firestoreNotificationSub?.cancel();
-    _firestoreNotificationSub = null;
-    _isListening = false;
-    _initialSnapshotReceived = false;
-    _seenDocIds.clear();
-    debugPrint('[Notifications] Stopped Firestore notification listener');
+    // No-op
   }
 
   /// Save or refresh the FCM token for the currently logged-in user.
@@ -268,7 +163,30 @@ class NotificationService {
     }
   }
 
-  static final Set<String> _displayedForegroundIds = <String>{};
+  static final Map<String, int> _recentlyDisplayedTimestamps = <String, int>{};
+
+  /// Thread-safe deduplication to guarantee each notification is shown exactly ONCE
+  /// across FCM topic, FCM device token, and Firestore snapshot listener.
+  static bool _shouldDisplayAndMark(String id, String title, String body) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    // Clean entries older than 2 minutes
+    _recentlyDisplayedTimestamps.removeWhere((_, timestamp) => now - timestamp > 120000);
+
+    final cleanTitle = title.replaceAll(RegExp(r'^[^\w\s]+'), '').trim().toLowerCase();
+    final cleanBody = body.trim().toLowerCase();
+    final textKey = 'text:$cleanTitle|$cleanBody';
+    final idKey = 'id:$id';
+
+    if ((id.isNotEmpty && _recentlyDisplayedTimestamps.containsKey(idKey)) ||
+        (cleanTitle.isNotEmpty && _recentlyDisplayedTimestamps.containsKey(textKey))) {
+      debugPrint('[Notifications] Suppressed duplicate notification: "$title"');
+      return false;
+    }
+
+    if (id.isNotEmpty) _recentlyDisplayedTimestamps[idKey] = now;
+    if (cleanTitle.isNotEmpty) _recentlyDisplayedTimestamps[textKey] = now;
+    return true;
+  }
 
   /// Handle foreground FCM messages — show a local notification
   static void _handleForegroundMessage(RemoteMessage message) {
@@ -277,19 +195,23 @@ class NotificationService {
     final notification = message.notification;
     if (notification == null) return;
 
-    final notifKey = message.data['notificationId'] ?? message.messageId ?? '${notification.title}_${notification.body}';
-    if (_displayedForegroundIds.contains(notifKey)) {
-      debugPrint('[FCM] Duplicate foreground message ignored: $notifKey');
+    final title = notification.title ?? '';
+    final body = notification.body ?? '';
+
+    final notifKey = message.data['notificationId'] as String? ??
+        message.messageId ??
+        '${notification.title}_${notification.body}';
+
+    if (!_shouldDisplayAndMark(notifKey, title, body)) {
+      debugPrint('[FCM] Duplicate notification suppressed: $notifKey');
       return;
     }
-    _displayedForegroundIds.add(notifKey);
 
-    if (_displayedForegroundIds.length > 50) {
-      _displayedForegroundIds.remove(_displayedForegroundIds.first);
-    }
+    final cleanTitle = title.replaceAll(RegExp(r'^[^\w\s]+'), '').trim().toLowerCase();
+    final notifId = (cleanTitle.isNotEmpty ? cleanTitle.hashCode : notifKey.hashCode).abs();
 
     _localNotifications.show(
-      notifKey.hashCode,
+      notifId,
       notification.title,
       notification.body,
       NotificationDetails(
@@ -300,12 +222,13 @@ class NotificationService {
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
-          tag: notifKey,
+          tag: 'temple_$notifKey',
           playSound: true,
           enableVibration: true,
+          styleInformation: BigTextStyleInformation(notification.body ?? ''),
         ),
       ),
-      payload: message.data['actionRoute'],
+      payload: message.data['actionRoute'] as String?,
     );
   }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { getDarshans, createDarshan, updateDarshan, deleteDarshan } from "../services/darshanService";
+import { createNotification } from "../services/notificationService";
 import type { Darshan } from "../types";
 
 export default function DarshansPage() {
@@ -10,6 +11,7 @@ export default function DarshansPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [notifyDevotees, setNotifyDevotees] = useState(true);
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -55,6 +57,7 @@ export default function DarshansPage() {
       });
     } else {
       setEditingId(null);
+      setNotifyDevotees(true);
       setFormData({
         name: "",
         description: "",
@@ -85,6 +88,30 @@ export default function DarshansPage() {
         await updateDarshan(editingId, formData);
       } else {
         await createDarshan(formData);
+
+        if (notifyDevotees) {
+          try {
+            const priceText = formData.price > 0 ? ` (₹${formData.price})` : " (Free Entry)";
+            const descSnippet = formData.description && formData.description.trim().length > 0
+              ? formData.description.trim().length > 120 
+                ? `${formData.description.trim().substring(0, 117)}...` 
+                : formData.description.trim()
+              : `New sacred darshan "${formData.name}" is now open for pilgrim booking.`;
+
+            await createNotification({
+              title: `🙏 New Darshan Available: ${formData.name}`,
+              body: `${descSnippet}${priceText}. Tap to check availability and reserve your darshan slot.`,
+              type: "darshan",
+              targetAudience: "all",
+              isGlobal: true,
+              imageUrl: formData.imageUrl?.trim() || undefined,
+              actionRoute: "/darshan",
+              sentBy: "Temple Administration",
+            });
+          } catch (notifErr) {
+            console.error("Failed to broadcast notification for new darshan:", notifErr);
+          }
+        }
       }
       await loadDarshans();
       handleCloseModal();
@@ -439,6 +466,29 @@ export default function DarshansPage() {
                     </label>
                   </div>
                 </div>
+
+                {!editingId && (
+                  <div 
+                    className="form-group flex-checkbox" 
+                    style={{ 
+                      marginTop: "14px", 
+                      padding: "10px 14px", 
+                      background: "rgba(217, 119, 6, 0.08)", 
+                      borderRadius: "8px", 
+                      border: "1px solid rgba(217, 119, 6, 0.25)" 
+                    }}
+                  >
+                    <label className="checkbox-label" style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontWeight: 600, color: "#92400e" }}>
+                      <input
+                        type="checkbox"
+                        checked={notifyDevotees}
+                        onChange={(e) => setNotifyDevotees(e.target.checked)}
+                        style={{ width: "18px", height: "18px", accentColor: "#d97706", cursor: "pointer" }}
+                      />
+                      <span>🔔 Broadcast instant push notification to devotees on mobile app</span>
+                    </label>
+                  </div>
+                )}
               </div>
 
               <div className="modal-footer">

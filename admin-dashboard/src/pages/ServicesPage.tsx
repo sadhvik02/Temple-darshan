@@ -1,5 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { getServices, createService, updateService, deleteService } from "../services/serviceService";
+import { createNotification } from "../services/notificationService";
 import type { Service } from "../types";
 import ImageUploadInput from "../components/ImageUploadInput";
 
@@ -12,6 +13,7 @@ export default function ServicesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [notifyDevotees, setNotifyDevotees] = useState(true);
 
   // Delete states
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -73,6 +75,7 @@ export default function ServicesPage() {
       });
     } else {
       setEditingId(null);
+      setNotifyDevotees(true);
       setFormData({
         name: "",
         description: "",
@@ -104,6 +107,31 @@ export default function ServicesPage() {
         await updateService(editingId, formData);
       } else {
         await createService(formData);
+
+        if (notifyDevotees) {
+          try {
+            const categoryLabel = formData.category === "ashrama_seva" ? "Ashrama Seva" : "Arjita Seva";
+            const priceText = formData.price > 0 ? ` (₹${formData.price})` : " (Free)";
+            const descSnippet = formData.description && formData.description.trim().length > 0
+              ? formData.description.trim().length > 120 
+                ? `${formData.description.trim().substring(0, 117)}...` 
+                : formData.description.trim()
+              : `New sacred seva "${formData.name}" is now available.`;
+
+            await createNotification({
+              title: `🪔 New ${categoryLabel}: ${formData.name}`,
+              body: `${descSnippet}${priceText}. Tap to view details and book your seva slot.`,
+              type: "puja",
+              targetAudience: "all",
+              isGlobal: true,
+              imageUrl: formData.imageUrl?.trim() || undefined,
+              actionRoute: "/services",
+              sentBy: "Temple Administration",
+            });
+          } catch (notifErr) {
+            console.error("Failed to broadcast notification for new seva:", notifErr);
+          }
+        }
       }
       await loadServices();
       handleCloseModal();
@@ -537,6 +565,29 @@ export default function ServicesPage() {
                     </label>
                   </div>
                 </div>
+
+                {!editingId && (
+                  <div 
+                    className="form-group flex-checkbox" 
+                    style={{ 
+                      marginTop: "14px", 
+                      padding: "10px 14px", 
+                      background: "rgba(217, 119, 6, 0.08)", 
+                      borderRadius: "8px", 
+                      border: "1px solid rgba(217, 119, 6, 0.25)" 
+                    }}
+                  >
+                    <label className="checkbox-label" style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontWeight: 600, color: "#92400e" }}>
+                      <input
+                        type="checkbox"
+                        checked={notifyDevotees}
+                        onChange={(e) => setNotifyDevotees(e.target.checked)}
+                        style={{ width: "18px", height: "18px", accentColor: "#d97706", cursor: "pointer" }}
+                      />
+                      <span>🔔 Broadcast instant push notification to devotees on mobile app</span>
+                    </label>
+                  </div>
+                )}
               </div>
 
               <div className="modal-footer">

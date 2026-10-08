@@ -1,5 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { getEvents, createEvent, updateEvent, deleteEvent } from "../services/eventService";
+import { createNotification } from "../services/notificationService";
 import type { Event } from "../types";
 import ImageUploadInput from "../components/ImageUploadInput";
 
@@ -13,6 +14,7 @@ export default function EventsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [notifyDevotees, setNotifyDevotees] = useState(true);
 
   // Delete states
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -64,6 +66,8 @@ export default function EventsPage() {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const dateString = tomorrow.toISOString().split("T")[0];
 
+      setEditingId(null);
+      setNotifyDevotees(true);
       setFormData({
         title: "",
         description: "",
@@ -94,6 +98,30 @@ export default function EventsPage() {
         await updateEvent(editingId, formData);
       } else {
         await createEvent(formData);
+
+        if (notifyDevotees && formData.isPublished) {
+          try {
+            const dateStr = formData.eventDate ? ` on ${formData.eventDate}` : "";
+            const descSnippet = formData.description && formData.description.trim().length > 0
+              ? formData.description.trim().length > 120 
+                ? `${formData.description.trim().substring(0, 117)}...` 
+                : formData.description.trim()
+              : `Join us for the auspicious celebration of ${formData.title}.`;
+
+            await createNotification({
+              title: `🎉 Upcoming Temple Event: ${formData.title}`,
+              body: `${descSnippet}${dateStr}. Tap to view event details and schedule.`,
+              type: "event",
+              targetAudience: "all",
+              isGlobal: true,
+              imageUrl: formData.imageUrl?.trim() || undefined,
+              actionRoute: "/events",
+              sentBy: "Temple Administration",
+            });
+          } catch (notifErr) {
+            console.error("Failed to broadcast notification for new event:", notifErr);
+          }
+        }
       }
       await loadEvents();
       handleCloseModal();
@@ -534,6 +562,29 @@ export default function EventsPage() {
                     <span>Publish live on devotee mobile events calendar</span>
                   </label>
                 </div>
+
+                {!editingId && (
+                  <div 
+                    className="form-group flex-checkbox" 
+                    style={{ 
+                      marginTop: "14px", 
+                      padding: "10px 14px", 
+                      background: "rgba(217, 119, 6, 0.08)", 
+                      borderRadius: "8px", 
+                      border: "1px solid rgba(217, 119, 6, 0.25)" 
+                    }}
+                  >
+                    <label className="checkbox-label" style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontWeight: 600, color: "#92400e" }}>
+                      <input
+                        type="checkbox"
+                        checked={notifyDevotees}
+                        onChange={(e) => setNotifyDevotees(e.target.checked)}
+                        style={{ width: "18px", height: "18px", accentColor: "#d97706", cursor: "pointer" }}
+                      />
+                      <span>🔔 Broadcast instant push notification to devotees on mobile app</span>
+                    </label>
+                  </div>
+                )}
               </div>
 
               <div className="modal-footer">

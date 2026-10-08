@@ -594,52 +594,52 @@ exports.sendPushOnNotificationCreate = onDocumentCreated(
     }
 
     if (isGlobal) {
-      // 1. Broadcast via topic 'all_devotees'
+      // Broadcast via topic 'all_devotees' ONLY.
+      // Every device automatically subscribes to 'all_devotees' on app startup.
+      // Sending to both topic AND individual tokens causes duplicate push notifications on devices.
       try {
         const response = await getMessaging().send({
           ...messagePayload,
           topic: "all_devotees",
         });
-        console.log(`[FCM] Global broadcast push sent to topic 'all_devotees': ${response}`);
+        console.log(`[FCM] Global broadcast push sent successfully to topic 'all_devotees': ${response}`);
       } catch (topicErr) {
-        console.error("[FCM] Topic broadcast error:", topicErr.message);
-      }
+        console.error("[FCM] Topic broadcast error, falling back to registered tokens:", topicErr.message);
+        // Fallback only if topic broadcast failed
+        try {
+          const tokensSnap = await db.collectionGroup("tokens").get();
+          const seenTokens = new Set();
+          const tokenDocs = [];
+          tokensSnap.forEach((tDoc) => {
+            const t = tDoc.data().token;
+            if (t && !seenTokens.has(t)) {
+              seenTokens.add(t);
+              tokenDocs.push({ token: t, tokenDocRef: tDoc.ref });
+            }
+          });
 
-      // 2. Deliver directly to registered device tokens to guarantee instantaneous delivery
-      try {
-        const tokensSnap = await db.collectionGroup("tokens").get();
-        const seenTokens = new Set();
-        const tokenDocs = [];
-        tokensSnap.forEach((tDoc) => {
-          const t = tDoc.data().token;
-          if (t && !seenTokens.has(t)) {
-            seenTokens.add(t);
-            tokenDocs.push({ token: t, tokenDocRef: tDoc.ref });
-          }
-        });
-
-        if (tokenDocs.length > 0) {
-          console.log(`[FCM] Delivering directly to ${tokenDocs.length} registered device token(s)`);
-          await Promise.allSettled(
-            tokenDocs.map(async ({ token, tokenDocRef }) => {
-              try {
-                await getMessaging().send({
-                  ...messagePayload,
-                  token: token,
-                });
-              } catch (error) {
-                if (
-                  error.code === "messaging/invalid-registration-token" ||
-                  error.code === "messaging/registration-token-not-registered"
-                ) {
-                  await tokenDocRef.delete().catch(() => {});
+          if (tokenDocs.length > 0) {
+            await Promise.allSettled(
+              tokenDocs.map(async ({ token, tokenDocRef }) => {
+                try {
+                  await getMessaging().send({
+                    ...messagePayload,
+                    token: token,
+                  });
+                } catch (error) {
+                  if (
+                    error.code === "messaging/invalid-registration-token" ||
+                    error.code === "messaging/registration-token-not-registered"
+                  ) {
+                    await tokenDocRef.delete().catch(() => {});
+                  }
                 }
-              }
-            })
-          );
+              })
+            );
+          }
+        } catch (tokenErr) {
+          console.error("[FCM] Error in fallback token broadcast:", tokenErr.message);
         }
-      } catch (tokenErr) {
-        console.error("[FCM] Error sending to user tokens:", tokenErr.message);
       }
     } else {
       // For targeted notifications, collect unique tokens for target users only
