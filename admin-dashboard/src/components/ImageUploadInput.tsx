@@ -72,6 +72,7 @@ export default function ImageUploadInput({
   const [mode, setMode] = useState<"file" | "url">("file");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -90,6 +91,7 @@ export default function ImageUploadInput({
 
     setIsUploading(true);
     setUploadError(null);
+    setUploadNotice(null);
 
     try {
       // 1. Instantly compress image in browser (<100ms)
@@ -97,9 +99,8 @@ export default function ImageUploadInput({
 
       // Immediately set the image so user gets instant preview without waiting!
       onChange(compressedDataUrl);
-      setIsUploading(false);
 
-      // 2. Non-blocking cloud storage attempt with a strict 2-second timeout
+      // 2. Cloud storage upload attempt
       try {
         const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const storagePath = `${folder}/${Date.now()}_${cleanName}`;
@@ -113,14 +114,22 @@ export default function ImageUploadInput({
         });
 
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Storage timeout")), 2000)
+          setTimeout(() => reject(new Error("Storage timeout")), 10000)
         );
 
         const snap = await Promise.race([uploadTask, timeoutPromise]);
         const cloudUrl = await getDownloadURL(snap.ref);
         onChange(cloudUrl);
-      } catch {
-        // Cloud storage bucket unprovisioned or timed out; keeping instant compressed image data URL
+        setUploadNotice(null);
+      } catch (storageErr: any) {
+        console.warn("Storage upload status:", storageErr);
+        if (storageErr?.status_ === 404 || storageErr?.code === "storage/unknown") {
+          setUploadNotice(
+            "⚠️ Cloud Storage is not activated yet in Firebase Console. This photo is currently saved locally. To make uploaded computer photos appear on ALL devotee phones: enable Storage in Firebase Console (1 click), or use presets below / paste an image URL."
+          );
+        }
+      } finally {
+        setIsUploading(false);
       }
     } catch (err: any) {
       console.error("Error processing image:", err);
@@ -312,6 +321,23 @@ export default function ImageUploadInput({
         </div>
       )}
 
+      {uploadNotice && (
+        <div
+          style={{
+            background: "rgba(245, 158, 11, 0.12)",
+            border: "1px solid rgba(245, 158, 11, 0.35)",
+            borderRadius: "6px",
+            padding: "8px 12px",
+            fontSize: "0.78rem",
+            color: "#d97706",
+            marginTop: "6px",
+            lineHeight: 1.45,
+          }}
+        >
+          {uploadNotice}
+        </div>
+      )}
+
       {/* Quick Preset Buttons */}
       {presets.length > 0 && (
         <div
@@ -448,11 +474,17 @@ export default function ImageUploadInput({
               textOverflow: "ellipsis",
             }}
           >
-            {value.startsWith("data:")
-              ? "💻 Ready from Computer"
-              : value.startsWith("https://firebasestorage")
-              ? "☁️ Uploaded to Storage"
-              : value}
+            {value.startsWith("data:") ? (
+              <span style={{ color: "#fbbf24", fontWeight: 600 }}>
+                ⚠️ Local Device Only (Enable Storage for All Phones)
+              </span>
+            ) : value.startsWith("https://firebasestorage") || value.startsWith("https://temple-darshan") ? (
+              <span style={{ color: "#34d399", fontWeight: 600 }}>
+                ☁️ Live on All Phones (CDN)
+              </span>
+            ) : (
+              value
+            )}
           </div>
         </div>
       )}

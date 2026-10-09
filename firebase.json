@@ -13,6 +13,7 @@
     ]
   },
   "storage": {
+    "bucket": "temple-darshan-app-d1719.firebasestorage.app",
     "rules": "storage.rules"
   },
   "hosting": {
