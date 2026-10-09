@@ -460,7 +460,7 @@ export default function NewsPage() {
                   placeholder="https://... or choose from computer"
                   presets={[
                     { label: "📰 Ashram Announcement", url: "/darshan_general.jpg" },
-                    { label: "🪔 Spiritual Satsang", url: "/guruji.png" },
+                    { label: "🪔 Spiritual Satsang", url: "https://temple-darshan-app-d1719.web.app/guruji.png" },
                   ]}
                   helperText="Upload news photo directly from your computer or paste a direct image URL."
                 />

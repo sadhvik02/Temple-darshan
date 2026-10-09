@@ -403,7 +403,7 @@ export default function BannersPage() {
                   presets={[
                     { label: "🚩 Temple Hero", url: "/darshan_general.jpg" },
                     { label: "🪔 Sanctum Darshan", url: "/darshan_special.jpg" },
-                    { label: "🙏 Guruji Blessing", url: "/guruji.png" },
+                    { label: "🙏 Guruji Blessing", url: "https://temple-darshan-app-d1719.web.app/guruji.png" },
                   ]}
                   helperText="Upload banner image from computer (1920x800 recommended) or paste a link."
                 />
