@@ -1,4 +1,4 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
@@ -11,10 +11,9 @@ initializeApp();
 const db = getFirestore();
 
 // Fetch keys from environment variables (local .env or Firebase functions config)
-// In production, these should be handled securely, but for now we read process.env
-// The .env file deployed with functions will populate this.
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || RAZORPAY_KEY_SECRET;
 
 /**
  * Helper to get the correct collection name and validate amount
@@ -137,31 +136,11 @@ exports.createPaymentOrder = onCall(async (request) => {
 });
 
 
-exports.verifyPayment = onCall(async (request) => {
-  const { auth, data } = request;
-  
-  if (!auth) {
-    throw new HttpsError("unauthenticated", "User must be logged in.");
-  }
-
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, paymentDocId, devoteeDetails } = data;
-
-  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !paymentDocId) {
-    console.error("Missing verification data!", JSON.stringify(data));
-    throw new HttpsError("invalid-argument", "Missing required verification data.");
-  }
-
-  // 1. Verify HMAC Signature
-  const generatedSignature = crypto
-    .createHmac("sha256", RAZORPAY_KEY_SECRET)
-    .update(razorpay_order_id + "|" + razorpay_payment_id)
-    .digest("hex");
-
-  if (generatedSignature !== razorpay_signature) {
-    throw new HttpsError("permission-denied", "Payment signature verification failed.");
-  }
-
-  // 2. Atomic Verification & Booking Creation
+/**
+ * Atomic Fulfillment for Seva / Darshan Bookings and Donations
+ * Can be called by verifyPayment (client-side) or razorpayWebhook (server-side)
+ */
+async function fulfillPayment(paymentDocId, razorpayPaymentId, razorpaySignature = null, devoteeDetails = null, authUid = null) {
   return await db.runTransaction(async (transaction) => {
     const paymentRef = db.collection("payments").doc(paymentDocId);
     const paymentDoc = await transaction.get(paymentRef);
@@ -171,27 +150,21 @@ exports.verifyPayment = onCall(async (request) => {
     }
 
     const pData = paymentDoc.data();
-    
-    console.log("PAYMENT DOC DATA IN VERIFY:", JSON.stringify(pData));
+    console.log("PAYMENT DOC DATA IN FULFILL:", JSON.stringify(pData));
 
-    // Idempotency check
+    // Idempotency check: Already fulfilled
     if (pData.status === "paid") {
       return { success: true, status: "already_paid", bookingRef: pData.bookingRef };
     }
 
-    // Ensure user owns this payment
-    if (pData.userId !== auth.uid) {
+    // If initiated from user callable verifyPayment, ensure ownership
+    if (authUid && pData.userId !== authUid) {
       throw new HttpsError("permission-denied", "Payment does not belong to this user.");
-    }
-
-    // Ensure order IDs match
-    if (pData.razorpayOrderId !== razorpay_order_id) {
-      throw new HttpsError("invalid-argument", "Order ID mismatch.");
     }
 
     let bookingRefStr = null;
 
-    // 3. Handle Seva/Darshan Slot Capacity & Booking
+    // 1. Handle Seva/Darshan Slot Capacity & Booking
     if (pData.sourceType === "seva" || pData.sourceType === "darshan") {
       let slotData = null;
       
@@ -202,8 +175,6 @@ exports.verifyPayment = onCall(async (request) => {
         if (!slotDoc.exists) {
           if (pData.slotId.startsWith("auto_")) {
             // Auto slot doesn't exist yet, create it dynamically
-            const [_, serviceId, dateKey, startEnd] = pData.slotId.split("_");
-            // Basic parsing if needed, but we can just use defaults
             slotData = {
               id: pData.slotId,
               serviceId: pData.offeringId,
@@ -217,16 +188,14 @@ exports.verifyPayment = onCall(async (request) => {
               updatedAt: FieldValue.serverTimestamp()
             };
             
-            // Check capacity just in case
             if (pData.quantity > 50) {
-              transaction.update(paymentRef, { status: "refund_needed", razorpayPaymentId: razorpay_payment_id });
+              transaction.update(paymentRef, { status: "refund_needed", razorpayPaymentId: razorpayPaymentId });
               throw new HttpsError("resource-exhausted", "Capacity exceeded.");
             }
             
             transaction.set(slotRef, slotData);
           } else {
-            // Manual slot not found
-            transaction.update(paymentRef, { status: "refund_needed", razorpayPaymentId: razorpay_payment_id });
+            transaction.update(paymentRef, { status: "refund_needed", razorpayPaymentId: razorpayPaymentId });
             throw new HttpsError("failed-precondition", "Slot not found. Refund required.");
           }
         } else {
@@ -238,7 +207,7 @@ exports.verifyPayment = onCall(async (request) => {
           if (currentBooked + pData.quantity > capacity) {
             transaction.update(paymentRef, { 
               status: "refund_needed", 
-              razorpayPaymentId: razorpay_payment_id,
+              razorpayPaymentId: razorpayPaymentId,
               updatedAt: FieldValue.serverTimestamp()
             });
             throw new HttpsError("resource-exhausted", "Capacity exceeded. Slot is now full. Automatic refund initiated.");
@@ -264,9 +233,9 @@ exports.verifyPayment = onCall(async (request) => {
         serviceName: pData.offeringName,
         slotId: pData.slotId,
         bookingRef: bookingRefStr,
-        bookingDate: (slotData && slotData.date) ? slotData.date : (pData.bookingDate || "N/A"), // From slot if available, else payload
+        bookingDate: (slotData && slotData.date) ? slotData.date : (pData.bookingDate || "N/A"),
         quantity: pData.quantity,
-        status: "confirmed", // Verified payment means confirmed booking
+        status: "confirmed",
         paymentStatus: "paid",
         totalAmount: pData.amountInr,
         sourceType: pData.sourceType,
@@ -274,21 +243,16 @@ exports.verifyPayment = onCall(async (request) => {
         updatedAt: FieldValue.serverTimestamp(),
       };
       
-      console.log("BOOKING DATA BEFORE DEVOTEE ASSIGN:", JSON.stringify(bookingData));
-      console.log("DEVOTEE DETAILS IN PDATA:", JSON.stringify(pData.devotees));
-      
       if (pData.devotees && Array.isArray(pData.devotees) && pData.devotees.length > 0) {
         bookingData.devotees = pData.devotees.map((dev, idx) => ({
           ...dev,
           devoteeId: `${bookingRefStr}-${idx + 1}`
         }));
-        console.log("Assigned pData.devotees to bookingData");
       } else if (devoteeDetails) {
         bookingData.devotees = [{
           ...devoteeDetails,
           devoteeId: `${bookingRefStr}-1`
         }];
-        console.log("Assigned single devoteeDetails to bookingData");
       } else if (pData.devoteeName) {
         bookingData.devotees = [{
           name: pData.devoteeName,
@@ -296,38 +260,38 @@ exports.verifyPayment = onCall(async (request) => {
           email: pData.devoteeEmail || "",
           devoteeId: `${bookingRefStr}-1`
         }];
-        console.log("Assigned single pData.devoteeName to bookingData");
       }
-      
-      console.log("FINAL BOOKING DATA:", JSON.stringify(bookingData));
 
       transaction.set(bookingRef, bookingData);
 
       // Update Payment Record
-      transaction.update(paymentRef, {
+      const paymentUpdate = {
         status: "paid",
-        razorpayPaymentId: razorpay_payment_id,
-        razorpaySignature: razorpay_signature,
+        razorpayPaymentId: razorpayPaymentId,
         bookingId: bookingRef.id,
         bookingRef: bookingRefStr,
         updatedAt: FieldValue.serverTimestamp()
-      });
+      };
+      if (razorpaySignature) {
+        paymentUpdate.razorpaySignature = razorpaySignature;
+      }
+      transaction.update(paymentRef, paymentUpdate);
 
     } 
-    // 4. Handle Donation Transaction
+    // 2. Handle Donation Transaction
     else if (pData.sourceType === "donation") {
       const donationRef = db.collection("donations").doc();
-      const userDoc = await transaction.get(db.collection("users").doc(auth.uid));
+      const userDoc = await transaction.get(db.collection("users").doc(pData.userId));
       const userName = userDoc.exists ? userDoc.data().name : "Devotee";
       const userPhone = userDoc.exists ? userDoc.data().phone : "";
 
       const donationData = {
-        userId: auth.uid,
+        userId: pData.userId,
         donationTypeId: pData.offeringId,
         donationTypeName: pData.offeringName,
         amount: pData.amountInr,
         paymentId: paymentRef.id,
-        razorpayPaymentId: razorpay_payment_id,
+        razorpayPaymentId: razorpayPaymentId,
         status: "completed",
         donorName: pData.donorName || userName,
         donorPhone: pData.donorPhone || userPhone,
@@ -337,14 +301,16 @@ exports.verifyPayment = onCall(async (request) => {
 
       transaction.set(donationRef, donationData);
 
-      // Update Payment Record
-      transaction.update(paymentRef, {
+      const paymentUpdate = {
         status: "paid",
-        razorpayPaymentId: razorpay_payment_id,
-        razorpaySignature: razorpay_signature,
+        razorpayPaymentId: razorpayPaymentId,
         donationId: donationRef.id,
         updatedAt: FieldValue.serverTimestamp()
-      });
+      };
+      if (razorpaySignature) {
+        paymentUpdate.razorpaySignature = razorpaySignature;
+      }
+      transaction.update(paymentRef, paymentUpdate);
     }
 
     return { 
@@ -353,7 +319,107 @@ exports.verifyPayment = onCall(async (request) => {
       bookingRef: bookingRefStr 
     };
   });
+}
+
+exports.verifyPayment = onCall(async (request) => {
+  const { auth, data } = request;
+  
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "User must be logged in.");
+  }
+
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, paymentDocId, devoteeDetails } = data;
+
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !paymentDocId) {
+    console.error("Missing verification data!", JSON.stringify(data));
+    throw new HttpsError("invalid-argument", "Missing required verification data.");
+  }
+
+  // 1. Verify HMAC Signature
+  const generatedSignature = crypto
+    .createHmac("sha256", RAZORPAY_KEY_SECRET)
+    .update(razorpay_order_id + "|" + razorpay_payment_id)
+    .digest("hex");
+
+  if (generatedSignature !== razorpay_signature) {
+    throw new HttpsError("permission-denied", "Payment signature verification failed.");
+  }
+
+  // 2. Fulfill Payment
+  return await fulfillPayment(paymentDocId, razorpay_payment_id, razorpay_signature, devoteeDetails, auth.uid);
 });
+
+exports.razorpayWebhook = onRequest(async (req, res) => {
+  if (req.method !== "POST") {
+    return res.status(405).send("Method Not Allowed");
+  }
+
+  const webhookSignature = req.headers["x-razorpay-signature"];
+  if (!webhookSignature) {
+    console.error("Webhook missing x-razorpay-signature header");
+    return res.status(400).send("Missing signature header");
+  }
+
+  // Verify webhook signature with raw request body
+  const expectedSignature = crypto
+    .createHmac("sha256", RAZORPAY_WEBHOOK_SECRET)
+    .update(req.rawBody)
+    .digest("hex");
+
+  if (expectedSignature !== webhookSignature) {
+    console.error("Invalid webhook signature!");
+    return res.status(400).send("Invalid signature");
+  }
+
+  const event = req.body;
+  const eventName = event.event;
+  console.log(`[Webhook] Event received: ${eventName}`);
+
+  if (eventName === "payment.captured" || eventName === "order.paid") {
+    const paymentEntity = (event.payload && event.payload.payment && event.payload.payment.entity)
+      ? event.payload.payment.entity
+      : null;
+    const orderEntity = (event.payload && event.payload.order && event.payload.order.entity)
+      ? event.payload.order.entity
+      : null;
+
+    const orderId = paymentEntity?.order_id || orderEntity?.id;
+    const paymentId = paymentEntity?.id;
+
+    if (!orderId) {
+      console.warn("[Webhook] No order ID found in payload");
+      return res.status(200).send("No order ID");
+    }
+
+    console.log(`[Webhook] Processing fulfillment for order: ${orderId}, payment: ${paymentId}`);
+
+    try {
+      const snap = await db.collection("payments").where("razorpayOrderId", "==", orderId).limit(1).get();
+      if (snap.empty) {
+        console.warn(`[Webhook] No payment record found for order ${orderId}`);
+        return res.status(200).send("Payment record not found");
+      }
+
+      const paymentDoc = snap.docs[0];
+      const pData = paymentDoc.data();
+
+      if (pData.status === "paid") {
+        console.log(`[Webhook] Payment ${orderId} already marked as paid`);
+        return res.status(200).send("Already paid");
+      }
+
+      const result = await fulfillPayment(paymentDoc.id, paymentId || pData.razorpayPaymentId || "webhook_captured", null, null, null);
+      console.log(`[Webhook] Successfully fulfilled payment for order ${orderId}:`, result);
+      return res.status(200).json({ success: true, result });
+    } catch (err) {
+      console.error("[Webhook] Error fulfilling payment:", err);
+      return res.status(500).send("Internal fulfillment error");
+    }
+  }
+
+  return res.status(200).send("Event ignored");
+});
+
 
 exports.bookFreeSeva = onCall(async (request) => {
   const data = request.data;

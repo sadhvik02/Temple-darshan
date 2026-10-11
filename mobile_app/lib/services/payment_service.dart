@@ -1,5 +1,6 @@
 
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
@@ -396,8 +397,37 @@ class PaymentService {
   }
 
   /// Razorpay Failure / Cancel Handler
-  void _handlePaymentError(PaymentFailureResponse response) {
+  void _handlePaymentError(PaymentFailureResponse response) async {
     debugPrint('[PaymentService] Razorpay Error: Code ${response.code}, Message: ${response.message}');
+    
+    // Check if the server webhook already confirmed this payment (or confirms it within 2-3 seconds)
+    if (_currentPaymentDocId != null) {
+      for (int i = 0; i < 3; i++) {
+        try {
+          final doc = await FirebaseFirestore.instance.collection('payments').doc(_currentPaymentDocId).get();
+          if (doc.exists && doc.data()?['status'] == 'paid') {
+            final data = doc.data()!;
+            debugPrint('[PaymentService] Payment confirmed via server Webhook fallback!');
+            _isProcessing = false;
+            _activePaymentCompleter?.complete(PaymentResult(
+              isSuccess: true,
+              bookingRef: data['bookingRef']?.toString(),
+              bookingId: data['bookingId']?.toString(),
+              donationRef: data['donationId']?.toString(),
+              paymentId: data['razorpayPaymentId']?.toString() ?? response.message,
+              orderId: _currentOrderId,
+              totalAmount: _currentAmount,
+              message: 'Payment verified and confirmed.',
+            ));
+            return;
+          }
+        } catch (e) {
+          debugPrint('[PaymentService] Error checking webhook payment status: $e');
+        }
+        await Future.delayed(const Duration(milliseconds: 1000));
+      }
+    }
+
     _isProcessing = false;
 
     // Razorpay code 0 or 2 typically indicates user cancellation
