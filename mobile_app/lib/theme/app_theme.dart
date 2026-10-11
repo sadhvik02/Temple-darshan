@@ -118,7 +118,7 @@ class AppTheme {
         suffixIconColor: AppColors.textSecondary,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        height: 68,
+        height: 74,
         backgroundColor: AppColors.surface,
         indicatorColor: AppColors.primaryLight.withValues(alpha: 0.25),
         surfaceTintColor: Colors.transparent,

@@ -11,10 +11,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -52,5 +49,14 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1046724129762',
     projectId: 'temple-darshan-app-d1719',
     storageBucket: 'temple-darshan-app-d1719.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyDnI18ZPs1NDXsibsK16QU4ouGCYuFHng8',
+    appId: '1:1046724129762:ios:13bed2195c0a1ee470bfbb',
+    messagingSenderId: '1046724129762',
+    projectId: 'temple-darshan-app-d1719',
+    storageBucket: 'temple-darshan-app-d1719.firebasestorage.app',
+    iosBundleId: 'com.temple.mobileapp',
   );
 }

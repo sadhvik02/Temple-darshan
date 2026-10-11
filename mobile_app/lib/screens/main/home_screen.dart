@@ -161,28 +161,35 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Sri Kedareshwara Ashramam',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.2,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Sri Kedareshwara Ashramam',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.2,
+                    ),
                   ),
-                ),
-                Text(
-                  'Namaste, $displayName 🙏',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
+                  Text(
+                    'Namaste, $displayName 🙏',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -193,6 +200,9 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (context, snapshot) {
               final count = snapshot.data?.length ?? 0;
               return IconButton(
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                visualDensity: VisualDensity.compact,
                 icon: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -230,6 +240,9 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           IconButton(
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            visualDensity: VisualDensity.compact,
             icon: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
@@ -256,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
           await Future.delayed(const Duration(milliseconds: 600));
         },
         child: ListView(
-          padding: const EdgeInsets.only(bottom: 24),
+          padding: const EdgeInsets.only(bottom: 40),
           children: [
             const SizedBox(height: 8),
 
@@ -310,109 +323,114 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTTDQuickServicesGrid() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14.0),
-      child: Wrap(
-        alignment: WrapAlignment.spaceEvenly,
-        spacing: 12.0,
-        runSpacing: 16.0,
-        children: [
-          // Row 1: Darshan, Sevas, Donations
-          SizedBox(
-            width: (MediaQuery.of(context).size.width - 60) / 3,
-            child: _buildTTDServiceItem(
-              assetImage: 'assets/icons/darshan_selected.png',
-              iconColor: const Color(0xFFE65100),
-              bgColor: const Color(0xFFFFF3E0),
-              label: 'Darshan',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DarshanScreen()),
-                );
-              },
-            ),
-          ),
-          SizedBox(
-            width: (MediaQuery.of(context).size.width - 60) / 3,
-            child: _buildTTDServiceItem(
-              assetImage: 'assets/icons/ashrama_seva_icon.png',
-              iconColor: const Color(0xFFE65100),
-              bgColor: const Color(0xFFFFF3E0),
-              label: 'Ashrama Seva',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ServicesScreen(
-                    categoryFilter: 'ashrama_seva',
-                    title: 'Ashrama Sevas',
-                  )),
-                );
-              },
-            ),
-          ),
-          SizedBox(
-            width: (MediaQuery.of(context).size.width - 60) / 3,
-            child: _buildTTDServiceItem(
-              icon: Icons.spa_rounded,
-              iconColor: const Color(0xFFE65100),
-              bgColor: const Color(0xFFFFF3E0),
-              label: 'Arjitha Sevas',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ServicesScreen(
-                    categoryFilter: 'arjita_seva',
-                    title: 'Arjitha Sevas',
-                  )),
-                );
-              },
-            ),
-          ),
-          SizedBox(
-            width: (MediaQuery.of(context).size.width - 60) / 3,
-            child: _buildTTDServiceItem(
-              icon: Icons.volunteer_activism_rounded, // Represents offering/respectful donation
-              iconColor: const Color(0xFFE65100),
-              bgColor: const Color(0xFFFFF3E0),
-              label: 'Donations',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DonationsScreen()),
-                );
-              },
-            ),
-          ),
-          SizedBox(
-            width: (MediaQuery.of(context).size.width - 60) / 3,
-            child: _buildTTDServiceItem(
-              assetImage: 'assets/icons/temple_info_icon.png',
-              iconColor: const Color(0xFFE65100),
-              bgColor: const Color(0xFFFFF3E0),
-              label: 'Temple Info',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const TempleInfoScreen()),
-                );
-              },
-            ),
-          ),
-          SizedBox(
-            width: (MediaQuery.of(context).size.width - 60) / 3,
-            child: _buildTTDServiceItem(
-              icon: Icons.celebration_rounded,
-              iconColor: const Color(0xFFE65100),
-              bgColor: const Color(0xFFFFF3E0),
-              label: 'Utsavams',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const EventsScreen()),
-                );
-              },
-            ),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final itemWidth = (constraints.maxWidth - 24) / 3;
+          return Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            spacing: 12.0,
+            runSpacing: 16.0,
+            children: [
+              // Row 1: Darshan, Sevas, Donations
+              SizedBox(
+                width: itemWidth,
+                child: _buildTTDServiceItem(
+                  assetImage: 'assets/icons/darshan_selected.png',
+                  iconColor: const Color(0xFFE65100),
+                  bgColor: const Color(0xFFFFF3E0),
+                  label: 'Darshan',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DarshanScreen()),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(
+                width: itemWidth,
+                child: _buildTTDServiceItem(
+                  assetImage: 'assets/icons/ashrama_seva_icon.png',
+                  iconColor: const Color(0xFFE65100),
+                  bgColor: const Color(0xFFFFF3E0),
+                  label: 'Ashrama Seva',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ServicesScreen(
+                        categoryFilter: 'ashrama_seva',
+                        title: 'Ashrama Sevas',
+                      )),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(
+                width: itemWidth,
+                child: _buildTTDServiceItem(
+                  icon: Icons.spa_rounded,
+                  iconColor: const Color(0xFFE65100),
+                  bgColor: const Color(0xFFFFF3E0),
+                  label: 'Arjitha Sevas',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ServicesScreen(
+                        categoryFilter: 'arjita_seva',
+                        title: 'Arjitha Sevas',
+                      )),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(
+                width: itemWidth,
+                child: _buildTTDServiceItem(
+                  icon: Icons.volunteer_activism_rounded, // Represents offering/respectful donation
+                  iconColor: const Color(0xFFE65100),
+                  bgColor: const Color(0xFFFFF3E0),
+                  label: 'Donations',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DonationsScreen()),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(
+                width: itemWidth,
+                child: _buildTTDServiceItem(
+                  assetImage: 'assets/icons/temple_info_icon.png',
+                  iconColor: const Color(0xFFE65100),
+                  bgColor: const Color(0xFFFFF3E0),
+                  label: 'Temple Info',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const TempleInfoScreen()),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(
+                width: itemWidth,
+                child: _buildTTDServiceItem(
+                  icon: Icons.celebration_rounded,
+                  iconColor: const Color(0xFFE65100),
+                  bgColor: const Color(0xFFFFF3E0),
+                  label: 'Utsavams',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const EventsScreen()),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -506,27 +524,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.auto_awesome_rounded, size: 18, color: AppColors.primary),
                           ),
-                          child: const Icon(Icons.auto_awesome_rounded, size: 18, color: AppColors.primary),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Today\'s Darshan Timings',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
+                          const SizedBox(width: 8),
+                          const Flexible(
+                            child: Text(
+                              'Today\'s Darshan Timings',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () {
                         Navigator.push(
@@ -557,7 +582,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
@@ -566,18 +591,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Row(
                           children: [
                             const Icon(Icons.wb_sunny_rounded, color: AppColors.accent, size: 20),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text('Morning Darshan', style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                                   const SizedBox(height: 2),
-                                  Text(
-                                    info.morningTimings,
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      info.morningTimings,
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                                      maxLines: 1,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -589,7 +617,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
@@ -598,18 +626,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Row(
                           children: [
                             const Icon(Icons.nights_stay_rounded, color: AppColors.primary, size: 20),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text('Evening Darshan', style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                                   const SizedBox(height: 2),
-                                  Text(
-                                    info.eveningTimings,
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      info.eveningTimings,
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                                      maxLines: 1,
+                                    ),
                                   ),
                                 ],
                               ),
