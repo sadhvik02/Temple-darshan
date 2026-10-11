@@ -24,9 +24,20 @@ export async function getDonationTypes(): Promise<DonationType[]> {
   })) as DonationType[];
 }
 
+function cleanData<T extends Record<string, any>>(data: T): Record<string, any> {
+  const clean: Record<string, any> = {};
+  for (const [key, val] of Object.entries(data)) {
+    if (val !== undefined) {
+      clean[key] = val;
+    }
+  }
+  return clean;
+}
+
 export async function createDonationType(data: Omit<DonationType, "id" | "createdAt" | "updatedAt">): Promise<string> {
+  const cleaned = cleanData(data);
   const docRef = await addDoc(DONATION_TYPES_COLLECTION, {
-    ...data,
+    ...cleaned,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -35,8 +46,9 @@ export async function createDonationType(data: Omit<DonationType, "id" | "create
 
 export async function updateDonationType(id: string, data: Partial<Omit<DonationType, "id" | "createdAt" | "updatedAt">>): Promise<void> {
   const docRef = doc(db, "donationTypes", id);
+  const cleaned = cleanData(data);
   await setDoc(docRef, {
-    ...data,
+    ...cleaned,
     updatedAt: serverTimestamp(),
   }, { merge: true });
 }

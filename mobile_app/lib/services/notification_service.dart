@@ -86,12 +86,15 @@ class NotificationService {
     if (initialMessage != null) {
       debugPrint('[FCM] App opened from terminated state via notification');
     }
+
+    // Real-time notifications are handled directly by Firebase Cloud Messaging (FCM).
+    // The Firestore listener is not used to prevent duplicate system alerts.
   }
 
-  /// Deprecated: Local Firestore listener is no longer needed since
-  /// the server-side Cloud Function handles push notifications via FCM directly.
+  /// Deprecated: Local Firestore listener is disabled because Firebase Cloud Messaging (FCM)
+  /// triggers notifications for background, terminated, and foreground states.
   static void startFirestoreNotificationListener() {
-    // No-op: FCM push notifications are now handled by Cloud Functions.
+    // No-op: FCM handles notifications cleanly without duplicates.
   }
 
   /// Stop the Firestore notification listener
@@ -160,7 +163,30 @@ class NotificationService {
     }
   }
 
-  static final Set<String> _displayedForegroundIds = <String>{};
+  static final Map<String, int> _recentlyDisplayedTimestamps = <String, int>{};
+
+  /// Thread-safe deduplication to guarantee each notification is shown exactly ONCE
+  /// across FCM topic, FCM device token, and Firestore snapshot listener.
+  static bool _shouldDisplayAndMark(String id, String title, String body) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    // Clean entries older than 2 minutes
+    _recentlyDisplayedTimestamps.removeWhere((_, timestamp) => now - timestamp > 120000);
+
+    final cleanTitle = title.replaceAll(RegExp(r'^[^\w\s]+'), '').trim().toLowerCase();
+    final cleanBody = body.trim().toLowerCase();
+    final textKey = 'text:$cleanTitle|$cleanBody';
+    final idKey = 'id:$id';
+
+    if ((id.isNotEmpty && _recentlyDisplayedTimestamps.containsKey(idKey)) ||
+        (cleanTitle.isNotEmpty && _recentlyDisplayedTimestamps.containsKey(textKey))) {
+      debugPrint('[Notifications] Suppressed duplicate notification: "$title"');
+      return false;
+    }
+
+    if (id.isNotEmpty) _recentlyDisplayedTimestamps[idKey] = now;
+    if (cleanTitle.isNotEmpty) _recentlyDisplayedTimestamps[textKey] = now;
+    return true;
+  }
 
   /// Handle foreground FCM messages — show a local notification
   static void _handleForegroundMessage(RemoteMessage message) {
@@ -169,19 +195,23 @@ class NotificationService {
     final notification = message.notification;
     if (notification == null) return;
 
-    final notifKey = message.data['notificationId'] ?? message.messageId ?? '${notification.title}_${notification.body}';
-    if (_displayedForegroundIds.contains(notifKey)) {
-      debugPrint('[FCM] Duplicate foreground message ignored: $notifKey');
+    final title = notification.title ?? '';
+    final body = notification.body ?? '';
+
+    final notifKey = message.data['notificationId'] as String? ??
+        message.messageId ??
+        '${notification.title}_${notification.body}';
+
+    if (!_shouldDisplayAndMark(notifKey, title, body)) {
+      debugPrint('[FCM] Duplicate notification suppressed: $notifKey');
       return;
     }
-    _displayedForegroundIds.add(notifKey);
 
-    if (_displayedForegroundIds.length > 50) {
-      _displayedForegroundIds.remove(_displayedForegroundIds.first);
-    }
+    final cleanTitle = title.replaceAll(RegExp(r'^[^\w\s]+'), '').trim().toLowerCase();
+    final notifId = (cleanTitle.isNotEmpty ? cleanTitle.hashCode : notifKey.hashCode).abs();
 
     _localNotifications.show(
-      notifKey.hashCode,
+      notifId,
       notification.title,
       notification.body,
       NotificationDetails(
@@ -192,12 +222,13 @@ class NotificationService {
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
-          tag: notifKey,
+          tag: 'temple_$notifKey',
           playSound: true,
           enableVibration: true,
+          styleInformation: BigTextStyleInformation(notification.body ?? ''),
         ),
       ),
-      payload: message.data['actionRoute'],
+      payload: message.data['actionRoute'] as String?,
     );
   }
 

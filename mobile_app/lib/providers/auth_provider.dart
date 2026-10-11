@@ -30,6 +30,15 @@ class AuthProvider extends ChangeNotifier {
       final doc = await _firestore.collection('users').doc(uid).get();
       if (doc.exists) {
         _userModel = UserModel.fromFirestore(doc);
+      } else {
+        // Fallback for users missing a Firestore profile (e.g. manually created accounts)
+        final user = _auth.currentUser;
+        _userModel = UserModel(
+          id: uid,
+          name: user?.displayName ?? 'Devotee',
+          email: user?.email ?? '',
+          phone: user?.phoneNumber ?? '',
+        );
       }
     } catch (e) {
       debugPrint("Error fetching user profile: $e");

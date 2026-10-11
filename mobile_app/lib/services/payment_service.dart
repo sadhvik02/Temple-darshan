@@ -104,6 +104,7 @@ class PaymentService {
   num? _currentAmount;
   List<Map<String, String>>? _currentDevotees;
   Completer<PaymentResult>? _activePaymentCompleter;
+  void Function(PaymentUIState state)? _onStateChange;
 
   bool get isProcessing => _isProcessing;
 
@@ -119,6 +120,7 @@ class PaymentService {
     _razorpay?.clear();
     _razorpay = null;
     _isProcessing = false;
+    _onStateChange = null;
   }
 
   /// Start Seva Payment
@@ -246,9 +248,10 @@ class PaymentService {
 
     try {
       _initRazorpay();
+      _onStateChange = onStateChange;
 
       // 1. Create Payment Order via Cloud Function
-      onStateChange?.call(PaymentUIState.creatingOrder);
+      _onStateChange?.call(PaymentUIState.creatingOrder);
       
       final HttpsCallable createOrderCallable = _functions.httpsCallable('createPaymentOrder');
       final HttpsCallableResult createResult = await createOrderCallable.call(payload);
@@ -266,7 +269,7 @@ class PaymentService {
 
       if (orderId.isEmpty || keyId.isEmpty) {
         _isProcessing = false;
-        onStateChange?.call(PaymentUIState.failed);
+        _onStateChange?.call(PaymentUIState.failed);
         return PaymentResult.failed('Invalid payment order response from temple server.');
       }
 
@@ -276,7 +279,7 @@ class PaymentService {
       _currentDevotees = payload['devotees'] as List<Map<String, String>>?;
 
       // 2. Open Razorpay Checkout UI
-      onStateChange?.call(PaymentUIState.openingCheckout);
+      _onStateChange?.call(PaymentUIState.openingCheckout);
 
       final int totalRupees = (amountInPaise / 100).toInt();
 
@@ -309,13 +312,13 @@ class PaymentService {
       _isProcessing = false;
       debugPrint('[PaymentService] Firebase Functions Error: ${e.code} - ${e.message}');
       if (e.code == 'resource-exhausted' || e.code == 'failed-precondition') {
-        onStateChange?.call(PaymentUIState.slotUnavailable);
+        _onStateChange?.call(PaymentUIState.slotUnavailable);
         return PaymentResult.failed(
           e.message ?? 'Selected slot is no longer available. Please select another slot.',
           isSlotUnavailable: true,
         );
       }
-      onStateChange?.call(PaymentUIState.networkError);
+      _onStateChange?.call(PaymentUIState.networkError);
       return PaymentResult.failed(
         e.message ?? 'Unable to connect to temple payment server. Please try again.',
         isNetworkError: true,
@@ -323,7 +326,7 @@ class PaymentService {
     } catch (e) {
       _isProcessing = false;
       debugPrint('[PaymentService] General Error starting payment: $e');
-      onStateChange?.call(PaymentUIState.networkError);
+      _onStateChange?.call(PaymentUIState.networkError);
       return PaymentResult.failed(
         'Network error while preparing payment. Please check your internet connection.',
         isNetworkError: true,
@@ -335,6 +338,9 @@ class PaymentService {
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
     debugPrint('[PaymentService] Razorpay Callback: Success (Payment ID: ${response.paymentId})');
     
+    // Devotee just paid successfully; transition UI to verifying immediately
+    _onStateChange?.call(PaymentUIState.verifying);
+
     // IMPORTANT: Razorpay callback is NOT final success. Must verify server-side.
     try {
       final HttpsCallable verifyCallable = _functions.httpsCallable('verifyPayment');
@@ -363,6 +369,10 @@ class PaymentService {
       _isProcessing = false;
 
       if (isSuccess || status == 'success' || status == 'paid' || status == 'already_paid') {
+        _onStateChange?.call(PaymentUIState.success);
+        // Brief moment for user to see the green "Booking Confirmed!" badge
+        await Future.delayed(const Duration(milliseconds: 700));
+
         _activePaymentCompleter?.complete(PaymentResult(
           isSuccess: true,
           bookingRef: bookingRef,
@@ -374,6 +384,7 @@ class PaymentService {
           message: message ?? 'Payment verified and confirmed.',
         ));
       } else if (status == 'refund_needed') {
+        _onStateChange?.call(PaymentUIState.refundRequired);
         _activePaymentCompleter?.complete(PaymentResult.refundNeeded(
           paymentId: response.paymentId ?? '',
           orderId: response.orderId ?? _currentOrderId,
@@ -381,6 +392,7 @@ class PaymentService {
           message: message,
         ));
       } else {
+        _onStateChange?.call(PaymentUIState.failed);
         _activePaymentCompleter?.complete(PaymentResult.failed(
           message ?? 'Payment verification was unsuccessful.',
           isVerificationFailed: true,
@@ -388,6 +400,7 @@ class PaymentService {
       }
     } catch (e) {
       _isProcessing = false;
+      _onStateChange?.call(PaymentUIState.failed);
       debugPrint('[PaymentService] Verification Error: $e');
       _activePaymentCompleter?.complete(PaymentResult.failed(
         'Server verification failed. If payment was deducted, please contact temple support with reference ID: ${response.paymentId}.',
@@ -432,10 +445,12 @@ class PaymentService {
 
     // Razorpay code 0 or 2 typically indicates user cancellation
     if (response.code == Razorpay.PAYMENT_CANCELLED || response.code == 0) {
+      _onStateChange?.call(PaymentUIState.cancelled);
       _activePaymentCompleter?.complete(PaymentResult.cancelled(
         response.message ?? 'Payment was cancelled.',
       ));
     } else {
+      _onStateChange?.call(PaymentUIState.failed);
       _activePaymentCompleter?.complete(PaymentResult.failed(
         response.message ?? 'Payment transaction failed. Please try again.',
       ));

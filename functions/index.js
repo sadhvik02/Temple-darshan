@@ -41,7 +41,7 @@ async function getOfferingDetails(sourceType, offeringId, quantity, donationAmou
   }
 }
 
-exports.createPaymentOrder = onCall(async (request) => {
+exports.createPaymentOrder = onCall({ invoker: "public" }, async (request) => {
   const { auth, data } = request;
   
   console.log("createPaymentOrder RECEIVED DATA:", JSON.stringify(data));
@@ -457,28 +457,30 @@ exports.bookFreeSeva = onCall(async (request) => {
       const start = occ.timeRange.split(" - ")[0];
       const end = occ.timeRange.split(" - ")[1];
       
-      if (occ.slotId) {
+      if (occ.slotId && occ.slotId !== "custom" && occ.slotId !== "recurring" && !occ.slotId.startsWith("auto_")) {
         let slotDoc = await transaction.get(db.collection("slots").doc(occ.slotId));
-        if (!slotDoc.exists) {
-          throw new HttpsError("failed-precondition", `Slot unavailable for ${occ.date} at ${occ.timeRange}. Please ensure slots are available for all dates.`);
+        if (slotDoc.exists) {
+          const slotData = slotDoc.data();
+          const currentBooked = slotData.bookedCount || 0;
+          const capacity = slotData.capacity || 0;
+          
+          if (currentBooked + quantity > capacity) {
+            throw new HttpsError("resource-exhausted", `Not enough capacity for ${occ.date} at ${occ.timeRange}. Available: ${capacity - currentBooked}.`);
+          }
+          
+          slotDocsAndRefs.push({
+            ref: slotDoc.ref,
+            currentBooked: currentBooked,
+            isNew: false
+          });
+          continue; // Skip the else block if found
         }
-        
-        const slotData = slotDoc.data();
-        const currentBooked = slotData.bookedCount || 0;
-        const capacity = slotData.capacity || 0;
-        
-        if (currentBooked + quantity > capacity) {
-          throw new HttpsError("resource-exhausted", `Not enough capacity for ${occ.date} at ${occ.timeRange}. Available: ${capacity - currentBooked}.`);
-        }
-        
-        slotDocsAndRefs.push({
-          ref: slotDoc.ref,
-          currentBooked: currentBooked,
-          isNew: false
-        });
-      } else {
-        // Query the slots collection to find the exact admin-created slot
-        const slotsQuery = db.collection("slots")
+      }
+      
+      // If we reach here, it's either no slotId, a custom/recurring/auto_ slotId, or the slotId didn't exist in DB.
+      // We dynamically create or find it based on date and time.
+      const slotsQuery = db.collection("slots")
+
           .where("serviceId", "==", serviceId)
           .where("date", "==", occ.date)
           .where("startTime", "==", start)
@@ -528,7 +530,7 @@ exports.bookFreeSeva = onCall(async (request) => {
             isNew: false
           });
         }
-      }
+
     }
     
     // 2. All slots are valid and have capacity! Execute all writes safely.
@@ -658,9 +660,9 @@ exports.sendPushOnNotificationCreate = onDocumentCreated(
     }
 
     if (isGlobal) {
-      // For all devotees, broadcast via topic 'all_devotees' ONLY.
-      // Every device subscribes to this topic on app launch.
-      // Do NOT send to individual tokens to avoid duplicate notifications on devices.
+      // Broadcast via topic 'all_devotees' ONLY.
+      // Every device automatically subscribes to 'all_devotees' on app startup.
+      // Sending to both topic AND individual tokens causes duplicate push notifications on devices.
       try {
         const response = await getMessaging().send({
           ...messagePayload,
@@ -668,7 +670,42 @@ exports.sendPushOnNotificationCreate = onDocumentCreated(
         });
         console.log(`[FCM] Global broadcast push sent successfully to topic 'all_devotees': ${response}`);
       } catch (topicErr) {
-        console.error("[FCM] Topic broadcast error:", topicErr.message);
+        console.error("[FCM] Topic broadcast error, falling back to registered tokens:", topicErr.message);
+        // Fallback only if topic broadcast failed
+        try {
+          const tokensSnap = await db.collectionGroup("tokens").get();
+          const seenTokens = new Set();
+          const tokenDocs = [];
+          tokensSnap.forEach((tDoc) => {
+            const t = tDoc.data().token;
+            if (t && !seenTokens.has(t)) {
+              seenTokens.add(t);
+              tokenDocs.push({ token: t, tokenDocRef: tDoc.ref });
+            }
+          });
+
+          if (tokenDocs.length > 0) {
+            await Promise.allSettled(
+              tokenDocs.map(async ({ token, tokenDocRef }) => {
+                try {
+                  await getMessaging().send({
+                    ...messagePayload,
+                    token: token,
+                  });
+                } catch (error) {
+                  if (
+                    error.code === "messaging/invalid-registration-token" ||
+                    error.code === "messaging/registration-token-not-registered"
+                  ) {
+                    await tokenDocRef.delete().catch(() => {});
+                  }
+                }
+              })
+            );
+          }
+        } catch (tokenErr) {
+          console.error("[FCM] Error in fallback token broadcast:", tokenErr.message);
+        }
       }
     } else {
       // For targeted notifications, collect unique tokens for target users only
@@ -717,3 +754,4 @@ exports.sendPushOnNotificationCreate = onDocumentCreated(
     }
   }
 );
+

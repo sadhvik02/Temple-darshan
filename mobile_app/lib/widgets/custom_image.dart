@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
@@ -32,40 +33,79 @@ class CustomImage extends StatelessWidget {
       return _buildFallback(effectiveBorderRadius, effectiveBg);
     }
 
-    return ClipRRect(
-      borderRadius: effectiveBorderRadius,
-      child: Image.network(
-        imageUrl!.trim(),
-        width: width,
-        height: height,
-        fit: fit,
-        alignment: alignment,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Container(
+    final String url = imageUrl!.trim();
+
+    // Support in-memory Base64 data URLs uploaded from dashboard
+    if (url.startsWith('data:image')) {
+      try {
+        final commaIndex = url.indexOf(',');
+        final base64String = commaIndex != -1 ? url.substring(commaIndex + 1) : url;
+        final bytes = base64Decode(base64String);
+        return ClipRRect(
+          borderRadius: effectiveBorderRadius,
+          child: Image.memory(
+            bytes,
             width: width,
             height: height,
-            color: effectiveBg,
-            child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          (loadingProgress.expectedTotalBytes ?? 1)
-                      : null,
-                  color: AppColors.primaryLight,
-                ),
-              ),
+            fit: fit,
+            alignment: alignment,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildFallback(effectiveBorderRadius, effectiveBg);
+            },
+          ),
+        );
+      } catch (_) {
+        return _buildFallback(effectiveBorderRadius, effectiveBg);
+      }
+    }
+
+    final bool isAsset = url.startsWith('/');
+
+    return ClipRRect(
+      borderRadius: effectiveBorderRadius,
+      child: isAsset
+          ? Image.asset(
+              'assets/images$url',
+              width: width,
+              height: height,
+              fit: fit,
+              alignment: alignment,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildFallback(effectiveBorderRadius, effectiveBg);
+              },
+            )
+          : Image.network(
+              url,
+              width: width,
+              height: height,
+              fit: fit,
+              alignment: alignment,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: width,
+                  height: height,
+                  color: effectiveBg,
+                  child: Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                (loadingProgress.expectedTotalBytes ?? 1)
+                            : null,
+                        color: AppColors.primaryLight,
+                      ),
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return _buildFallback(effectiveBorderRadius, effectiveBg);
+              },
             ),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) {
-          return _buildFallback(effectiveBorderRadius, effectiveBg);
-        },
-      ),
     );
   }
 

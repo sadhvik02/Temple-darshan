@@ -222,7 +222,7 @@ export interface NotificationItem {
   targetAudience: 'all' | 'devotees';
   imageUrl?: string;
   actionRoute?: string;
-  isGlobal: boolean;
+  isGlobal?: boolean;
   targetUserId?: string | null;
   sentBy?: string;
   createdAt: any;

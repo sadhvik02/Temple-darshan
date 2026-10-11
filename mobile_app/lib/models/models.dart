@@ -72,14 +72,21 @@ class ServiceModel {
 
   factory ServiceModel.fromFirestore(DocumentSnapshot doc) {
     final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
+    final rawPrice = data['price'] ?? 0;
+    final num priceNum = rawPrice is num ? rawPrice : int.tryParse(rawPrice.toString()) ?? 0;
+    final int priceVal = priceNum.toInt();
+
+    final rawCat = data['category']?.toString().trim() ?? '';
+    final String cat = (rawCat == 'arjita_seva') ? 'arjita_seva' : 'ashrama_seva';
+
     return ServiceModel(
       id: doc.id,
       name: data['name'] ?? '',
       description: data['description'] ?? '',
-      price: data['price'] ?? 0,
+      price: priceVal,
       imageUrl: data['imageUrl'],
       bookingEnabled: data['bookingEnabled'] ?? false,
-      category: (data['category'] == 'seva' || data['category'] == null) ? 'ashrama_seva' : data['category'],
+      category: cat,
     );
   }
 

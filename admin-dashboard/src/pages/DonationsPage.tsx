@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { DonationService } from "../services/donationService";
 import { getDonationTypes, createDonationType, updateDonationType, deleteDonationType } from "../services/donationTypeService";
 import type { Donation, DonationType } from "../types";
+import ImageUploadInput from "../components/ImageUploadInput";
 
 const CATEGORY_OPTIONS = [
   { value: "general", label: "General Temple Fund", icon: "🏛️" },
@@ -138,13 +139,13 @@ export default function DonationsPage() {
       }
 
       const payload = {
-        title: formData.title,
-        description: formData.description,
-        imageUrl: formData.imageUrl || undefined,
-        category: formData.category,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        imageUrl: formData.imageUrl?.trim() || "",
+        category: formData.category || "general",
         suggestedAmounts: amounts,
         isActive: formData.isActive,
-        displayOrder: formData.displayOrder,
+        displayOrder: Number(formData.displayOrder) || 1,
       };
 
       if (editingId) {
@@ -154,9 +155,9 @@ export default function DonationsPage() {
       }
       await loadDonationTypes();
       handleCloseModal();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving donation type:", err);
-      alert("Failed to save donation type.");
+      alert(err?.message || "Failed to save donation type.");
     } finally {
       setSaving(false);
     }
@@ -809,34 +810,6 @@ export default function DonationsPage() {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
-                {formData.imageUrl && (
-                  <div
-                    style={{
-                      height: "220px",
-                      borderRadius: "12px",
-                      background: "#0f172a",
-                      border: "1px solid var(--color-border)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <img
-                      src={formData.imageUrl}
-                      alt="Preview"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "contain",
-                        borderRadius: "12px",
-                      }}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  </div>
-                )}
 
                 <div className="form-group">
                   <label>Donation Fund Title *</label>
@@ -870,15 +843,19 @@ export default function DonationsPage() {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label>Cover Image URL (Optional)</label>
-                  <input
-                    type="url"
-                    value={formData.imageUrl}
-                    onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                  />
-                </div>
+                <ImageUploadInput
+                  value={formData.imageUrl}
+                  onChange={(url) => handleInputChange("imageUrl", url)}
+                  folder="donations"
+                  label="Cover Image"
+                  placeholder="/annadanam_seva.jpg, https://... or choose from computer"
+                  presets={[
+                    { label: "🍲 Annadanam", url: "/annadanam_seva.jpg", color: "34, 197, 94" },
+                    { label: "🐄 Goshala", url: "/goshala_seva.jpg", color: "168, 85, 247" },
+                    { label: "🛕 Mandir Nirman", url: "/mandir_nirman.jpg", color: "234, 88, 12" },
+                  ]}
+                  helperText="Upload donation cause image directly from your computer or paste an image link."
+                />
 
                 <div className="form-group">
                   <label>Suggested Preset Amounts (Comma-separated) *</label>
