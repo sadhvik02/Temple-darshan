@@ -131,6 +131,43 @@ class SlotModel {
   int get available => (capacity - bookedCount).clamp(0, capacity);
   bool get isFull => available <= 0;
   String get timeRange => '$startTime - $endTime';
+
+  bool get isPast {
+    try {
+      if (date.isEmpty) return false;
+      final parts = date.split('-');
+      if (parts.length != 3) return false;
+      final y = int.parse(parts[0]);
+      final m = int.parse(parts[1]);
+      final d = int.parse(parts[2]);
+
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final slotDay = DateTime(y, m, d);
+
+      if (slotDay.isBefore(today)) return true;
+      if (slotDay.isAfter(today)) return false;
+
+      // Slot is today - check if startTime has passed
+      final clean = startTime.trim().toUpperCase();
+      final isPm = clean.contains('PM');
+      final isAm = clean.contains('AM');
+      final numPart = clean.replaceAll('AM', '').replaceAll('PM', '').trim();
+      final timeParts = numPart.split(':');
+      if (timeParts.isEmpty) return false;
+      int hour = int.parse(timeParts[0].trim());
+      int minute = timeParts.length > 1 ? int.parse(timeParts[1].trim()) : 0;
+      if (isPm && hour < 12) hour += 12;
+      if (isAm && hour == 12) hour = 0;
+
+      final slotDateTime = DateTime(y, m, d, hour, minute);
+      return now.isAfter(slotDateTime);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool get isAvailable => !isFull && !isPast;
 }
 
 class BookingModel {

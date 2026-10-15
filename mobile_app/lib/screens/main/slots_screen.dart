@@ -22,7 +22,14 @@ class _SlotsScreenState extends State<SlotsScreen> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _selectedDate = DateTime(now.year, now.month, now.day);
+    final today = DateTime(now.year, now.month, now.day);
+    // If it's already 8:00 PM (20:00) or later, all slots for today have started/passed.
+    // Default to tomorrow so devotees immediately see open, bookable slots!
+    if (now.hour >= 20) {
+      _selectedDate = today.add(const Duration(days: 1));
+    } else {
+      _selectedDate = today;
+    }
   }
 
   static String _formatDateKey(DateTime dt) {
@@ -161,6 +168,40 @@ class _SlotsScreenState extends State<SlotsScreen> {
             eveningSlots.add(live);
           }
 
+          // Also merge any custom DB slots for this date that are not in default lists
+          for (final s in dateSlots) {
+            final inMorning = _defaultMorningTimings.any((d) => d['start'] == s.startTime && d['end'] == s.endTime);
+            final inEvening = _defaultEveningTimings.any((d) => d['start'] == s.startTime && d['end'] == s.endTime);
+            if (!inMorning && !inEvening) {
+              if (isMorningSlot(s.startTime)) {
+                morningSlots.add(s);
+              } else {
+                eveningSlots.add(s);
+              }
+            }
+          }
+
+          // Filter out slots that have already started or passed
+          morningSlots = morningSlots.where((s) => !s.isPast).toList();
+          eveningSlots = eveningSlots.where((s) => !s.isPast).toList();
+
+          final now = DateTime.now();
+          final bool isToday = _selectedDate.year == now.year &&
+              _selectedDate.month == now.month &&
+              _selectedDate.day == now.day;
+          final bool allSlotsPassedForToday = isToday && morningSlots.isEmpty && eveningSlots.isEmpty;
+
+          // If the currently selected slot has expired or is in the past, deselect it
+          if (_selectedSlot != null && _selectedSlot!.isPast) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _selectedSlot != null && _selectedSlot!.isPast) {
+                setState(() {
+                  _selectedSlot = null;
+                });
+              }
+            });
+          }
+
           return Column(
             children: [
               Expanded(
@@ -222,6 +263,41 @@ class _SlotsScreenState extends State<SlotsScreen> {
                     // 3. Horizontal Date Strip (Next 30 Days)
                     _buildHorizontalDateStrip(activeDates),
                     const SizedBox(height: 22),
+
+                    // If all slots for today have ended
+                    if (allSlotsPassedForToday) ...[
+                      _buildTodayClosedCard(),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // If today and morning slots ended but evening slots are still ahead
+                    if (isToday && morningSlots.isEmpty && eveningSlots.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.schedule_rounded, color: Color(0xFF64748B), size: 18),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Morning slots for today have ended. Evening slots are available below.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF475569),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     // 4. Morning Slots Section
                     if (morningSlots.isNotEmpty) ...[
@@ -340,6 +416,77 @@ class _SlotsScreenState extends State<SlotsScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  // Today Closed Information Banner
+  Widget _buildTodayClosedCard() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFFE0B2), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFFFCC80), width: 1.5),
+            ),
+            child: const Icon(Icons.nightlight_round, color: Color(0xFFE65100), size: 32),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            "Today's Booking Slots Have Closed",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            "All darshan and seva timings for today have already concluded. Please choose tomorrow or an upcoming date to reserve your slot.",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 18),
+          ElevatedButton.icon(
+            onPressed: () {
+              final now = DateTime.now();
+              setState(() {
+                _selectedDate = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+                _selectedSlot = null;
+              });
+            },
+            icon: const Icon(Icons.calendar_today_rounded, size: 16),
+            label: const Text('View Tomorrow\'s Slots'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE65100),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 2,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -574,12 +721,14 @@ class _SlotsScreenState extends State<SlotsScreen> {
       itemBuilder: (context, index) {
         final slot = slots[index];
         final isSelected = _selectedSlot?.id == slot.id;
+        final isPast = slot.isPast;
         final isFull = slot.isFull;
+        final isUnavailable = isPast || isFull;
         final isMorn = isMorningSlot(slot.startTime);
         final formattedRange = _formatSlotRange(slot);
 
         return GestureDetector(
-          onTap: isFull
+          onTap: isUnavailable
               ? null
               : () {
                   setState(() {
@@ -592,14 +741,14 @@ class _SlotsScreenState extends State<SlotsScreen> {
             decoration: BoxDecoration(
               color: isSelected
                   ? const Color(0xFFFFF3E0)
-                  : isFull
+                  : isUnavailable
                       ? const Color(0xFFF1F5F9)
                       : Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: isSelected
                     ? const Color(0xFFE65100)
-                    : isFull
+                    : isUnavailable
                         ? const Color(0xFFE2E8F0)
                         : const Color(0xFFFFE0B2),
                 width: isSelected ? 2.0 : 1.0,
@@ -627,7 +776,7 @@ class _SlotsScreenState extends State<SlotsScreen> {
                   size: 18,
                   color: isSelected
                       ? const Color(0xFFE65100)
-                      : isFull
+                      : isUnavailable
                           ? const Color(0xFF94A3B8)
                           : isMorn
                               ? const Color(0xFFF57F17)
@@ -644,7 +793,7 @@ class _SlotsScreenState extends State<SlotsScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
-                          color: isFull ? const Color(0xFF94A3B8) : const Color(0xFF0F172A),
+                          color: isUnavailable ? const Color(0xFF94A3B8) : const Color(0xFF0F172A),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -657,17 +806,21 @@ class _SlotsScreenState extends State<SlotsScreen> {
                             height: 6,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: isFull ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                              color: isPast
+                                  ? const Color(0xFF94A3B8)
+                                  : (isFull ? const Color(0xFFEF4444) : const Color(0xFF10B981)),
                             ),
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              isFull ? 'Full' : '${slot.available} left',
+                              isPast ? 'Closed' : (isFull ? 'Full' : '${slot.available} left'),
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: isFull ? const Color(0xFFEF4444) : const Color(0xFF047857),
+                                color: isPast
+                                    ? const Color(0xFF94A3B8)
+                                    : (isFull ? const Color(0xFFEF4444) : const Color(0xFF047857)),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -732,7 +885,7 @@ class _SlotsScreenState extends State<SlotsScreen> {
             ],
           ),
           ElevatedButton(
-            onPressed: _selectedSlot == null
+            onPressed: (_selectedSlot == null || _selectedSlot!.isPast)
                 ? null
                 : () {
                     Navigator.push(

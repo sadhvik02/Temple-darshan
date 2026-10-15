@@ -141,6 +141,16 @@ class _BookingScreenState extends State<BookingScreen> {
       }
     }
 
+    if (widget.slot != null && widget.slot!.isPast) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This seva slot has already passed. Please select an upcoming slot.'),
+          backgroundColor: AppColors.statusCancelled,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     final List<Map<String, String>> devoteeList = _devotees.map((entry) {
