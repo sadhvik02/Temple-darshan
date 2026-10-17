@@ -57,6 +57,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1046724129762',
     projectId: 'temple-darshan-app-d1719',
     storageBucket: 'temple-darshan-app-d1719.firebasestorage.app',
-    iosBundleId: 'com.temple.mobileapp',
+    iosBundleId: 'com.temple.srikedareshwara',
   );
 }
