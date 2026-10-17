@@ -208,14 +208,19 @@ class _BannerVideoPlayerState extends State<BannerVideoPlayer> {
       return Stack(
         fit: StackFit.expand,
         children: [
-          FittedBox(
-            fit: BoxFit.cover,
-            clipBehavior: Clip.hardEdge,
-            child: SizedBox(
-              width: 16,
-              height: 9,
-              child: YoutubePlayer(
-                controller: _youtubeController!,
+          ClipRect(
+            child: SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                clipBehavior: Clip.hardEdge,
+                child: SizedBox(
+                  width: 480,
+                  height: 270,
+                  child: YoutubePlayer(
+                    controller: _youtubeController!,
+                    aspectRatio: 16 / 9,
+                  ),
+                ),
               ),
             ),
           ),
