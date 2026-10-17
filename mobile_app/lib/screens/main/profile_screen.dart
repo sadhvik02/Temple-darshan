@@ -105,7 +105,9 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  user.email ?? 'Devotee Account',
+                  (user.email != null && !user.email!.endsWith('@palguttaashramam.org'))
+                      ? user.email!
+                      : user.phone,
                   style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
@@ -135,7 +137,9 @@ class ProfileScreen extends StatelessWidget {
                   _buildProfileRow(Icons.person_outline, 'Full Name', user.name),
                   const SizedBox(height: 14),
                   _buildProfileRow(Icons.phone_outlined, 'Phone Number', user.phone),
-                  if (user.email != null && user.email!.isNotEmpty) ...[
+                  if (user.email != null &&
+                      user.email!.isNotEmpty &&
+                      !user.email!.endsWith('@palguttaashramam.org')) ...[
                     const SizedBox(height: 14),
                     _buildProfileRow(Icons.email_outlined, 'Email Address', user.email!),
                   ],

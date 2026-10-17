@@ -306,7 +306,7 @@ class _DonationCheckoutSheetState extends State<_DonationCheckoutSheet> {
       if (user != null) {
         _nameController.text = user.name;
         _phoneController.text = user.phone;
-        if (user.email != null) {
+        if (user.email != null && !user.email!.endsWith('@palguttaashramam.org')) {
           _emailController.text = user.email!;
         }
       }
@@ -596,7 +596,7 @@ class _DonationCheckoutSheetState extends State<_DonationCheckoutSheet> {
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
-                labelText: 'Email Address (For e-Receipt)',
+                labelText: 'Email Address (Optional, for e-Receipt)',
                 isDense: true,
                 prefixIcon: const Icon(Icons.email_outlined, size: 20),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

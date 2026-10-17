@@ -143,22 +143,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Email
+                // Email (Optional)
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
-                    labelText: 'Email Address *',
-                    hintText: 'devotee@example.com',
+                    labelText: 'Email Address (Optional)',
+                    hintText: 'devotee@example.com (optional)',
                     prefixIcon: Icon(Icons.email_outlined),
+                    helperText: 'Optional — leave blank if you do not have an email',
                   ),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!val.contains('@') || !val.contains('.')) {
-                      return 'Please enter a valid email address';
+                    if (val != null && val.trim().isNotEmpty) {
+                      if (!val.contains('@') || !val.contains('.')) {
+                        return 'Please enter a valid email address';
+                      }
                     }
                     return null;
                   },

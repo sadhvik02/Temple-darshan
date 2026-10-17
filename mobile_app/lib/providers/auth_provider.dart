@@ -104,8 +104,9 @@ class AuthProvider extends ChangeNotifier {
           }
         }
 
+        // 3. Fallback: Check if user was registered with phone-only virtual email
         if (resolvedEmail == null || resolvedEmail.isEmpty) {
-          return 'No devotee account found with mobile number $digits. Please check the number or register.';
+          resolvedEmail = '$last10@palguttaashramam.org';
         }
 
         emailToAuth = resolvedEmail;
@@ -125,8 +126,16 @@ class AuthProvider extends ChangeNotifier {
 
   Future<String?> register(String name, String phone, String email, String password) async {
     try {
+      final cleanDigits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+      final last10 = cleanDigits.length >= 10 ? cleanDigits.substring(cleanDigits.length - 10) : cleanDigits;
+
+      // If devotee did not provide an email, generate a seamless virtual email from their mobile number
+      final String effectiveEmail = email.trim().isNotEmpty
+          ? email.trim()
+          : '$last10@palguttaashramam.org';
+
       final UserCredential cred = await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
+        email: effectiveEmail,
         password: password,
       );
       if (cred.user != null) {
@@ -134,19 +143,22 @@ class AuthProvider extends ChangeNotifier {
         await _firestore.collection('users').doc(cred.user!.uid).set({
           'name': name.trim(),
           'phone': phone.trim(),
-          'email': email.trim(),
+          'email': effectiveEmail,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
 
         // Store fast phone-to-email mapping
-        _cachePhoneMapping(phone, email);
+        _cachePhoneMapping(phone, effectiveEmail);
 
         await _fetchUserProfile(cred.user!.uid);
         return null; // Success
       }
       return "Registration could not be completed. Please try again.";
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        return 'An account with this mobile number or email already exists. Please login.';
+      }
       return _mapAuthError(e.code, e.message);
     } catch (e) {
       return "Registration failed: ${e.toString()}";
