@@ -95,45 +95,23 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 .setMediaPlaybackRequiresUserGesture(false);
           }
 
-          final html = '''
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      width: 100%;
-      height: 100%;
-      background-color: #000000;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: 0;
-    }
-  </style>
-</head>
-<body>
-  <iframe
-    src="https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1&rel=0&modestbranding=1&controls=1&fs=1&enablejsapi=1"
-    frameborder="0"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowfullscreen>
-  </iframe>
-</body>
-</html>
-''';
+          debugPrint('VideoPlayerScreen loading YouTube videoId: $videoId (url: ${widget.videoUrl})');
 
-          await controller.loadHtmlString(html, baseUrl: 'https://www.youtube.com');
+          final embedUrl = Uri.parse(
+            'https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&playsinline=1&rel=0&modestbranding=1&controls=1&fs=1&enablejsapi=1&origin=https://www.youtube-nocookie.com',
+          );
+
+          await controller.loadRequest(
+            embedUrl,
+            headers: const {
+              'Referer': 'https://www.youtube-nocookie.com',
+            },
+          );
           _webViewController = controller;
 
           if (mounted) setState(() => _isInitialized = true);
         } else {
+          debugPrint('VideoPlayerScreen could not extract videoId from: ${widget.videoUrl}');
           if (mounted) setState(() => _hasError = true);
         }
       } else {
