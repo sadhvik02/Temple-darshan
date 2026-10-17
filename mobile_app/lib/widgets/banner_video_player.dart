@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../screens/main/video_player_screen.dart';
 import 'custom_image.dart';
@@ -53,7 +54,23 @@ class BannerVideoPlayer extends StatelessWidget {
     return fallbackImageUrl ?? '';
   }
 
-  void _openPlayer(BuildContext context) {
+  Future<void> _openPlayer(BuildContext context) async {
+    if (isYoutubeUrl(videoUrl)) {
+      final uri = Uri.parse(videoUrl.trim());
+      try {
+        final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (!launched) {
+          await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+        }
+      } catch (e) {
+        debugPrint('YouTube launch error: $e');
+        try {
+          await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+        } catch (_) {}
+      }
+      return;
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => VideoPlayerScreen(
