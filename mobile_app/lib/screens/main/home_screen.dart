@@ -902,23 +902,8 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
     super.dispose();
   }
 
-  Future<void> _handleBannerTap(BannerModel banner, String? rawVideo) async {
+  void _handleBannerTap(BannerModel banner, String? rawVideo) {
     if (rawVideo != null && rawVideo.isNotEmpty) {
-      if (BannerVideoPlayer.isYoutubeUrl(rawVideo)) {
-        final uri = Uri.parse(rawVideo.trim());
-        try {
-          final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-          if (!launched) {
-            await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-          }
-        } catch (_) {
-          try {
-            await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-          } catch (_) {}
-        }
-        return;
-      }
-
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => VideoPlayerScreen(

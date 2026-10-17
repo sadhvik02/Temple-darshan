@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../theme/app_colors.dart';
 
@@ -19,7 +22,7 @@ class VideoPlayerScreen extends StatefulWidget {
 }
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
-  YoutubePlayerController? _youtubeController;
+  WebViewController? _webViewController;
   VideoPlayerController? _directVideoController;
   bool _isYoutube = false;
   bool _isInitialized = false;
@@ -42,16 +45,87 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       if (_isYoutube) {
         final videoId = YoutubePlayerController.convertUrlToId(widget.videoUrl);
         if (videoId != null && videoId.isNotEmpty) {
-          _youtubeController = YoutubePlayerController.fromVideoId(
-            videoId: videoId,
-            autoPlay: true,
-            params: const YoutubePlayerParams(
-              mute: false,
-              showControls: true,
-              showFullscreenButton: true,
-              enableCaption: true,
-            ),
-          );
+          late final PlatformWebViewControllerCreationParams params;
+          if (WebViewPlatform.instance is WebKitWebViewPlatform) {
+            params = WebKitWebViewControllerCreationParams(
+              allowsInlineMediaPlayback: true,
+              mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+            );
+          } else {
+            params = const PlatformWebViewControllerCreationParams();
+          }
+
+          final controller = WebViewController.fromPlatformCreationParams(params);
+          controller
+            ..setJavaScriptMode(JavaScriptMode.unrestricted)
+            ..setBackgroundColor(Colors.black)
+            ..setUserAgent(
+              'Mozilla/5.0 (Linux; Android 13; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+            )
+            ..setNavigationDelegate(
+              NavigationDelegate(
+                onNavigationRequest: (NavigationRequest request) {
+                  final url = request.url;
+                  // Allow embed, streaming endpoints, and media CDN assets
+                  if (url.contains('/embed/') ||
+                      url.contains('googlevideo.com') ||
+                      url.contains('ytimg.com') ||
+                      url.contains('google.com') ||
+                      url.contains('gstatic.com') ||
+                      url.contains('doubleclick.net') ||
+                      url.startsWith('data:') ||
+                      url.startsWith('about:blank')) {
+                    return NavigationDecision.navigate;
+                  }
+                  // Prevent navigation away to YouTube app or external watch page
+                  debugPrint('Prevented redirect out to: $url');
+                  return NavigationDecision.prevent;
+                },
+              ),
+            );
+
+          if (controller.platform is AndroidWebViewController) {
+            (controller.platform as AndroidWebViewController)
+                .setMediaPlaybackRequiresUserGesture(false);
+          }
+
+          final html = '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: #000000;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <iframe
+    src="https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1&rel=0&modestbranding=1&controls=1&fs=1&enablejsapi=1"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen>
+  </iframe>
+</body>
+</html>
+''';
+
+          await controller.loadHtmlString(html, baseUrl: 'https://www.youtube.com');
+          _webViewController = controller;
+
           if (mounted) setState(() => _isInitialized = true);
         } else {
           if (mounted) setState(() => _hasError = true);
@@ -72,7 +146,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   @override
   void dispose() {
-    _youtubeController?.close();
     _directVideoController?.dispose();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -87,7 +160,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Bar with Close button and Title
+            // Top Navigation Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
@@ -132,12 +205,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   Widget _buildPlayerView() {
-    if (_isYoutube && _youtubeController != null) {
+    if (_isYoutube && _webViewController != null) {
       return AspectRatio(
         aspectRatio: 16 / 9,
-        child: YoutubePlayer(
-          controller: _youtubeController!,
-          aspectRatio: 16 / 9,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: WebViewWidget(controller: _webViewController!),
         ),
       );
     }
