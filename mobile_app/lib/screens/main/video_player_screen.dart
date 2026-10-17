@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
@@ -66,6 +67,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               NavigationDelegate(
                 onNavigationRequest: (NavigationRequest request) {
                   final url = request.url;
+                  // If user clicked "Watch on YouTube" on the YouTube player error card
+                  if (url.contains('youtube.com/watch') || url.contains('youtu.be/')) {
+                    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                    return NavigationDecision.prevent;
+                  }
                   // Allow embed, streaming endpoints, and media CDN assets
                   if (url.contains('/embed/') ||
                       url.contains('googlevideo.com') ||
@@ -77,7 +83,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       url.startsWith('about:blank')) {
                     return NavigationDecision.navigate;
                   }
-                  // Prevent navigation away to YouTube app or external watch page
+                  // Prevent unexpected redirects
                   debugPrint('Prevented redirect out to: $url');
                   return NavigationDecision.prevent;
                 },
@@ -192,10 +198,97 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
             // Video Player Section
             Expanded(
-              child: Center(
-                child: _hasError
-                    ? _buildErrorView()
-                    : (!_isInitialized ? _buildLoadingView() : _buildPlayerView()),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: _hasError
+                          ? _buildErrorView()
+                          : (!_isInitialized ? _buildLoadingView() : _buildPlayerView()),
+                    ),
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            widget.title.isNotEmpty ? widget.title : 'Sri Kedareshwara Darshan',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (_isYoutube) ...[
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFCC0000),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 3,
+                              ),
+                              onPressed: () {
+                                launchUrl(
+                                  Uri.parse(widget.videoUrl.trim()),
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              },
+                              icon: const Icon(Icons.play_circle_fill, size: 20),
+                              label: const Text(
+                                'Watch on YouTube App',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    size: 16,
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Note: Videos with "Allow embedding" enabled in YouTube Studio play directly in-app. If restricted by the creator, use the button above to watch seamlessly.',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white.withValues(alpha: 0.6),
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
           ],
@@ -203,6 +296,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       ),
     );
   }
+
 
   Widget _buildPlayerView() {
     if (_isYoutube && _webViewController != null) {
