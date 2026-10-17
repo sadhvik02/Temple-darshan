@@ -14,6 +14,7 @@ import 'temple_info_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/banner_video_player.dart';
+import 'video_player_screen.dart';
 import 'donations_screen.dart';
 import 'darshan_screen.dart';
 import 'notifications_screen.dart';
@@ -860,36 +861,20 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
   late final PageController _pageController;
   int _currentPage = 0;
   Timer? _timer;
-  bool _isVideoActive = false;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    _checkCurrentSlideType();
-  }
-
-  void _checkCurrentSlideType() {
-    if (widget.banners.isEmpty) return;
-    final current = widget.banners[_currentPage % widget.banners.length];
-    final bool isVid = (current.videoUrl != null && current.videoUrl!.isNotEmpty) ||
-        BannerVideoPlayer.isVideoUrl(current.imageUrl);
-
-    if (isVid) {
-      _isVideoActive = true;
-      _timer?.cancel();
-    } else {
-      _isVideoActive = false;
-      _startTimer();
-    }
+    _startTimer();
   }
 
   void _startTimer() {
     _timer?.cancel();
-    if (widget.banners.length <= 1 || _isVideoActive) return;
+    if (widget.banners.length <= 1) return;
 
     _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (!mounted || !_pageController.hasClients || _isVideoActive) return;
+      if (!mounted || !_pageController.hasClients) return;
       int next = _currentPage + 1;
       if (next >= widget.banners.length) {
         next = 0;
@@ -906,7 +891,7 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
   void didUpdateWidget(covariant BannerCarouselWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.banners.length != widget.banners.length) {
-      _checkCurrentSlideType();
+      _startTimer();
     }
   }
 
@@ -917,7 +902,19 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
     super.dispose();
   }
 
-  void _handleBannerTap(BannerModel banner) {
+  void _handleBannerTap(BannerModel banner, String? rawVideo) {
+    if (rawVideo != null && rawVideo.isNotEmpty) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => VideoPlayerScreen(
+            videoUrl: rawVideo,
+            title: banner.title,
+          ),
+        ),
+      );
+      return;
+    }
+
     final action = banner.actionUrl?.trim();
     if (action == null || action.isEmpty) return;
 
@@ -945,10 +942,7 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
               controller: _pageController,
               itemCount: widget.banners.length,
               onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                  _checkCurrentSlideType();
-                });
+                setState(() => _currentPage = index);
               },
               itemBuilder: (context, index) {
                 final banner = widget.banners[index];
@@ -959,30 +953,17 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
                 final bool hasVideo = rawVideo != null && rawVideo.isNotEmpty;
 
                 return GestureDetector(
-                  onTap: () => _handleBannerTap(banner),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _handleBannerTap(banner, rawVideo),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // Video Player OR Image
+                      // Video Poster Card with Play Button OR Standard Image
                       if (hasVideo)
                         BannerVideoPlayer(
                           videoUrl: rawVideo,
                           fallbackImageUrl: banner.imageUrl,
-                          isCurrentSlide: _currentPage == index,
-                          onPlayStateChanged: (isPlaying) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (mounted && _isVideoActive != isPlaying) {
-                                setState(() {
-                                  _isVideoActive = isPlaying;
-                                  if (isPlaying) {
-                                    _timer?.cancel();
-                                  } else {
-                                    _startTimer();
-                                  }
-                                });
-                              }
-                            });
-                          },
+                          title: banner.title,
                         )
                       else
                         CustomImage(
