@@ -502,6 +502,16 @@ class DarshanReviewScreenState extends State<DarshanReviewScreen> {
       }
     }
 
+    if (widget.slot.isPast) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This darshan slot has already passed. Please select an upcoming slot.'),
+          backgroundColor: AppColors.statusCancelled,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     final List<Map<String, String>> devoteeList = _devotees.map((entry) {

@@ -35,10 +35,10 @@ export default function SevasPage() {
   const filteredServices = services.filter((s) => {
     if (selectedTab === "all") return true;
     if (selectedTab === "ashrama_seva") {
-      return s.category === "ashrama_seva" || s.price === 0;
+      return (s.category || "ashrama_seva") === "ashrama_seva";
     }
     if (selectedTab === "arjita_seva") {
-      return s.category === "arjita_seva" && s.price > 0;
+      return s.category === "arjita_seva";
     }
     return true;
   });

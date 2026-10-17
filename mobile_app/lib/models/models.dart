@@ -72,14 +72,21 @@ class ServiceModel {
 
   factory ServiceModel.fromFirestore(DocumentSnapshot doc) {
     final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
+    final rawPrice = data['price'] ?? 0;
+    final num priceNum = rawPrice is num ? rawPrice : int.tryParse(rawPrice.toString()) ?? 0;
+    final int priceVal = priceNum.toInt();
+
+    final rawCat = data['category']?.toString().trim() ?? '';
+    final String cat = (rawCat == 'arjita_seva') ? 'arjita_seva' : 'ashrama_seva';
+
     return ServiceModel(
       id: doc.id,
       name: data['name'] ?? '',
       description: data['description'] ?? '',
-      price: data['price'] ?? 0,
+      price: priceVal,
       imageUrl: data['imageUrl'],
       bookingEnabled: data['bookingEnabled'] ?? false,
-      category: (data['category'] == 'seva' || data['category'] == null) ? 'ashrama_seva' : data['category'],
+      category: cat,
     );
   }
 
@@ -124,6 +131,43 @@ class SlotModel {
   int get available => (capacity - bookedCount).clamp(0, capacity);
   bool get isFull => available <= 0;
   String get timeRange => '$startTime - $endTime';
+
+  bool get isPast {
+    try {
+      if (date.isEmpty) return false;
+      final parts = date.split('-');
+      if (parts.length != 3) return false;
+      final y = int.parse(parts[0]);
+      final m = int.parse(parts[1]);
+      final d = int.parse(parts[2]);
+
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final slotDay = DateTime(y, m, d);
+
+      if (slotDay.isBefore(today)) return true;
+      if (slotDay.isAfter(today)) return false;
+
+      // Slot is today - check if startTime has passed
+      final clean = startTime.trim().toUpperCase();
+      final isPm = clean.contains('PM');
+      final isAm = clean.contains('AM');
+      final numPart = clean.replaceAll('AM', '').replaceAll('PM', '').trim();
+      final timeParts = numPart.split(':');
+      if (timeParts.isEmpty) return false;
+      int hour = int.parse(timeParts[0].trim());
+      int minute = timeParts.length > 1 ? int.parse(timeParts[1].trim()) : 0;
+      if (isPm && hour < 12) hour += 12;
+      if (isAm && hour == 12) hour = 0;
+
+      final slotDateTime = DateTime(y, m, d, hour, minute);
+      return now.isAfter(slotDateTime);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool get isAvailable => !isFull && !isPast;
 }
 
 class BookingModel {

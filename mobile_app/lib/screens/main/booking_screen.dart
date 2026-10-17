@@ -141,6 +141,16 @@ class _BookingScreenState extends State<BookingScreen> {
       }
     }
 
+    if (widget.slot != null && widget.slot!.isPast) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This seva slot has already passed. Please select an upcoming slot.'),
+          backgroundColor: AppColors.statusCancelled,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     final List<Map<String, String>> devoteeList = _devotees.map((entry) {
@@ -157,7 +167,8 @@ class _BookingScreenState extends State<BookingScreen> {
     PaymentProcessingDialog.show(context, stateNotifier: _paymentStateNotifier);
 
     try {
-      if (widget.service.category == 'ashrama_seva') {
+      final isFree = widget.service.price == 0;
+      if (isFree) {
         // FREE ASHRAMA SEVA FLOW (One-time or Recurring)
         List<Map<String, String>> occurrences = [];
         
@@ -298,7 +309,7 @@ class _BookingScreenState extends State<BookingScreen> {
     final available = widget.slot?.available ?? 50;
     final maxAllowed = available > 10 ? 10 : available;
     final totalAmount = widget.service.price * _quantity;
-    final isFree = widget.service.category == 'ashrama_seva';
+    final isFree = widget.service.price == 0;
 
     return Scaffold(
       appBar: AppBar(
