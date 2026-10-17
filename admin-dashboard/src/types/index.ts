@@ -53,6 +53,7 @@ export interface Banner {
   id?: string; // Document ID (added for client-side use)
   title: string;
   imageUrl: string;
+  videoUrl?: string; // Optional: direct MP4, MOV, or YouTube link
   isActive: boolean;
   displayOrder: number;
   actionUrl?: string; // Optional in schema

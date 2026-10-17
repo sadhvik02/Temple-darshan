@@ -12,6 +12,8 @@ import 'news_screen.dart';
 import 'services_screen.dart';
 import 'temple_info_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../widgets/banner_video_player.dart';
 import 'donations_screen.dart';
 import 'darshan_screen.dart';
 import 'notifications_screen.dart';
@@ -858,20 +860,36 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
   late final PageController _pageController;
   int _currentPage = 0;
   Timer? _timer;
+  bool _isVideoActive = false;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    _startTimer();
+    _checkCurrentSlideType();
+  }
+
+  void _checkCurrentSlideType() {
+    if (widget.banners.isEmpty) return;
+    final current = widget.banners[_currentPage % widget.banners.length];
+    final bool isVid = (current.videoUrl != null && current.videoUrl!.isNotEmpty) ||
+        BannerVideoPlayer.isVideoUrl(current.imageUrl);
+
+    if (isVid) {
+      _isVideoActive = true;
+      _timer?.cancel();
+    } else {
+      _isVideoActive = false;
+      _startTimer();
+    }
   }
 
   void _startTimer() {
     _timer?.cancel();
-    if (widget.banners.length <= 1) return;
+    if (widget.banners.length <= 1 || _isVideoActive) return;
 
-    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (!mounted || !_pageController.hasClients) return;
+    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (!mounted || !_pageController.hasClients || _isVideoActive) return;
       int next = _currentPage + 1;
       if (next >= widget.banners.length) {
         next = 0;
@@ -888,7 +906,7 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
   void didUpdateWidget(covariant BannerCarouselWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.banners.length != widget.banners.length) {
-      _startTimer();
+      _checkCurrentSlideType();
     }
   }
 
@@ -899,6 +917,19 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
     super.dispose();
   }
 
+  void _handleBannerTap(BannerModel banner) {
+    final action = banner.actionUrl?.trim();
+    if (action == null || action.isEmpty) return;
+
+    try {
+      if (action.startsWith('http://') || action.startsWith('https://')) {
+        launchUrl(Uri.parse(action), mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Banner tap launch error: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.banners.isEmpty) return const SizedBox.shrink();
@@ -906,7 +937,7 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
     return Column(
       children: [
         Container(
-          height: 185,
+          height: 195,
           margin: const EdgeInsets.symmetric(horizontal: 16),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
@@ -914,52 +945,95 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
               controller: _pageController,
               itemCount: widget.banners.length,
               onPageChanged: (index) {
-                setState(() => _currentPage = index);
+                setState(() {
+                  _currentPage = index;
+                  _checkCurrentSlideType();
+                });
               },
               itemBuilder: (context, index) {
                 final banner = widget.banners[index];
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CustomImage(
-                      imageUrl: banner.imageUrl,
-                      fit: BoxFit.cover,
-                      fallbackIcon: Icons.temple_hindu,
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.1),
-                            Colors.black.withValues(alpha: 0.8),
-                          ],
-                          stops: const [0.4, 0.65, 1.0],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
+                final String? rawVideo = (banner.videoUrl != null && banner.videoUrl!.isNotEmpty)
+                    ? banner.videoUrl
+                    : (BannerVideoPlayer.isVideoUrl(banner.imageUrl) ? banner.imageUrl : null);
+
+                final bool hasVideo = rawVideo != null && rawVideo.isNotEmpty;
+
+                return GestureDetector(
+                  onTap: () => _handleBannerTap(banner),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Video Player OR Image
+                      if (hasVideo)
+                        BannerVideoPlayer(
+                          videoUrl: rawVideo,
+                          fallbackImageUrl: banner.imageUrl,
+                          isCurrentSlide: _currentPage == index,
+                          onPlayStateChanged: (isPlaying) {
+                            if (mounted) {
+                              setState(() {
+                                _isVideoActive = isPlaying;
+                                if (isPlaying) {
+                                  _timer?.cancel();
+                                } else {
+                                  _startTimer();
+                                }
+                              });
+                            }
+                          },
+                        )
+                      else
+                        CustomImage(
+                          imageUrl: banner.imageUrl,
+                          fit: BoxFit.cover,
+                          fallbackIcon: Icons.temple_hindu,
                         ),
-                      ),
-                    ),
-                    if (banner.title.isNotEmpty)
+
+                      // Gradient overlay for title readability (only at bottom)
                       Positioned(
-                        left: 18,
-                        right: 18,
-                        bottom: 16,
-                        child: Text(
-                          banner.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            shadows: [
-                              Shadow(color: Colors.black87, blurRadius: 6),
-                            ],
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 70,
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withValues(alpha: 0.85),
+                                ],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                  ],
+
+                      if (banner.title.isNotEmpty)
+                        Positioned(
+                          left: 18,
+                          right: 18,
+                          bottom: 12,
+                          child: IgnorePointer(
+                            child: Text(
+                              banner.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                shadows: [
+                                  Shadow(color: Colors.black87, blurRadius: 6),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 );
               },
             ),

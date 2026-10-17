@@ -28,6 +28,7 @@ class BannerModel {
   final String id;
   final String title;
   final String imageUrl;
+  final String? videoUrl;
   final String? actionUrl;
   final int displayOrder;
 
@@ -35,16 +36,20 @@ class BannerModel {
     required this.id,
     required this.title,
     required this.imageUrl,
+    this.videoUrl,
     this.actionUrl,
     this.displayOrder = 0,
   });
 
   factory BannerModel.fromFirestore(DocumentSnapshot doc) {
     final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
+    final String img = data['imageUrl'] ?? '';
+    final String? vid = data['videoUrl'];
     return BannerModel(
       id: doc.id,
       title: data['title'] ?? '',
-      imageUrl: data['imageUrl'] ?? '',
+      imageUrl: img,
+      videoUrl: (vid != null && vid.isNotEmpty) ? vid : null,
       actionUrl: data['actionUrl'],
       displayOrder: (data['displayOrder'] as num?)?.toInt() ?? 0,
     );

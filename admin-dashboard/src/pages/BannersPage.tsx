@@ -50,6 +50,7 @@ export default function BannersPage() {
       setFormData({
         title: banner.title,
         imageUrl: banner.imageUrl,
+        videoUrl: banner.videoUrl || "",
         isActive: banner.isActive,
         displayOrder: banner.displayOrder,
         actionUrl: banner.actionUrl || "",
@@ -59,6 +60,7 @@ export default function BannersPage() {
       setFormData({
         title: "",
         imageUrl: "",
+        videoUrl: "",
         isActive: true,
         displayOrder: banners.length > 0 ? banners[banners.length - 1].displayOrder + 1 : 1,
         actionUrl: "",
@@ -407,6 +409,19 @@ export default function BannersPage() {
                   ]}
                   helperText="Upload banner image from computer (1920x800 recommended) or paste a link."
                 />
+
+                <div className="form-group">
+                  <label>Banner Video URL (Optional - MP4 or YouTube link)</label>
+                  <input
+                    type="text"
+                    value={(formData as any).videoUrl || ""}
+                    onChange={(e) => handleInputChange("videoUrl", e.target.value)}
+                    placeholder="https://.../video.mp4 or https://youtube.com/watch?v=..."
+                  />
+                  <small style={{ color: "var(--color-text-secondary)", fontSize: "0.82rem", marginTop: "4px", display: "block" }}>
+                    🎬 When set, this video plays directly inside the mobile app homepage banner with sound controls.
+                  </small>
+                </div>
 
                 <div className="form-group">
                   <label>Action / Navigation URL (Optional)</label>
