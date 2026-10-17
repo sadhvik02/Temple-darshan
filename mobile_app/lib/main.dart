@@ -33,7 +33,7 @@ class TempleApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
       child: MaterialApp(
-        title: 'Sri Kedareshwara Ashramam',
+        title: 'Palgutta Ashramam',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const RootWrapper(),

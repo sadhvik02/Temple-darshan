@@ -171,7 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Sri Kedareshwara Ashramam',
+                    'Palgutta Ashramam',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 24,

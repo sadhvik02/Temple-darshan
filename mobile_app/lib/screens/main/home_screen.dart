@@ -171,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Sri Kedareshwara Ashramam',
+                    'Palgutta Ashramam',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

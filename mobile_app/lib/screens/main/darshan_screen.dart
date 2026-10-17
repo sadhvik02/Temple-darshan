@@ -1018,7 +1018,7 @@ class DarshanReviewScreenState extends State<DarshanReviewScreen> {
                         ),
                       ),
                       Text(
-                        'Sri Kedareshwara Ashramam',
+                        'Palgutta Ashramam',
                         style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
                       ),
                     ],

@@ -353,7 +353,7 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
           Text(
             info.description.isNotEmpty
                 ? info.description
-                : 'Welcome to Sri Kedareshwara Ashramam, a holy place of prayer, tranquility, and devotion.',
+                : 'Welcome to Palgutta Ashramam, a holy place of prayer, tranquility, and devotion.',
             style: const TextStyle(
               fontSize: 14,
               color: Color(0xFF4A4A4A),

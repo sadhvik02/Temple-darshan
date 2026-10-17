@@ -286,7 +286,7 @@ class PaymentService {
       final Map<String, dynamic> options = {
         'key': keyId,
         'amount': amountInPaise.toInt(),
-        'name': 'Sri Kedareshwara Ashramam',
+        'name': 'Palgutta Ashramam',
         'order_id': orderId,
         'theme': {
           'color': '#1E293B',
@@ -296,7 +296,7 @@ class PaymentService {
           'confirm_close': true,
         },
         'notes': {
-          'temple': 'Sri Kedareshwara Ashramam',
+          'temple': 'Palgutta Ashramam',
           'offering': offeringTitle,
           'amount': '₹$totalRupees',
           'devotee': donorName,

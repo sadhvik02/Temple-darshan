@@ -47,7 +47,7 @@ class RootWrapper extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    'Sri Kedareshwara Ashramam',
+                    'Palgutta Ashramam',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 22,

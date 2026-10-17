@@ -20,7 +20,7 @@ class NotificationService {
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'temple_notifications', // id
     'Temple Notifications', // name
-    description: 'Notifications from Sri Kedareshwara Ashramam',
+    description: 'Notifications from Palgutta Ashramam',
     importance: Importance.max,
     playSound: true,
     enableVibration: true,

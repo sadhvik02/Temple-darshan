@@ -156,7 +156,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      widget.title.isNotEmpty ? widget.title : 'Sri Kedareshwara Darshan',
+                      widget.title.isNotEmpty ? widget.title : 'Palgutta Ashramam',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -193,7 +193,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            widget.title.isNotEmpty ? widget.title : 'Sri Kedareshwara Darshan',
+                            widget.title.isNotEmpty ? widget.title : 'Palgutta Ashramam',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 18,

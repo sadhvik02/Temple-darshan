@@ -587,7 +587,7 @@ class _EventsScreenState extends State<EventsScreen> {
                                       SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
-                                          'Sri Kedareshwara Ashramam • Navasiddula Gutta',
+                                          'Palgutta Ashramam • Navasiddula Gutta',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 12,
