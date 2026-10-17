@@ -14,14 +14,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
+  final _identifierCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
+    _identifierCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
   }
@@ -31,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
     final error = await context.read<AuthProvider>().login(
-          _emailCtrl.text,
+          _identifierCtrl.text,
           _passCtrl.text,
         );
     if (!mounted) return;
@@ -49,7 +49,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showForgotPasswordDialog() {
-    final resetEmailCtrl = TextEditingController(text: _emailCtrl.text.trim());
+    final currentText = _identifierCtrl.text.trim();
+    final resetEmailCtrl = TextEditingController(
+      text: currentText.contains('@') ? currentText : '',
+    );
     bool resetLoading = false;
 
     showDialog(
@@ -192,22 +195,30 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 36),
 
-                  // Email Field
+                  // Email or Mobile Number Field
                   TextFormField(
-                    controller: _emailCtrl,
+                    controller: _identifierCtrl,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      labelText: 'Email Address',
-                      hintText: 'devotee@example.com',
-                      prefixIcon: Icon(Icons.email_outlined),
+                      labelText: 'Email or Mobile Number',
+                      hintText: 'Email or 10-digit mobile',
+                      prefixIcon: Icon(Icons.person_outline),
                     ),
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
-                        return 'Please enter your email';
+                        return 'Please enter your email or mobile number';
                       }
-                      if (!val.contains('@') || !val.contains('.')) {
-                        return 'Please enter a valid email address';
+                      final trimmed = val.trim();
+                      if (trimmed.contains('@')) {
+                        if (!trimmed.contains('.') || trimmed.length < 5) {
+                          return 'Please enter a valid email address';
+                        }
+                      } else {
+                        final digits = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
+                        if (digits.length < 10) {
+                          return 'Please enter a valid 10-digit mobile number';
+                        }
                       }
                       return null;
                     },

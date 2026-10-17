@@ -3,6 +3,7 @@ const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 const { getMessaging } = require("firebase-admin/messaging");
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
@@ -754,4 +755,57 @@ exports.sendPushOnNotificationCreate = onDocumentCreated(
     }
   }
 );
+
+/**
+ * Callable Function: Lookup user email by phone number to enable phone + password login
+ */
+exports.getEmailByPhone = onCall({ invoker: "public" }, async (request) => {
+  const phone = request.data?.phone;
+  if (!phone || typeof phone !== "string") {
+    throw new HttpsError("invalid-argument", "Valid mobile number is required.");
+  }
+
+  const clean = phone.replace(/[^\d]/g, "");
+  if (clean.length < 10) {
+    throw new HttpsError("invalid-argument", "Mobile number must be at least 10 digits.");
+  }
+
+  const last10 = clean.slice(-10);
+  const candidates = [
+    clean,
+    last10,
+    `+91${last10}`,
+    `91${last10}`,
+    `0${last10}`,
+  ];
+
+  // 1. Query users collection in Firestore
+  const usersRef = db.collection("users");
+  const querySnap = await usersRef.where("phone", "in", candidates).limit(1).get();
+
+  if (!querySnap.empty) {
+    const userData = querySnap.docs[0].data();
+    if (userData.email) {
+      // Cache in phone_lookup collection for fast direct retrieval
+      try {
+        await db.collection("phone_lookup").doc(last10).set({
+          email: userData.email.toLowerCase().trim(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      } catch (_) {}
+
+      return { email: userData.email.trim() };
+    }
+  }
+
+  // 2. Query Firebase Auth by phone
+  try {
+    const authUser = await getAuth().getUserByPhoneNumber(`+91${last10}`).catch(() => null);
+    if (authUser && authUser.email) {
+      return { email: authUser.email.trim() };
+    }
+  } catch (_) {}
+
+  throw new HttpsError("not-found", "No devotee account found with this mobile number.");
+});
 

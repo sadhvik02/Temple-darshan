@@ -85,6 +85,14 @@ service cloud.firestore {
     }
 
     // =========================================================
+    // PHONE LOOKUP (Maps phone number to email for login)
+    // =========================================================
+    match /phone_lookup/{phoneKey} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================
     // TEMPLE INFO COLLECTION
     // =========================================================
     // Public read. Only admins can write.
