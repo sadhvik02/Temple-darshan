@@ -81,7 +81,9 @@ class _BannerVideoPlayerState extends State<BannerVideoPlayer> {
             setState(() {
               _isInitialized = true;
             });
-            widget.onPlayStateChanged?.call(true);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) widget.onPlayStateChanged?.call(true);
+            });
           }
         } else {
           if (mounted) setState(() => _hasError = true);
@@ -95,7 +97,9 @@ class _BannerVideoPlayerState extends State<BannerVideoPlayer> {
 
         if (widget.isCurrentSlide) {
           await _videoController!.play();
-          widget.onPlayStateChanged?.call(true);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) widget.onPlayStateChanged?.call(true);
+          });
         }
 
         if (mounted) {

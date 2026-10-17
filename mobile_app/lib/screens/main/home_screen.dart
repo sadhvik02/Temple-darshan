@@ -970,16 +970,18 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
                           fallbackImageUrl: banner.imageUrl,
                           isCurrentSlide: _currentPage == index,
                           onPlayStateChanged: (isPlaying) {
-                            if (mounted) {
-                              setState(() {
-                                _isVideoActive = isPlaying;
-                                if (isPlaying) {
-                                  _timer?.cancel();
-                                } else {
-                                  _startTimer();
-                                }
-                              });
-                            }
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted && _isVideoActive != isPlaying) {
+                                setState(() {
+                                  _isVideoActive = isPlaying;
+                                  if (isPlaying) {
+                                    _timer?.cancel();
+                                  } else {
+                                    _startTimer();
+                                  }
+                                });
+                              }
+                            });
                           },
                         )
                       else
