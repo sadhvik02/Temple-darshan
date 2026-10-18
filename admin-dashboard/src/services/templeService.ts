@@ -12,9 +12,17 @@ export async function getTempleInfo(): Promise<TempleInfo | null> {
   return snapshot.data() as TempleInfo;
 }
 
-export async function updateTempleInfo(data: Omit<TempleInfo, "updatedAt">): Promise<void> {
+export async function updateTempleInfo(data: Partial<TempleInfo>): Promise<void> {
   await setDoc(TEMPLE_DOC_REF, {
     ...data,
     updatedAt: serverTimestamp(),
-  }, { merge: true }); // Use merge in case some other fields exist, though we expect a full overwrite of managed fields
+  }, { merge: true });
 }
+
+export async function toggleDarshanStatus(enabled: boolean): Promise<void> {
+  await setDoc(TEMPLE_DOC_REF, {
+    isDarshanEnabled: enabled,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+}
+

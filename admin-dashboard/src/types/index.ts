@@ -77,6 +77,10 @@ export interface TempleInfo {
     evening: string;
   };
   imageUrl?: string; // Optional in schema
+  isDarshanEnabled?: boolean; // Master toggle for Darshan module across mobile app
+  scrollingAnnouncement?: string; // Marquee announcement text scrolling across mobile app
+  featuredVideoUrl?: string; // Dedicated video URL (YouTube / MP4)
+  featuredVideoTitle?: string; // Title for the dedicated video card
   updatedAt: any; // Firestore Timestamp
 }
 

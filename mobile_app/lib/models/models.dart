@@ -356,6 +356,10 @@ class TempleInfoModel {
   final String? website;
   final Map<String, dynamic> timings;
   final String? imageUrl;
+  final bool isDarshanEnabled;
+  final String? scrollingAnnouncement;
+  final String? featuredVideoUrl;
+  final String? featuredVideoTitle;
 
   TempleInfoModel({
     required this.name,
@@ -369,6 +373,10 @@ class TempleInfoModel {
     this.website,
     required this.timings,
     this.imageUrl,
+    this.isDarshanEnabled = false,
+    this.scrollingAnnouncement,
+    this.featuredVideoUrl,
+    this.featuredVideoTitle,
   });
 
   factory TempleInfoModel.fromFirestore(DocumentSnapshot doc) {
@@ -385,6 +393,10 @@ class TempleInfoModel {
       website: data['website'],
       timings: data['timings'] as Map<String, dynamic>? ?? {},
       imageUrl: data['imageUrl'],
+      isDarshanEnabled: data['isDarshanEnabled'] ?? false,
+      scrollingAnnouncement: data['scrollingAnnouncement'],
+      featuredVideoUrl: data['featuredVideoUrl'],
+      featuredVideoTitle: data['featuredVideoTitle'],
     );
   }
 

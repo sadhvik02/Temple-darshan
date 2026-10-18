@@ -180,6 +180,34 @@ class AuthProvider extends ChangeNotifier {
     await _auth.signOut();
   }
 
+  Future<String?> deleteAccount() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return "No devotee is currently logged in.";
+
+      final uid = user.uid;
+      // 1. Delete user profile doc from Firestore
+      try {
+        await _firestore.collection('users').doc(uid).delete();
+      } catch (e) {
+        debugPrint('Error deleting user Firestore record: $e');
+      }
+
+      // 2. Delete Auth user account
+      await user.delete();
+      _userModel = null;
+      notifyListeners();
+      return null; // Success
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        return 'For account security, please log out and log back in before deleting your account.';
+      }
+      return _mapAuthError(e.code, e.message);
+    } catch (e) {
+      return "Failed to delete account: ${e.toString()}";
+    }
+  }
+
   String _mapAuthError(String code, String? defaultMessage) {
     switch (code) {
       case 'user-not-found':

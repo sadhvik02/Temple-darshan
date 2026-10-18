@@ -265,76 +265,223 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: () async {
-          setState(() {});
-          await Future.delayed(const Duration(milliseconds: 600));
-        },
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 40),
-          children: [
-            const SizedBox(height: 8),
+      body: StreamBuilder<TempleInfoModel?>(
+        stream: _db.getTempleInfoStream(),
+        builder: (context, infoSnapshot) {
+          final templeInfo = infoSnapshot.data;
+          final bool isDarshanEnabled = templeInfo?.isDarshanEnabled ?? false;
+          final String? marqueeText = templeInfo?.scrollingAnnouncement?.trim();
+          final String? featuredVideo = templeInfo?.featuredVideoUrl?.trim();
+          final bool hasVideo = featuredVideo != null && featuredVideo.isNotEmpty;
 
-            // 1. TTD Style Auto-Sliding Banner Carousel
-            StreamBuilder<List<BannerModel>>(
-              stream: _db.getActiveBanners(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Container(
-                    height: 185,
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: const Center(
-                      child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
-                    ),
-                  );
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const SizedBox.shrink();
-                }
-                return BannerCarouselWidget(banners: snapshot.data!);
-              },
+          return RefreshIndicator(
+            color: AppColors.primary,
+            onRefresh: () async {
+              setState(() {});
+              await Future.delayed(const Duration(milliseconds: 600));
+            },
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 40),
+              children: [
+                const SizedBox(height: 8),
+
+                // 1. TTD Style Auto-Sliding Banner Carousel (Images only)
+                StreamBuilder<List<BannerModel>>(
+                  stream: _db.getActiveBanners(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Container(
+                        height: 185,
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: const Center(
+                          child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+                        ),
+                      );
+                    }
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return BannerCarouselWidget(banners: snapshot.data!);
+                  },
+                ),
+                const SizedBox(height: 14),
+
+                // 2. Latest Announcements Header & Scrolling Marquee Ticker (Replaces Today's Darshan Timings)
+                SectionHeader(
+                  title: 'Latest Announcements',
+                  actionText: 'View All',
+                  onAction: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NewsScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                _buildMarqueeSection(marqueeText),
+
+                // 3. Dedicated Ashram Video Player (If video uploaded in admin; else completely hidden)
+                if (hasVideo && templeInfo != null) ...[
+                  const SizedBox(height: 16),
+                  _buildDedicatedVideoSection(templeInfo),
+                ],
+                const SizedBox(height: 18),
+
+                // 4. Quick Services Grid (Darshan removed when isDarshanEnabled == false; Ashram Seva prioritized)
+                _buildTTDQuickServicesGrid(isDarshanEnabled: isDarshanEnabled),
+                const SizedBox(height: 20),
+
+                // 5. Sliding News Announcements Carousel
+                _buildNewsSection(),
+                const SizedBox(height: 20),
+
+                // 6. Donations
+                _buildDonationsSection(),
+                const SizedBox(height: 24),
+              ],
             ),
-            const SizedBox(height: 14),
-
-            // 2. Today's Darshan & Seva Schedule Card (Immediately below banners)
-            _buildTimingsCard(),
-            const SizedBox(height: 16),
-
-            // 3. TTD Style Quick Services Grid
-            _buildTTDQuickServicesGrid(),
-            const SizedBox(height: 20),
-
-            // 4. Latest News & Announcements (Sliding Banner Style)
-            _buildNewsSection(),
-            const SizedBox(height: 20),
-
-            // 5. Donations
-            _buildDonationsSection(),
-            const SizedBox(height: 24),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  // 2. TTD Style Quick Services Grid (2 rows of 3)
-  Widget _buildTTDQuickServicesGrid() {
+  // Scrolling Marquee Ticker Section (Continuous Horizontal Scrolling)
+  Widget _buildMarqueeSection(String? customText) {
+    if (customText != null && customText.isNotEmpty) {
+      return MarqueeTickerWidget(
+        text: customText,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const NewsScreen()),
+          );
+        },
+      );
+    }
+
+    // Fallback: Stream latest published news announcements
+    return StreamBuilder<List<NewsModel>>(
+      stream: _db.getPublishedNews(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const MarqueeTickerWidget(
+            text: '🕉️ Welcome to Sri Kedareshwara Palgutta Ashramam • Daily Poojas, Sevas & Holy Blessings',
+          );
+        }
+        final headlines = snapshot.data!.map((n) => n.title).join('   •   ');
+        return MarqueeTickerWidget(
+          text: headlines,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NewsScreen()),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Dedicated Ashram Video Section (Shown only if a video URL is configured)
+  Widget _buildDedicatedVideoSection(TempleInfoModel info) {
+    final videoUrl = info.featuredVideoUrl?.trim();
+    if (videoUrl == null || videoUrl.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final videoTitle = info.featuredVideoTitle?.trim().isNotEmpty == true
+        ? info.featuredVideoTitle!.trim()
+        : 'Palgutta Ashramam • Sacred Video & Darshan';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.play_circle_filled_rounded, color: AppColors.primary, size: 20),
+                  SizedBox(width: 6),
+                  Text(
+                    'Featured Video',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => VideoPlayerScreen(
+                        videoUrl: videoUrl,
+                        title: videoTitle,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Watch Fullscreen →',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            height: 195,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BannerVideoPlayer(
+                videoUrl: videoUrl,
+                fallbackImageUrl: info.imageUrl,
+                title: videoTitle,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Quick Services Grid (Darshan excluded when isDarshanEnabled == false; Ashrama Seva prioritized)
+  Widget _buildTTDQuickServicesGrid({required bool isDarshanEnabled}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14.0),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final itemWidth = (constraints.maxWidth - 24) / 3;
-          return Wrap(
-            alignment: WrapAlignment.spaceEvenly,
-            spacing: 12.0,
-            runSpacing: 16.0,
-            children: [
-              // Row 1: Darshan, Sevas, Donations
+          final List<Widget> items = [];
+
+          // 1. Darshan (Only if enabled from Admin Dashboard)
+          if (isDarshanEnabled) {
+            items.add(
               SizedBox(
                 width: itemWidth,
                 child: _buildTTDServiceItem(
@@ -350,88 +497,115 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
-              SizedBox(
-                width: itemWidth,
-                child: _buildTTDServiceItem(
-                  assetImage: 'assets/icons/ashrama_seva_icon.png',
-                  iconColor: const Color(0xFFE65100),
-                  bgColor: const Color(0xFFFFF3E0),
-                  label: 'Ashrama Seva',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ServicesScreen(
-                        categoryFilter: 'ashrama_seva',
-                        title: 'Ashrama Sevas',
-                      )),
-                    );
-                  },
-                ),
+            );
+          }
+
+          // 2. Ashrama Seva (Always visible; prioritized first when darshan is off)
+          items.add(
+            SizedBox(
+              width: itemWidth,
+              child: _buildTTDServiceItem(
+                assetImage: 'assets/icons/ashrama_seva_icon.png',
+                iconColor: const Color(0xFFE65100),
+                bgColor: const Color(0xFFFFF3E0),
+                label: 'Ashrama Seva',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ServicesScreen(
+                      categoryFilter: 'ashrama_seva',
+                      title: 'Ashrama Sevas',
+                    )),
+                  );
+                },
               ),
-              SizedBox(
-                width: itemWidth,
-                child: _buildTTDServiceItem(
-                  icon: Icons.spa_rounded,
-                  iconColor: const Color(0xFFE65100),
-                  bgColor: const Color(0xFFFFF3E0),
-                  label: 'Arjitha Sevas',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ServicesScreen(
-                        categoryFilter: 'arjita_seva',
-                        title: 'Arjitha Sevas',
-                      )),
-                    );
-                  },
-                ),
+            ),
+          );
+
+          // 3. Arjitha Sevas
+          items.add(
+            SizedBox(
+              width: itemWidth,
+              child: _buildTTDServiceItem(
+                icon: Icons.spa_rounded,
+                iconColor: const Color(0xFFE65100),
+                bgColor: const Color(0xFFFFF3E0),
+                label: 'Arjitha Sevas',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ServicesScreen(
+                      categoryFilter: 'arjita_seva',
+                      title: 'Arjitha Sevas',
+                    )),
+                  );
+                },
               ),
-              SizedBox(
-                width: itemWidth,
-                child: _buildTTDServiceItem(
-                  icon: Icons.volunteer_activism_rounded, // Represents offering/respectful donation
-                  iconColor: const Color(0xFFE65100),
-                  bgColor: const Color(0xFFFFF3E0),
-                  label: 'Donations',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const DonationsScreen()),
-                    );
-                  },
-                ),
+            ),
+          );
+
+          // 4. Donations
+          items.add(
+            SizedBox(
+              width: itemWidth,
+              child: _buildTTDServiceItem(
+                icon: Icons.volunteer_activism_rounded,
+                iconColor: const Color(0xFFE65100),
+                bgColor: const Color(0xFFFFF3E0),
+                label: 'Donations',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const DonationsScreen()),
+                  );
+                },
               ),
-              SizedBox(
-                width: itemWidth,
-                child: _buildTTDServiceItem(
-                  assetImage: 'assets/icons/temple_info_icon.png',
-                  iconColor: const Color(0xFFE65100),
-                  bgColor: const Color(0xFFFFF3E0),
-                  label: 'Temple Info',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const TempleInfoScreen()),
-                    );
-                  },
-                ),
+            ),
+          );
+
+          // 5. Temple Info
+          items.add(
+            SizedBox(
+              width: itemWidth,
+              child: _buildTTDServiceItem(
+                assetImage: 'assets/icons/temple_info_icon.png',
+                iconColor: const Color(0xFFE65100),
+                bgColor: const Color(0xFFFFF3E0),
+                label: 'Temple Info',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TempleInfoScreen()),
+                  );
+                },
               ),
-              SizedBox(
-                width: itemWidth,
-                child: _buildTTDServiceItem(
-                  icon: Icons.celebration_rounded,
-                  iconColor: const Color(0xFFE65100),
-                  bgColor: const Color(0xFFFFF3E0),
-                  label: 'Utsavams',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const EventsScreen()),
-                    );
-                  },
-                ),
+            ),
+          );
+
+          // 6. Utsavams
+          items.add(
+            SizedBox(
+              width: itemWidth,
+              child: _buildTTDServiceItem(
+                icon: Icons.celebration_rounded,
+                iconColor: const Color(0xFFE65100),
+                bgColor: const Color(0xFFFFF3E0),
+                label: 'Utsavams',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const EventsScreen()),
+                  );
+                },
               ),
-            ],
+            ),
+          );
+
+          return Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            spacing: 12.0,
+            runSpacing: 16.0,
+            children: items,
           );
         },
       ),
@@ -493,172 +667,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  // 3. TTD Style Today's Darshan Timings Card
-  Widget _buildTimingsCard() {
-    return StreamBuilder<TempleInfoModel?>(
-      stream: _db.getTempleInfoStream(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data == null) {
-          return const SizedBox.shrink();
-        }
-        final info = snapshot.data!;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.05),
-                  AppColors.accent.withValues(alpha: 0.08),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.25)),
-            ),
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Icons.auto_awesome_rounded, size: 18, color: AppColors.primary),
-                          ),
-                          const SizedBox(width: 8),
-                          const Flexible(
-                            child: Text(
-                              'Today\'s Darshan Timings',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const TempleInfoScreen()),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          'Details →',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.cardBorder),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.wb_sunny_rounded, color: AppColors.accent, size: 20),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Morning Darshan', style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 2),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      info.morningTimings,
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-                                      maxLines: 1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.cardBorder),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.nights_stay_rounded, color: AppColors.primary, size: 20),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Evening Darshan', style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 2),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      info.eveningTimings,
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-                                      maxLines: 1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -950,27 +958,18 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
                     ? banner.videoUrl
                     : (BannerVideoPlayer.isVideoUrl(banner.imageUrl) ? banner.imageUrl : null);
 
-                final bool hasVideo = rawVideo != null && rawVideo.isNotEmpty;
-
                 return GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _handleBannerTap(banner, rawVideo),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // Video Poster Card with Play Button OR Standard Image
-                      if (hasVideo)
-                        BannerVideoPlayer(
-                          videoUrl: rawVideo,
-                          fallbackImageUrl: banner.imageUrl,
-                          title: banner.title,
-                        )
-                      else
-                        CustomImage(
-                          imageUrl: banner.imageUrl,
-                          fit: BoxFit.cover,
-                          fallbackIcon: Icons.temple_hindu,
-                        ),
+                      // Clean, high quality image banner
+                      CustomImage(
+                        imageUrl: banner.imageUrl,
+                        fit: BoxFit.cover,
+                        fallbackIcon: Icons.temple_hindu,
+                      ),
 
                       // Gradient overlay for title readability (only at bottom)
                       Positioned(
@@ -1255,3 +1254,133 @@ class _AnnouncementCarouselWidgetState extends State<AnnouncementCarouselWidget>
     );
   }
 }
+
+// Dedicated Continuous Horizontal Marquee Announcement Ticker
+class MarqueeTickerWidget extends StatefulWidget {
+  final String text;
+  final VoidCallback? onTap;
+
+  const MarqueeTickerWidget({
+    super.key,
+    required this.text,
+    this.onTap,
+  });
+
+  @override
+  State<MarqueeTickerWidget> createState() => _MarqueeTickerWidgetState();
+}
+
+class _MarqueeTickerWidgetState extends State<MarqueeTickerWidget> {
+  late final ScrollController _scrollController;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startScrolling());
+  }
+
+  void _startScrolling() {
+    _timer?.cancel();
+    if (!mounted) return;
+    _timer = Timer.periodic(const Duration(milliseconds: 35), (timer) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final currentScroll = _scrollController.offset;
+      if (currentScroll >= maxScroll) {
+        _scrollController.jumpTo(0.0);
+      } else {
+        _scrollController.jumpTo(currentScroll + 1.2);
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant MarqueeTickerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _startScrolling());
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: widget.onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 44,
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF7ED),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFED7AA), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.06),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.campaign_rounded, size: 14, color: Colors.white),
+                  SizedBox(width: 4),
+                  Text(
+                    'UPDATE',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ListView(
+                controller: _scrollController,
+                scrollDirection: Axis.horizontal,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  Center(
+                    child: Text(
+                      '${widget.text}               ${widget.text}               ',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF9A3412),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

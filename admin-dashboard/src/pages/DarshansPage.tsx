@@ -1,5 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { getDarshans, createDarshan, updateDarshan, deleteDarshan } from "../services/darshanService";
+import { getTempleInfo, toggleDarshanStatus } from "../services/templeService";
 import { createNotification } from "../services/notificationService";
 import type { Darshan } from "../types";
 
@@ -7,6 +8,8 @@ export default function DarshansPage() {
   const [darshans, setDarshans] = useState<Darshan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDarshanEnabled, setIsDarshanEnabled] = useState(false);
+  const [togglingDarshan, setTogglingDarshan] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -29,13 +32,30 @@ export default function DarshansPage() {
   const loadDarshans = async () => {
     setLoading(true);
     try {
-      const data = await getDarshans();
-      setDarshans(data);
+      const [darshansData, templeInfo] = await Promise.all([
+        getDarshans(),
+        getTempleInfo(),
+      ]);
+      setDarshans(darshansData);
+      setIsDarshanEnabled(templeInfo?.isDarshanEnabled ?? false);
     } catch (err) {
       console.error("Error loading darshans:", err);
       setError("Failed to load darshans.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleDarshan = async (enabled: boolean) => {
+    setTogglingDarshan(true);
+    try {
+      await toggleDarshanStatus(enabled);
+      setIsDarshanEnabled(enabled);
+    } catch (err) {
+      console.error("Error toggling darshan status:", err);
+      alert("Failed to update Darshan status. Please check your admin permissions.");
+    } finally {
+      setTogglingDarshan(false);
     }
   };
 
@@ -175,6 +195,64 @@ export default function DarshansPage() {
             + Add New Darshan
           </button>
         </div>
+      </div>
+
+      {/* Master Darshan Module Status Banner */}
+      <div
+        style={{
+          background: isDarshanEnabled ? "#f0fdf4" : "#fef2f2",
+          border: `1.5px solid ${isDarshanEnabled ? "#86efac" : "#fca5a5"}`,
+          borderRadius: "14px",
+          padding: "16px 20px",
+          marginBottom: "20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "16px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <span style={{ fontSize: "1.8rem" }}>{isDarshanEnabled ? "🕉️" : "🪔"}</span>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <strong style={{ fontSize: "1.05rem", color: isDarshanEnabled ? "#15803d" : "#b91c1c" }}>
+                Mobile App Darshan Status: {isDarshanEnabled ? "ACTIVE (Visible to Devotees)" : "DISABLED (Hidden from Devotees)"}
+              </strong>
+            </div>
+            <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "#475569" }}>
+              {isDarshanEnabled
+                ? "Devotees can view Darshans, check timings, and book tokens on iOS & Android."
+                : "Darshan is completely hidden from the mobile app (grid and navigation). Ashram Sevas are prioritized."}
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => handleToggleDarshan(!isDarshanEnabled)}
+          disabled={togglingDarshan}
+          className="btn"
+          style={{
+            background: isDarshanEnabled ? "#dc2626" : "#059669",
+            color: "white",
+            fontWeight: "800",
+            padding: "10px 20px",
+            fontSize: "0.92rem",
+            borderRadius: "8px",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          {togglingDarshan ? (
+            <>
+              <span className="spinner spinner-sm" /> Updating...
+            </>
+          ) : isDarshanEnabled ? (
+            "Turn Darshan OFF"
+          ) : (
+            "Turn Darshan ON"
+          )}
+        </button>
       </div>
 
       {/* Summary Chips - Full Width */}

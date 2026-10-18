@@ -46,6 +46,54 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.statusCancelled, size: 28),
+            SizedBox(width: 8),
+            Text('Delete Account', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to permanently delete your devotee account? All your personal profile information and seva booking history will be permanently erased. This action cannot be undone.',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.statusCancelled,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final messenger = ScaffoldMessenger.of(context);
+              final err = await context.read<AuthProvider>().deleteAccount();
+              if (err != null) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(err),
+                    backgroundColor: AppColors.statusCancelled,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Delete Permanently', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().userModel;
@@ -210,12 +258,27 @@ class ProfileScreen extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+
+          // Delete Account Button (Required by Apple Review Guideline 5.1.1(v) & 2.1)
+          TextButton.icon(
+            onPressed: () => _showDeleteAccountDialog(context),
+            icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFF991B1B), size: 18),
+            label: const Text(
+              'Delete Devotee Account',
+              style: TextStyle(
+                color: Color(0xFF991B1B),
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // App Footer
           const Center(
             child: Text(
-              'Palgutta Ashramam • Version 1.0.7',
+              'Palgutta Ashramam • Version 1.0.9 (11)',
               style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
             ),
           ),

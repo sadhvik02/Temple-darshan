@@ -121,14 +121,14 @@ class _MainNavigatorState extends State<MainNavigator> {
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
         destinations: const [
           NavigationDestination(
-            icon: ImageIcon(AssetImage('assets/icons/darshan_selected.png'), size: 24, color: AppColors.primary),
-            selectedIcon: ImageIcon(AssetImage('assets/icons/darshan_selected.png'), size: 24, color: AppColors.primary),
-            label: 'Darshan',
+            icon: Icon(Icons.home_outlined, color: AppColors.primary),
+            selectedIcon: Icon(Icons.home_rounded, color: AppColors.primary),
+            label: 'Home',
           ),
           NavigationDestination(
             icon: Icon(Icons.spa_outlined, color: AppColors.primary),
             selectedIcon: Icon(Icons.spa_rounded, color: AppColors.primary),
-            label: 'Arjitha Sevas',
+            label: 'Ashrama Seva',
           ),
           NavigationDestination(
             icon: Icon(Icons.confirmation_number_outlined, color: AppColors.primary),
