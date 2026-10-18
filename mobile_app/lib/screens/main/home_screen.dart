@@ -6,7 +6,6 @@ import '../../providers/auth_provider.dart';
 import '../../services/database_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/custom_image.dart';
-import '../../widgets/section_header.dart';
 import 'events_screen.dart';
 import 'news_screen.dart';
 import 'services_screen.dart';
@@ -344,34 +343,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 12),
 
-                    // 2. Scrolling Marquee Ticker (The [UPDATE] banner directly under banners; no duplicate "Latest Announcements" header above it)
+                    // 2. Scrolling Marquee Ticker (The [UPDATE] section where text is scrolling)
                     _buildMarqueeSection(marqueeText),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
-                    // 3. Quick Services Grid (Darshan removed when isDarshanEnabled == false; Ashrama Seva prioritized first)
-                    _buildTTDQuickServicesGrid(isDarshanEnabled: isDarshanEnabled),
-                    const SizedBox(height: 20),
-
-                    // 4. Latest Announcements Video Section (Appears after Temple Info / Services Grid ONLY when a video is uploaded)
+                    // 3. Dedicated Ashram Video (Directly under the Update section; appears ONLY if video is uploaded; NO Latest Announcements heading)
                     if (showVideoSection) ...[
-                      SectionHeader(
-                        title: 'Latest Announcements',
-                        actionText: 'View All',
-                        onAction: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const NewsScreen()),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 8),
                       _buildDedicatedVideoCard(
                         videoUrl: effectiveVideoUrl,
                         title: effectiveVideoTitle,
                         fallbackImageUrl: templeInfo?.imageUrl,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                     ],
+
+                    // 4. Bookings / Quick Services Grid (Below the video: Ashrama Seva, Arjitha Sevas, Donations, Temple Info, Utsavams)
+                    _buildTTDQuickServicesGrid(isDarshanEnabled: isDarshanEnabled),
+                    const SizedBox(height: 20),
 
                     // 5. Donations
                     _buildDonationsSection(),
