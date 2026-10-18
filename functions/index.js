@@ -809,3 +809,234 @@ exports.getEmailByPhone = onCall({ invoker: "public" }, async (request) => {
   throw new HttpsError("not-found", "No devotee account found with this mobile number.");
 });
 
+// =========================================================================
+// SUPER ADMIN MANAGEMENT FUNCTIONS
+// =========================================================================
+
+/**
+ * Helper to verify that the calling user is authenticated and has SUPER_ADMIN role
+ */
+async function verifySuperAdmin(auth) {
+  if (!auth || !auth.uid) {
+    throw new HttpsError("unauthenticated", "Authentication required.");
+  }
+  const adminDoc = await db.collection("admins").doc(auth.uid).get();
+  if (!adminDoc.exists) {
+    throw new HttpsError("permission-denied", "Unauthorized. You are not an administrator.");
+  }
+  const role = (adminDoc.data().role || "").toUpperCase();
+  if (role !== "SUPER_ADMIN") {
+    throw new HttpsError("permission-denied", "Access denied. Only Super Admins can manage administrators.");
+  }
+  return adminDoc.data();
+}
+
+/**
+ * Callable Function: Create a new Admin or Super Admin account
+ */
+exports.createAdminUser = onCall(async (request) => {
+  const callerData = await verifySuperAdmin(request.auth);
+  const data = request.data || {};
+
+  const name = typeof data.name === "string" ? data.name.trim() : "";
+  const email = typeof data.email === "string" ? data.email.toLowerCase().trim() : "";
+  const password = typeof data.password === "string" ? data.password : "";
+  const phone = typeof data.phone === "string" ? data.phone.trim() : null;
+  const role = typeof data.role === "string" && data.role.toUpperCase() === "SUPER_ADMIN" ? "SUPER_ADMIN" : "ADMIN";
+  const permissions = Array.isArray(data.permissions) ? data.permissions : [];
+
+  if (!name) {
+    throw new HttpsError("invalid-argument", "Administrator full name is required.");
+  }
+  if (!email || !email.includes("@")) {
+    throw new HttpsError("invalid-argument", "Valid email address is required.");
+  }
+  if (!password || password.length < 6) {
+    throw new HttpsError("invalid-argument", "Password must be at least 6 characters long.");
+  }
+
+  // 1. Create or retrieve user in Firebase Auth
+  let userRecord;
+  try {
+    userRecord = await getAuth().createUser({
+      email,
+      password,
+      displayName: name,
+    });
+    console.log(`Created new Firebase Auth user for admin: ${userRecord.uid}`);
+  } catch (err) {
+    if (err.code === "auth/email-already-exists") {
+      userRecord = await getAuth().getUserByEmail(email);
+      // Update password and display name for existing user
+      await getAuth().updateUser(userRecord.uid, {
+        password,
+        displayName: name,
+      });
+      console.log(`User already exists in Auth. Updated password & promoted to admin: ${userRecord.uid}`);
+    } else {
+      console.error("Error creating Auth user for admin:", err);
+      throw new HttpsError("internal", err.message || "Failed to create administrator account.");
+    }
+  }
+
+  // 2. Save Administrator profile in Firestore admins collection
+  const adminRef = db.collection("admins").doc(userRecord.uid);
+  const adminPayload = {
+    name,
+    email,
+    phone,
+    role,
+    permissions: role === "SUPER_ADMIN" ? ["all"] : permissions,
+    isActive: true,
+    createdBy: request.auth.uid,
+    createdByName: callerData.name || "Super Admin",
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  await adminRef.set(adminPayload, { merge: true });
+  console.log(`Admin document written for UID: ${userRecord.uid} with role: ${role}`);
+
+  return {
+    success: true,
+    uid: userRecord.uid,
+    message: `Administrator "${name}" (${role}) created successfully.`,
+  };
+});
+
+/**
+ * Callable Function: List all administrators (Super Admin only)
+ */
+exports.listAdmins = onCall(async (request) => {
+  await verifySuperAdmin(request.auth);
+
+  const snapshot = await db.collection("admins").get();
+  const admins = snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      name: data.name || "",
+      email: data.email || "",
+      phone: data.phone || "",
+      role: (data.role || "ADMIN").toUpperCase(),
+      permissions: Array.isArray(data.permissions) ? data.permissions : [],
+      isActive: data.isActive !== false,
+      createdBy: data.createdBy || null,
+      createdByName: data.createdByName || null,
+      createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : null,
+      updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : null,
+    };
+  });
+
+  // Sort: Super Admins first, then by createdAt desc
+  admins.sort((a, b) => {
+    if (a.role === "SUPER_ADMIN" && b.role !== "SUPER_ADMIN") return -1;
+    if (b.role === "SUPER_ADMIN" && a.role !== "SUPER_ADMIN") return 1;
+    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+  });
+
+  return { admins };
+});
+
+/**
+ * Callable Function: Update an administrator's profile, role, permissions, or password
+ */
+exports.updateAdminUser = onCall(async (request) => {
+  await verifySuperAdmin(request.auth);
+  const data = request.data || {};
+  const { uid, name, phone, role, permissions, isActive, password } = data;
+
+  if (!uid || typeof uid !== "string") {
+    throw new HttpsError("invalid-argument", "Administrator UID is required.");
+  }
+
+  const adminRef = db.collection("admins").doc(uid);
+  const adminDoc = await adminRef.get();
+  if (!adminDoc.exists) {
+    throw new HttpsError("not-found", "Administrator not found.");
+  }
+
+  // Prevent self-lockout: cannot deactivate yourself or remove yourself from SUPER_ADMIN
+  if (uid === request.auth.uid) {
+    if (isActive === false) {
+      throw new HttpsError("invalid-argument", "You cannot deactivate your own account.");
+    }
+    if (role && role.toUpperCase() !== "SUPER_ADMIN") {
+      throw new HttpsError("invalid-argument", "You cannot remove your own Super Admin role.");
+    }
+  }
+
+  const updates = {
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  if (typeof name === "string" && name.trim()) {
+    updates.name = name.trim();
+  }
+  if (phone !== undefined) {
+    updates.phone = phone ? phone.trim() : null;
+  }
+  if (typeof role === "string") {
+    updates.role = role.toUpperCase() === "SUPER_ADMIN" ? "SUPER_ADMIN" : "ADMIN";
+    if (updates.role === "SUPER_ADMIN") {
+      updates.permissions = ["all"];
+    }
+  }
+  if (Array.isArray(permissions) && updates.role !== "SUPER_ADMIN") {
+    updates.permissions = permissions;
+  }
+  if (typeof isActive === "boolean") {
+    updates.isActive = isActive;
+  }
+
+  await adminRef.update(updates);
+
+  // Update Auth details if needed
+  const authUpdates = {};
+  if (updates.name) authUpdates.displayName = updates.name;
+  if (typeof password === "string" && password.length >= 6) {
+    authUpdates.password = password;
+  }
+  if (typeof isActive === "boolean") {
+    authUpdates.disabled = !isActive;
+  }
+
+  if (Object.keys(authUpdates).length > 0) {
+    try {
+      await getAuth().updateUser(uid, authUpdates);
+    } catch (err) {
+      console.error(`Failed to update Auth record for admin ${uid}:`, err);
+    }
+  }
+
+  return { success: true, message: "Administrator updated successfully." };
+});
+
+/**
+ * Callable Function: Delete an administrator
+ */
+exports.deleteAdminUser = onCall(async (request) => {
+  await verifySuperAdmin(request.auth);
+  const { uid } = request.data || {};
+
+  if (!uid || typeof uid !== "string") {
+    throw new HttpsError("invalid-argument", "Administrator UID is required.");
+  }
+
+  if (uid === request.auth.uid) {
+    throw new HttpsError("invalid-argument", "You cannot delete your own Super Admin account.");
+  }
+
+  const adminRef = db.collection("admins").doc(uid);
+  await adminRef.delete();
+
+  // Also remove or disable in Firebase Auth
+  try {
+    await getAuth().deleteUser(uid);
+  } catch (err) {
+    console.warn(`Could not delete Auth user ${uid}:`, err.message);
+  }
+
+  return { success: true, message: "Administrator deleted successfully." };
+});
+

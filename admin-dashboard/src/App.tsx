@@ -15,6 +15,8 @@ import UsersPage from "./pages/UsersPage";
 import DarshansPage from "./pages/DarshansPage";
 import DonationsPage from "./pages/DonationsPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import AdminsPage from "./pages/AdminsPage";
+import CreateAdminPage from "./pages/CreateAdminPage";
 
 export default function App() {
   return (
@@ -45,6 +47,8 @@ export default function App() {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/darshans" element={<DarshansPage />} />
             <Route path="/donations" element={<DonationsPage />} />
+            <Route path="/admins" element={<AdminsPage />} />
+            <Route path="/admins/create" element={<CreateAdminPage />} />
           </Route>
 
           {/* Catch-all → redirect to dashboard */}

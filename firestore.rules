@@ -24,6 +24,16 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Check if the authenticated user is a super admin
+    function isSuperAdmin() {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && (
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'SUPER_ADMIN'
+          || get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'super_admin'
+        );
+    }
+
     // Check if a field value is a valid server timestamp
     function isValidTimestamp(field) {
       return field == request.time;
@@ -32,23 +42,14 @@ service cloud.firestore {
     // =========================================================
     // ADMINS COLLECTION
     // =========================================================
-    // SECURITY CRITICAL:
-    // - NO user (authenticated or otherwise) can create, update,
-    //   or delete admin documents via client SDKs.
-    // - Admin accounts MUST be provisioned manually via:
-    //   1. Firebase Console (Firestore > admins collection > Add document)
-    //   2. Firebase Admin SDK (server-side / local script)
-    // - This prevents privilege escalation attacks where a user
-    //   creates an admin document with their own UID.
-    // =========================================================
     match /admins/{adminId} {
-      // Admins can read ONLY their own admin document
-      allow read: if isOwner(adminId);
+      // Admins can read their own doc; Super Admins can read all admin docs
+      allow read: if isOwner(adminId) || isSuperAdmin();
 
-      // NEVER allow client-side create, update, or delete
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      // Super Admins can manage admins (cannot delete self)
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin() && request.auth.uid != adminId;
     }
 
     // =========================================================

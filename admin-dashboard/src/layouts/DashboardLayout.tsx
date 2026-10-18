@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import type { NavItem } from "../types";
 
-const NAV_ITEMS: NavItem[] = [
+const MAIN_NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", path: "/dashboard", icon: "📊", enabled: true },
   { label: "Temple Info", path: "/temple", icon: "🛕", enabled: true },
   { label: "Banners", path: "/banners", icon: "🖼", enabled: true },
@@ -18,8 +18,16 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Users", path: "/users", icon: "👥", enabled: true },
 ];
 
+const ADMIN_NAV_ITEMS: NavItem[] = [
+  { label: "Admin Pages", path: "/admins", icon: "🛡️", enabled: true, superAdminOnly: true },
+  { label: "Create Admin", path: "/admins/create", icon: "➕", enabled: true, superAdminOnly: true },
+];
+
 function getPageTitle(pathname: string): string {
-  const item = NAV_ITEMS.find((n) => n.path === pathname);
+  if (pathname === "/admins") return "Admin Directory & Pages";
+  if (pathname === "/admins/create") return "Create Administrator";
+  const allItems = [...MAIN_NAV_ITEMS, ...ADMIN_NAV_ITEMS];
+  const item = allItems.find((n) => n.path === pathname);
   if (item) return item.label;
   if (pathname === "/" || pathname === "/dashboard") return "Dashboard";
   return pathname.replace("/", "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -31,6 +39,17 @@ export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>("");
+
+  const isSuperAdmin = (adminData?.role || "").toUpperCase() === "SUPER_ADMIN";
+  const userPermissions = adminData?.permissions || [];
+  const hasFullAccess = isSuperAdmin || userPermissions.includes("all") || userPermissions.length === 0;
+
+  // Filter main navigation items based on admin's permissions
+  const visibleNavItems = MAIN_NAV_ITEMS.filter((item) => {
+    if (hasFullAccess) return true;
+    if (item.path === "/dashboard") return true; // Dashboard always visible
+    return userPermissions.includes(item.path);
+  });
 
   const pageTitle = getPageTitle(location.pathname);
 
@@ -75,11 +94,12 @@ export default function DashboardLayout() {
       <aside className="sidebar">
         <div className="sidebar-header">
           <span className="sidebar-logo">🛕</span>
-          <span className="sidebar-title">Kedareshwara Ashramam</span>
+          <span className="sidebar-title">Palgutta Ashramam</span>
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map((item) => (
+          {/* Main Modules */}
+          {visibleNavItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -97,18 +117,72 @@ export default function DashboardLayout() {
               )}
             </NavLink>
           ))}
+
+          {/* Super Admin Management Section */}
+          {isSuperAdmin && (
+            <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid var(--color-border)" }}>
+              <div
+                style={{
+                  padding: "4px 14px 8px",
+                  fontSize: "0.72rem",
+                  fontWeight: "800",
+                  letterSpacing: "0.08em",
+                  color: "#7c3aed",
+                  textTransform: "uppercase",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <span>👑</span> Super Admin
+              </div>
+
+              {ADMIN_NAV_ITEMS.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={({ isActive }) =>
+                    `nav-item ${isActive ? "nav-item-active" : ""}`
+                  }
+                  style={({ isActive }) => ({
+                    color: isActive ? "#6d28d9" : "var(--color-text-secondary)",
+                    background: isActive ? "#ede9fe" : undefined,
+                    borderLeft: isActive ? "3px solid #7c3aed" : undefined,
+                  })}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  <span className="nav-label">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
         </nav>
 
         <div className="sidebar-footer">
           <div className="sidebar-user">
-            <span className="user-avatar">
+            <span
+              className="user-avatar"
+              style={{
+                background: isSuperAdmin ? "linear-gradient(135deg, #7c3aed, #4f46e5)" : undefined,
+                color: isSuperAdmin ? "#fff" : undefined,
+              }}
+            >
               {adminData?.name?.charAt(0)?.toUpperCase() || "A"}
             </span>
             <div className="user-info">
               <span className="user-name">
                 {adminData?.name || "Admin"}
               </span>
-              <span className="user-role">{adminData?.role || "admin"}</span>
+              <span
+                className="user-role"
+                style={{
+                  color: isSuperAdmin ? "#7c3aed" : undefined,
+                  fontWeight: isSuperAdmin ? "700" : undefined,
+                }}
+              >
+                {adminData?.role || "admin"}
+              </span>
             </div>
           </div>
         </div>

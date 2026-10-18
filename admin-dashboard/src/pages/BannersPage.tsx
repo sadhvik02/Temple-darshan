@@ -22,6 +22,7 @@ export default function BannersPage() {
   const [formData, setFormData] = useState({
     title: "",
     imageUrl: "",
+    videoUrl: "",
     isActive: true,
     displayOrder: 1,
     actionUrl: "",

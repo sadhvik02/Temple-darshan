@@ -1,11 +1,42 @@
 /** Admin document from Firestore admins collection */
 export interface AdminUser {
+  id?: string;
+  uid?: string;
   name: string;
   email: string;
-  role: string;
-  createdAt: unknown;
-  updatedAt: unknown;
+  phone?: string | null;
+  role: 'SUPER_ADMIN' | 'ADMIN' | string;
+  permissions?: string[];
+  isActive?: boolean;
+  createdBy?: string | null;
+  createdByName?: string | null;
+  createdAt: any;
+  updatedAt: any;
 }
+
+/** Admin page permission descriptor */
+export interface AdminPageOption {
+  id: string;
+  label: string;
+  path: string;
+  icon: string;
+  description: string;
+}
+
+export const AVAILABLE_ADMIN_PAGES: AdminPageOption[] = [
+  { id: "dashboard", label: "Dashboard", path: "/dashboard", icon: "📊", description: "View analytics, totals, metrics and revenue overviews" },
+  { id: "temple", label: "Temple Info", path: "/temple", icon: "🛕", description: "Manage temple description, contact details and daily timings" },
+  { id: "banners", label: "Banners", path: "/banners", icon: "🖼", description: "Upload, order, and toggle homepage banner images & videos" },
+  { id: "darshans", label: "Darshan", path: "/darshans", icon: "🙏", description: "Configure darshan categories, dakshina tiers, and booking" },
+  { id: "services", label: "Services", path: "/services", icon: "🪔", description: "Manage sacred poojas, sevas, pricing and descriptions" },
+  { id: "slots", label: "Slots", path: "/slots", icon: "📅", description: "Create and schedule seva & darshan time slot capacities" },
+  { id: "bookings", label: "Bookings", path: "/bookings", icon: "📋", description: "View, filter and update pilgrim seva and darshan bookings" },
+  { id: "donations", label: "Donations", path: "/donations", icon: "💰", description: "Track devotee hundi, annadanam, and goshala contributions" },
+  { id: "news", label: "News", path: "/news", icon: "📰", description: "Publish ashram newsletters, updates and articles" },
+  { id: "events", label: "Events", path: "/events", icon: "🎉", description: "Announce upcoming temple festivals, poojas and celebrations" },
+  { id: "notifications", label: "Notifications", path: "/notifications", icon: "🔔", description: "Broadcast instant push notifications to devotees' mobile app" },
+  { id: "users", label: "Users", path: "/users", icon: "👥", description: "View registered devotee directory and contact records" },
+];
 
 /** Auth state for the application */
 export interface AuthState {
@@ -27,6 +58,7 @@ export interface NavItem {
   path: string;
   icon: string;
   enabled: boolean;
+  superAdminOnly?: boolean;
 }
 
 /** Temple Information */
