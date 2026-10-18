@@ -5,8 +5,8 @@ import 'package:video_player/video_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/banner_video_player.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
@@ -44,7 +44,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   Future<void> _initPlayer() async {
     try {
       if (_isYoutube) {
-        final videoId = YoutubePlayerController.convertUrlToId(widget.videoUrl);
+        final videoId = BannerVideoPlayer.extractYoutubeId(widget.videoUrl);
         if (videoId != null && videoId.isNotEmpty) {
           late final PlatformWebViewControllerCreationParams params;
           if (WebViewPlatform.instance is WebKitWebViewPlatform) {

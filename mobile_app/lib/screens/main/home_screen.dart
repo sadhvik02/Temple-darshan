@@ -272,25 +272,63 @@ class _HomeScreenState extends State<HomeScreen> {
           final bool isDarshanEnabled = templeInfo?.isDarshanEnabled ?? false;
           final String? marqueeText = templeInfo?.scrollingAnnouncement?.trim();
           final String? featuredVideo = templeInfo?.featuredVideoUrl?.trim();
-          final bool hasVideo = featuredVideo != null && featuredVideo.isNotEmpty;
 
-          return RefreshIndicator(
-            color: AppColors.primary,
-            onRefresh: () async {
-              setState(() {});
-              await Future.delayed(const Duration(milliseconds: 600));
-            },
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 40),
-              children: [
-                const SizedBox(height: 8),
+          return StreamBuilder<List<BannerModel>>(
+            stream: _db.getActiveBanners(),
+            builder: (context, bannerSnapshot) {
+              // 1. Filter out videos from the top banner carousel so only valid images slide
+              BannerModel? videoBanner;
+              final List<BannerModel> imageOnlyBanners = [];
 
-                // 1. TTD Style Auto-Sliding Banner Carousel (Images only)
-                StreamBuilder<List<BannerModel>>(
-                  stream: _db.getActiveBanners(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Container(
+              for (final b in bannerSnapshot.data ?? <BannerModel>[]) {
+                final img = b.imageUrl.trim();
+                final vid = b.videoUrl?.trim();
+                final bool isVideo = BannerVideoPlayer.isVideoUrl(img) ||
+                    (vid != null && vid.isNotEmpty) ||
+                    BannerVideoPlayer.isYoutubeUrl(img) ||
+                    (vid != null && BannerVideoPlayer.isYoutubeUrl(vid));
+                if (isVideo) {
+                  videoBanner ??= b;
+                } else if (img.isNotEmpty &&
+                    !BannerVideoPlayer.isVideoUrl(img) &&
+                    !img.toLowerCase().contains('youtube') &&
+                    !img.toLowerCase().contains('youtu.be') &&
+                    (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('/'))) {
+                  imageOnlyBanners.add(b);
+                }
+              }
+
+              // Determine if a video is available (either from Temple Info or from an active Video Banner)
+              final String? effectiveVideoUrl = (featuredVideo != null && featuredVideo.isNotEmpty)
+                  ? featuredVideo
+                  : (videoBanner?.videoUrl != null && videoBanner!.videoUrl!.isNotEmpty
+                      ? videoBanner.videoUrl
+                      : (videoBanner != null && BannerVideoPlayer.isVideoUrl(videoBanner.imageUrl)
+                          ? videoBanner.imageUrl
+                          : null));
+
+              final String effectiveVideoTitle = (templeInfo?.featuredVideoTitle != null && templeInfo!.featuredVideoTitle!.trim().isNotEmpty)
+                  ? templeInfo.featuredVideoTitle!.trim()
+                  : (videoBanner?.title.isNotEmpty == true
+                      ? videoBanner!.title
+                      : 'Palgutta Ashramam • Sacred Video');
+
+              final bool showVideoSection = effectiveVideoUrl != null && effectiveVideoUrl.isNotEmpty;
+
+              return RefreshIndicator(
+                color: AppColors.primary,
+                onRefresh: () async {
+                  setState(() {});
+                  await Future.delayed(const Duration(milliseconds: 600));
+                },
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  children: [
+                    const SizedBox(height: 8),
+
+                    // 1. TTD Style Auto-Sliding Banner Carousel (Clean images only; no video or broken image slides)
+                    if (bannerSnapshot.connectionState == ConnectionState.waiting)
+                      Container(
                         height: 185,
                         margin: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
@@ -300,50 +338,48 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: const Center(
                           child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
                         ),
-                      );
-                    }
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const SizedBox.shrink();
-                    }
-                    return BannerCarouselWidget(banners: snapshot.data!);
-                  },
+                      )
+                    else if (imageOnlyBanners.isNotEmpty)
+                      BannerCarouselWidget(banners: imageOnlyBanners),
+
+                    const SizedBox(height: 12),
+
+                    // 2. Scrolling Marquee Ticker (The [UPDATE] banner directly under banners; no duplicate "Latest Announcements" header above it)
+                    _buildMarqueeSection(marqueeText),
+                    const SizedBox(height: 16),
+
+                    // 3. Quick Services Grid (Darshan removed when isDarshanEnabled == false; Ashrama Seva prioritized first)
+                    _buildTTDQuickServicesGrid(isDarshanEnabled: isDarshanEnabled),
+                    const SizedBox(height: 20),
+
+                    // 4. Latest Announcements Video Section (Appears after Temple Info / Services Grid ONLY when a video is uploaded)
+                    if (showVideoSection) ...[
+                      SectionHeader(
+                        title: 'Latest Announcements',
+                        actionText: 'View All',
+                        onAction: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const NewsScreen()),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _buildDedicatedVideoCard(
+                        videoUrl: effectiveVideoUrl,
+                        title: effectiveVideoTitle,
+                        fallbackImageUrl: templeInfo?.imageUrl,
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // 5. Donations
+                    _buildDonationsSection(),
+                    const SizedBox(height: 24),
+                  ],
                 ),
-                const SizedBox(height: 14),
-
-                // 2. Latest Announcements Header & Scrolling Marquee Ticker (Replaces Today's Darshan Timings)
-                SectionHeader(
-                  title: 'Latest Announcements',
-                  actionText: 'View All',
-                  onAction: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const NewsScreen()),
-                    );
-                  },
-                ),
-                const SizedBox(height: 8),
-                _buildMarqueeSection(marqueeText),
-
-                // 3. Dedicated Ashram Video Player (If video uploaded in admin; else completely hidden)
-                if (hasVideo && templeInfo != null) ...[
-                  const SizedBox(height: 16),
-                  _buildDedicatedVideoSection(templeInfo),
-                ],
-                const SizedBox(height: 18),
-
-                // 4. Quick Services Grid (Darshan removed when isDarshanEnabled == false; Ashram Seva prioritized)
-                _buildTTDQuickServicesGrid(isDarshanEnabled: isDarshanEnabled),
-                const SizedBox(height: 20),
-
-                // 5. Sliding News Announcements Carousel
-                _buildNewsSection(),
-                const SizedBox(height: 20),
-
-                // 6. Donations
-                _buildDonationsSection(),
-                const SizedBox(height: 24),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
@@ -387,85 +423,35 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Dedicated Ashram Video Section (Shown only if a video URL is configured)
-  Widget _buildDedicatedVideoSection(TempleInfoModel info) {
-    final videoUrl = info.featuredVideoUrl?.trim();
-    if (videoUrl == null || videoUrl.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final videoTitle = info.featuredVideoTitle?.trim().isNotEmpty == true
-        ? info.featuredVideoTitle!.trim()
-        : 'Palgutta Ashramam • Sacred Video & Darshan';
-
+  // Dedicated Ashram Video Card (Shown below services grid only when a video is present)
+  Widget _buildDedicatedVideoCard({
+    required String videoUrl,
+    required String title,
+    String? fallbackImageUrl,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.play_circle_filled_rounded, color: AppColors.primary, size: 20),
-                  SizedBox(width: 6),
-                  Text(
-                    'Featured Video',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              GestureDetector(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => VideoPlayerScreen(
-                        videoUrl: videoUrl,
-                        title: videoTitle,
-                      ),
-                    ),
-                  );
-                },
-                child: const Text(
-                  'Watch Fullscreen →',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Container(
-            height: 195,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+      child: Container(
+        height: 195,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BannerVideoPlayer(
-                videoUrl: videoUrl,
-                fallbackImageUrl: info.imageUrl,
-                title: videoTitle,
-              ),
-            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BannerVideoPlayer(
+            videoUrl: videoUrl,
+            fallbackImageUrl: fallbackImageUrl,
+            title: title,
           ),
-        ],
+        ),
       ),
     );
   }
@@ -670,119 +656,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 4. Latest News & Announcements Section (Sliding Banner Style)
-  Widget _buildNewsSection() {
-    return StreamBuilder<List<NewsModel>>(
-      stream: _db.getPublishedNews(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox.shrink();
-        }
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const SizedBox.shrink();
-        }
 
-        final announcements = snapshot.data!;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionHeader(
-              title: 'Latest Announcements',
-              actionText: 'View All',
-              onAction: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NewsScreen()),
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            AnnouncementCarouselWidget(
-              announcements: announcements,
-              onNewsTap: (news) => _showNewsDetailsModal(context, news),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
-  void _showNewsDetailsModal(BuildContext context, NewsModel news) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.75,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(24),
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: AppColors.divider,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              if (news.imageUrl != null && news.imageUrl!.trim().isNotEmpty) ...[
-                CustomImage(
-                  imageUrl: news.imageUrl,
-                  height: 200,
-                  borderRadius: BorderRadius.circular(14),
-                  fit: BoxFit.cover,
-                  fallbackIcon: Icons.newspaper_rounded,
-                ),
-                const SizedBox(height: 16),
-              ],
-              Text(
-                news.title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              if (news.publishedAt != null) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textTertiary),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${news.publishedAt!.day.toString().padLeft(2, '0')}/${news.publishedAt!.month.toString().padLeft(2, '0')}/${news.publishedAt!.year}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textTertiary, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              ],
-              const Divider(height: 24),
-              Text(
-                news.content,
-                style: const TextStyle(
-                  fontSize: 15,
-                  height: 1.6,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   // 5. Donations Section
   Widget _buildDonationsSection() {

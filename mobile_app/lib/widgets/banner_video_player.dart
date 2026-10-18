@@ -20,10 +20,10 @@ class BannerVideoPlayer extends StatelessWidget {
     if (url == null) return false;
     final clean = url.trim().toLowerCase();
     if (clean.isEmpty) return false;
-    return clean.endsWith('.mp4') ||
-        clean.endsWith('.mov') ||
-        clean.endsWith('.m4v') ||
-        clean.endsWith('.m3u8') ||
+    return clean.contains('.mp4') ||
+        clean.contains('.mov') ||
+        clean.contains('.m4v') ||
+        clean.contains('.m3u8') ||
         clean.contains('youtube.com/') ||
         clean.contains('youtu.be/');
   }
@@ -35,22 +35,39 @@ class BannerVideoPlayer extends StatelessWidget {
     return clean.contains('youtube.com/') || clean.contains('youtu.be/');
   }
 
+  /// Helper to extract YouTube video ID from standard URLs, Shorts, and embed links
+  static String? extractYoutubeId(String? url) {
+    if (url == null) return null;
+    final clean = url.trim();
+    if (clean.isEmpty) return null;
+
+    final regExp = RegExp(
+      r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})',
+      caseSensitive: false,
+    );
+    final match = regExp.firstMatch(clean);
+    if (match != null && match.groupCount >= 1) {
+      return match.group(1);
+    }
+    return YoutubePlayerController.convertUrlToId(clean);
+  }
+
   /// Get the effective display thumbnail for this video
   String _getEffectiveImageUrl() {
+    if (isYoutubeUrl(videoUrl)) {
+      final videoId = extractYoutubeId(videoUrl);
+      if (videoId != null && videoId.isNotEmpty) {
+        return 'https://img.youtube.com/vi/$videoId/hqdefault.jpg';
+      }
+    }
+
     if (fallbackImageUrl != null &&
         fallbackImageUrl!.trim().isNotEmpty &&
         !isVideoUrl(fallbackImageUrl)) {
       return fallbackImageUrl!.trim();
     }
 
-    if (isYoutubeUrl(videoUrl)) {
-      final videoId = YoutubePlayerController.convertUrlToId(videoUrl);
-      if (videoId != null && videoId.isNotEmpty) {
-        return 'https://img.youtube.com/vi/$videoId/hqdefault.jpg';
-      }
-    }
-
-    return fallbackImageUrl ?? '';
+    return '';
   }
 
   void _openPlayer(BuildContext context) {
