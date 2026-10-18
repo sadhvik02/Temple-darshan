@@ -61,6 +61,15 @@ export interface NavItem {
   superAdminOnly?: boolean;
 }
 
+/** Featured Ashram Video for mobile home screen */
+export interface FeaturedVideo {
+  id: string;
+  title: string;
+  videoUrl: string;
+  thumbnailUrl?: string;
+  displayOrder?: number;
+}
+
 /** Temple Information */
 export interface TempleInfo {
   name: string;
@@ -79,8 +88,9 @@ export interface TempleInfo {
   imageUrl?: string; // Optional in schema
   isDarshanEnabled?: boolean; // Master toggle for Darshan module across mobile app
   scrollingAnnouncement?: string; // Marquee announcement text scrolling across mobile app
-  featuredVideoUrl?: string; // Dedicated video URL (YouTube / MP4)
-  featuredVideoTitle?: string; // Title for the dedicated video card
+  featuredVideos?: FeaturedVideo[]; // Multiple sacred videos sliding on mobile app
+  featuredVideoUrl?: string; // Backward compatibility: dedicated video URL
+  featuredVideoTitle?: string; // Backward compatibility: title for dedicated video
   updatedAt: any; // Firestore Timestamp
 }
 

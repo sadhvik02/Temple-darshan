@@ -270,7 +270,6 @@ class _HomeScreenState extends State<HomeScreen> {
           final templeInfo = infoSnapshot.data;
           final bool isDarshanEnabled = templeInfo?.isDarshanEnabled ?? false;
           final String? marqueeText = templeInfo?.scrollingAnnouncement?.trim();
-          final String? featuredVideo = templeInfo?.featuredVideoUrl?.trim();
 
           return StreamBuilder<List<BannerModel>>(
             stream: _db.getActiveBanners(),
@@ -297,22 +296,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               }
 
-              // Determine if a video is available (either from Temple Info or from an active Video Banner)
-              final String? effectiveVideoUrl = (featuredVideo != null && featuredVideo.isNotEmpty)
-                  ? featuredVideo
-                  : (videoBanner?.videoUrl != null && videoBanner!.videoUrl!.isNotEmpty
-                      ? videoBanner.videoUrl
-                      : (videoBanner != null && BannerVideoPlayer.isVideoUrl(videoBanner.imageUrl)
-                          ? videoBanner.imageUrl
-                          : null));
-
-              final String effectiveVideoTitle = (templeInfo?.featuredVideoTitle != null && templeInfo!.featuredVideoTitle!.trim().isNotEmpty)
-                  ? templeInfo.featuredVideoTitle!.trim()
-                  : (videoBanner?.title.isNotEmpty == true
-                      ? videoBanner!.title
-                      : 'Palgutta Ashramam • Sacred Video');
-
-              final bool showVideoSection = effectiveVideoUrl != null && effectiveVideoUrl.isNotEmpty;
+              // Determine multiple videos available from Temple Info / News configuration
+              final List<FeaturedVideoItem> effectiveVideos = [];
+              if (templeInfo != null && templeInfo.featuredVideos.isNotEmpty) {
+                effectiveVideos.addAll(templeInfo.featuredVideos);
+              } else if (templeInfo?.featuredVideoUrl != null && templeInfo!.featuredVideoUrl!.trim().isNotEmpty) {
+                effectiveVideos.add(
+                  FeaturedVideoItem(
+                    id: 'temple_legacy_vid',
+                    title: templeInfo.featuredVideoTitle ?? 'Abhishekam',
+                    videoUrl: templeInfo.featuredVideoUrl!.trim(),
+                  ),
+                );
+              } else if (videoBanner != null) {
+                final raw = (videoBanner.videoUrl != null && videoBanner.videoUrl!.isNotEmpty)
+                    ? videoBanner.videoUrl!
+                    : videoBanner.imageUrl;
+                if (BannerVideoPlayer.isVideoUrl(raw)) {
+                  effectiveVideos.add(
+                    FeaturedVideoItem(
+                      id: videoBanner.id,
+                      title: videoBanner.title,
+                      videoUrl: raw,
+                    ),
+                  );
+                }
+              }
 
               return RefreshIndicator(
                 color: AppColors.primary,
@@ -347,11 +356,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildMarqueeSection(marqueeText),
                     const SizedBox(height: 14),
 
-                    // 3. Dedicated Ashram Video (Directly under the Update section; appears ONLY if video is uploaded; NO Latest Announcements heading)
-                    if (showVideoSection) ...[
-                      _buildDedicatedVideoCard(
-                        videoUrl: effectiveVideoUrl,
-                        title: effectiveVideoTitle,
+                    // 3. Sacred Ashram Videos (Directly under the Update section; appears ONLY if videos are uploaded; NO Latest Announcements heading)
+                    if (effectiveVideos.isNotEmpty) ...[
+                      SacredVideoCarouselWidget(
+                        videos: effectiveVideos,
                         fallbackImageUrl: templeInfo?.imageUrl,
                       ),
                       const SizedBox(height: 16),
@@ -408,39 +416,6 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         );
       },
-    );
-  }
-
-  // Dedicated Ashram Video Card (Shown below services grid only when a video is present)
-  Widget _buildDedicatedVideoCard({
-    required String videoUrl,
-    required String title,
-    String? fallbackImageUrl,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Container(
-        height: 195,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BannerVideoPlayer(
-            videoUrl: videoUrl,
-            fallbackImageUrl: fallbackImageUrl,
-            title: title,
-          ),
-        ),
-      ),
     );
   }
 
@@ -911,22 +886,22 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
   }
 }
 
-// Dedicated Sliding Announcements Carousel
-class AnnouncementCarouselWidget extends StatefulWidget {
-  final List<NewsModel> announcements;
-  final void Function(NewsModel news) onNewsTap;
+// Dedicated Sacred Ashram Videos Carousel (Multiple videos scrolling widget)
+class SacredVideoCarouselWidget extends StatefulWidget {
+  final List<FeaturedVideoItem> videos;
+  final String? fallbackImageUrl;
 
-  const AnnouncementCarouselWidget({
+  const SacredVideoCarouselWidget({
     super.key,
-    required this.announcements,
-    required this.onNewsTap,
+    required this.videos,
+    this.fallbackImageUrl,
   });
 
   @override
-  State<AnnouncementCarouselWidget> createState() => _AnnouncementCarouselWidgetState();
+  State<SacredVideoCarouselWidget> createState() => _SacredVideoCarouselWidgetState();
 }
 
-class _AnnouncementCarouselWidgetState extends State<AnnouncementCarouselWidget> {
+class _SacredVideoCarouselWidgetState extends State<SacredVideoCarouselWidget> {
   late final PageController _pageController;
   int _currentPage = 0;
   Timer? _timer;
@@ -940,12 +915,12 @@ class _AnnouncementCarouselWidgetState extends State<AnnouncementCarouselWidget>
 
   void _startTimer() {
     _timer?.cancel();
-    if (widget.announcements.length <= 1) return;
+    if (widget.videos.length <= 1) return;
 
-    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (!mounted || !_pageController.hasClients) return;
       int next = _currentPage + 1;
-      if (next >= widget.announcements.length) {
+      if (next >= widget.videos.length) {
         next = 0;
       }
       _pageController.animateToPage(
@@ -957,9 +932,9 @@ class _AnnouncementCarouselWidgetState extends State<AnnouncementCarouselWidget>
   }
 
   @override
-  void didUpdateWidget(covariant AnnouncementCarouselWidget oldWidget) {
+  void didUpdateWidget(covariant SacredVideoCarouselWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.announcements.length != widget.announcements.length) {
+    if (oldWidget.videos.length != widget.videos.length) {
       _startTimer();
     }
   }
@@ -971,150 +946,220 @@ class _AnnouncementCarouselWidgetState extends State<AnnouncementCarouselWidget>
     super.dispose();
   }
 
+  void _openPlayer(FeaturedVideoItem video) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => VideoPlayerScreen(
+          videoUrl: video.videoUrl,
+          title: video.title.isNotEmpty ? video.title : 'Sacred Video',
+        ),
+      ),
+    );
+  }
+
+  String _getVideoThumbnail(FeaturedVideoItem video) {
+    if (video.thumbnailUrl != null && video.thumbnailUrl!.trim().isNotEmpty) {
+      return video.thumbnailUrl!.trim();
+    }
+    if (BannerVideoPlayer.isYoutubeUrl(video.videoUrl)) {
+      final yId = BannerVideoPlayer.extractYoutubeId(video.videoUrl);
+      if (yId != null && yId.isNotEmpty) {
+        return 'https://img.youtube.com/vi/$yId/hqdefault.jpg';
+      }
+    }
+    if (widget.fallbackImageUrl != null && widget.fallbackImageUrl!.trim().isNotEmpty) {
+      return widget.fallbackImageUrl!.trim();
+    }
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (widget.announcements.isEmpty) return const SizedBox.shrink();
+    if (widget.videos.isEmpty) return const SizedBox.shrink();
 
+    // If only 1 video is available, show standard full width card
+    if (widget.videos.length == 1) {
+      final singleVideo = widget.videos.first;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Container(
+          height: 195,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: _buildVideoSlide(singleVideo, 0, 1),
+          ),
+        ),
+      );
+    }
+
+    // Multiple videos (e.g. 2 to 3 videos): scrollable horizontal carousel with dots
     return Column(
       children: [
         Container(
-          height: 180,
+          height: 195,
           margin: const EdgeInsets.symmetric(horizontal: 16),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             child: PageView.builder(
               controller: _pageController,
-              itemCount: widget.announcements.length,
+              itemCount: widget.videos.length,
               onPageChanged: (index) {
                 setState(() => _currentPage = index);
               },
               itemBuilder: (context, index) {
-                final news = widget.announcements[index];
-                return InkWell(
-                  onTap: () => widget.onNewsTap(news),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      CustomImage(
-                        imageUrl: news.imageUrl,
-                        fit: BoxFit.cover,
-                        fallbackIcon: Icons.campaign_rounded,
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: 0.25),
-                              Colors.black.withValues(alpha: 0.88),
-                            ],
-                            stops: const [0.2, 0.5, 1.0],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 14,
-                        left: 16,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.campaign_rounded, size: 14, color: Colors.white),
-                              SizedBox(width: 4),
-                              Text(
-                                'Announcement',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        left: 16,
-                        right: 16,
-                        bottom: 14,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              news.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                shadows: [
-                                  Shadow(color: Colors.black87, blurRadius: 6),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              news.content,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.88),
-                                fontSize: 12,
-                                height: 1.3,
-                                shadows: const [
-                                  Shadow(color: Colors.black87, blurRadius: 4),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
+                final video = widget.videos[index];
+                return _buildVideoSlide(video, index, widget.videos.length);
               },
             ),
           ),
         ),
-        if (widget.announcements.length > 1) ...[
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              widget.announcements.length,
-              (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                width: _currentPage == index ? 22 : 6,
-                height: 5,
-                margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                decoration: BoxDecoration(
-                  color: _currentPage == index
-                      ? AppColors.primary
-                      : AppColors.primaryLight.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(3),
-                ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            widget.videos.length,
+            (index) => AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: _currentPage == index ? 22 : 6,
+              height: 5,
+              margin: const EdgeInsets.symmetric(horizontal: 2.5),
+              decoration: BoxDecoration(
+                color: _currentPage == index
+                    ? AppColors.primary
+                    : AppColors.primaryLight.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
           ),
-        ],
+        ),
       ],
+    );
+  }
+
+  Widget _buildVideoSlide(FeaturedVideoItem video, int index, int total) {
+    final thumb = _getVideoThumbnail(video);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openPlayer(video),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Video Thumbnail Poster
+            CustomImage(
+              imageUrl: thumb,
+              fit: BoxFit.cover,
+              fallbackIcon: Icons.videocam_rounded,
+            ),
+
+            // Soft Dark Tint
+            Container(
+              color: Colors.black.withValues(alpha: 0.25),
+            ),
+
+            // Top-left "Watch Video" badge with counter if multiple
+            Positioned(
+              top: 12,
+              left: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 1)),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.play_circle_fill, color: Colors.white, size: 14),
+                    const SizedBox(width: 5),
+                    Text(
+                      total > 1 ? 'Watch Video (${index + 1}/$total)' : 'Watch Video',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Center Glowing Play Button
+            Center(
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 2.5),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black54,
+                      blurRadius: 14,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+            ),
+
+            // Bottom Gradient Overlay with Title
+            if (video.title.isNotEmpty)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.85),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                  child: Text(
+                    video.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

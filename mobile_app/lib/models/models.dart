@@ -344,6 +344,38 @@ class EventModel {
       : (startTime.isNotEmpty ? startTime : '');
 }
 
+class FeaturedVideoItem {
+  final String id;
+  final String title;
+  final String videoUrl;
+  final String? thumbnailUrl;
+
+  FeaturedVideoItem({
+    required this.id,
+    required this.title,
+    required this.videoUrl,
+    this.thumbnailUrl,
+  });
+
+  factory FeaturedVideoItem.fromMap(Map<String, dynamic> map) {
+    return FeaturedVideoItem(
+      id: map['id']?.toString() ?? '',
+      title: map['title']?.toString() ?? '',
+      videoUrl: map['videoUrl']?.toString() ?? '',
+      thumbnailUrl: map['thumbnailUrl']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'videoUrl': videoUrl,
+      if (thumbnailUrl != null) 'thumbnailUrl': thumbnailUrl,
+    };
+  }
+}
+
 class TempleInfoModel {
   final String name;
   final String description;
@@ -360,6 +392,7 @@ class TempleInfoModel {
   final String? scrollingAnnouncement;
   final String? featuredVideoUrl;
   final String? featuredVideoTitle;
+  final List<FeaturedVideoItem> featuredVideos;
 
   TempleInfoModel({
     required this.name,
@@ -377,10 +410,34 @@ class TempleInfoModel {
     this.scrollingAnnouncement,
     this.featuredVideoUrl,
     this.featuredVideoTitle,
+    this.featuredVideos = const [],
   });
 
   factory TempleInfoModel.fromFirestore(DocumentSnapshot doc) {
     final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
+
+    final List<FeaturedVideoItem> parsedVideos = [];
+    if (data['featuredVideos'] is List) {
+      for (final item in (data['featuredVideos'] as List)) {
+        if (item is Map) {
+          final v = FeaturedVideoItem.fromMap(Map<String, dynamic>.from(item));
+          if (v.videoUrl.isNotEmpty) {
+            parsedVideos.add(v);
+          }
+        }
+      }
+    }
+    // Fallback for single video legacy config if array is empty
+    if (parsedVideos.isEmpty && (data['featuredVideoUrl']?.toString().isNotEmpty ?? false)) {
+      parsedVideos.add(
+        FeaturedVideoItem(
+          id: 'default_video',
+          title: data['featuredVideoTitle']?.toString() ?? 'Abhishekam',
+          videoUrl: data['featuredVideoUrl'].toString(),
+        ),
+      );
+    }
+
     return TempleInfoModel(
       name: data['name'] ?? '',
       description: data['description'] ?? '',
@@ -397,6 +454,7 @@ class TempleInfoModel {
       scrollingAnnouncement: data['scrollingAnnouncement'],
       featuredVideoUrl: data['featuredVideoUrl'],
       featuredVideoTitle: data['featuredVideoTitle'],
+      featuredVideos: parsedVideos,
     );
   }
 

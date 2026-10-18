@@ -278,7 +278,7 @@ class ProfileScreen extends StatelessWidget {
           // App Footer
           const Center(
             child: Text(
-              'Palgutta Ashramam • Version 1.0.9 (13)',
+              'Palgutta Ashramam • Version 1.0.9 (14)',
               style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
             ),
           ),

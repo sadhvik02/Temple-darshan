@@ -87,8 +87,17 @@ export default function TempleInfoPage() {
     setSaving(true);
 
     try {
-      await updateTempleInfo(formData);
-      setSuccessMsg("Temple information updated successfully!");
+      // Exclude mobile controls and announcements managed exclusively from NewsPage
+      const {
+        isDarshanEnabled,
+        scrollingAnnouncement,
+        featuredVideoUrl,
+        featuredVideoTitle,
+        ...canonicalData
+      } = formData as any;
+
+      await updateTempleInfo(canonicalData);
+      setSuccessMsg("Temple profile updated successfully!");
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       console.error("Error saving temple info:", err);
@@ -300,97 +309,6 @@ export default function TempleInfoPage() {
               </div>
             </div>
 
-            {/* 5. Mobile App Feature Controls & Announcements */}
-            <div className="form-section">
-              <h3>
-                <span>📱</span> Mobile App Feature Controls &amp; Announcements
-              </h3>
-              
-              {/* Darshan Master Toggle */}
-              <div
-                style={{
-                  background: formData.isDarshanEnabled ? "#f0fdf4" : "#fef2f2",
-                  border: `1.5px solid ${formData.isDarshanEnabled ? "#86efac" : "#fca5a5"}`,
-                  borderRadius: "12px",
-                  padding: "16px 18px",
-                  marginBottom: "20px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "16px",
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "1.2rem" }}>{formData.isDarshanEnabled ? "🟢" : "🔴"}</span>
-                    <strong style={{ fontSize: "1rem", color: formData.isDarshanEnabled ? "#15803d" : "#b91c1c" }}>
-                      Darshan Feature: {formData.isDarshanEnabled ? "ENABLED (Visible in App)" : "DISABLED (Hidden in App)"}
-                    </strong>
-                  </div>
-                  <p style={{ margin: "4px 0 0 0", fontSize: "0.84rem", color: "#475569", lineHeight: "1.4" }}>
-                    {formData.isDarshanEnabled
-                      ? "Devotees can view Darshan catalog, check darshan timings, and book darshan tokens from the mobile app."
-                      : "Darshan is completely hidden from devotee mobile app (grid & navigation). Ashram Seva will be prioritized."}
-                  </p>
-                </div>
-                <label className="toggle-switch" style={{ flexShrink: 0, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={!!formData.isDarshanEnabled}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, isDarshanEnabled: e.target.checked }))}
-                    style={{ width: "20px", height: "20px", cursor: "pointer", accentColor: "#059669" }}
-                  />
-                  <span style={{ marginLeft: "8px", fontWeight: "700", fontSize: "0.9rem", color: "#0f172a" }}>
-                    {formData.isDarshanEnabled ? "Active" : "Off"}
-                  </span>
-                </label>
-              </div>
-
-              <div className="form-grid">
-                {/* Scrolling Announcement Marquee Text */}
-                <div className="form-group span-full">
-                  <label>
-                    <span>📢</span> Scrolling Announcement Ticker (Continuous Marquee Text)
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={formData.scrollingAnnouncement || ""}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, scrollingAnnouncement: e.target.value }))}
-                    placeholder="e.g., 🪔 Dussera Brahmotsavams starting tomorrow. Sacred Abhishekam timings: 6:00 AM to 11:00 AM. Devotees are cordially invited for Anna Prasadam."
-                  />
-                  <span className="form-help">
-                    This text scrolls continuously across devotee screens right under the main header on both iOS and Android. Leave empty to use published news items.
-                  </span>
-                </div>
-
-                {/* Dedicated Ashram Video URL */}
-                <div className="form-group span-full">
-                  <label>
-                    <span>🎥</span> Dedicated Ashram Video (YouTube or MP4 URL)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.featuredVideoUrl || ""}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, featuredVideoUrl: e.target.value }))}
-                    placeholder="https://www.youtube.com/watch?v=... or https://.../video.mp4"
-                  />
-                  <span className="form-help">
-                    When provided, a dedicated video card appears on the mobile home screen below the announcement ticker. If empty, the video section stays completely hidden.
-                  </span>
-                </div>
-
-                <div className="form-group span-full">
-                  <label>Video Title / Description</label>
-                  <input
-                    type="text"
-                    value={formData.featuredVideoTitle || ""}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, featuredVideoTitle: e.target.value }))}
-                    placeholder="e.g., Palgutta Ashramam Daily Satsang & Divine Darshan"
-                  />
-                </div>
-              </div>
-            </div>
-
             <div className="form-actions">
               <button type="submit" className="btn btn-primary" disabled={saving}>
                 {saving ? (
@@ -470,54 +388,6 @@ export default function TempleInfoPage() {
                 }}
               >
                 🛕
-              </div>
-            )}
-
-            {/* Live Ticker Preview */}
-            {formData.scrollingAnnouncement && (
-              <div
-                style={{
-                  background: "#fff7ed",
-                  border: "1px solid #fed7aa",
-                  borderRadius: "8px",
-                  padding: "8px 10px",
-                  marginBottom: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  fontSize: "0.76rem",
-                  color: "#c2410c",
-                  overflow: "hidden",
-                }}
-              >
-                <span>📢</span>
-                <span style={{ fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {formData.scrollingAnnouncement}
-                </span>
-              </div>
-            )}
-
-            {/* Dedicated Video Section Preview */}
-            {formData.featuredVideoUrl && (
-              <div
-                style={{
-                  background: "#0f172a",
-                  color: "white",
-                  borderRadius: "8px",
-                  padding: "10px 12px",
-                  marginBottom: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                }}
-              >
-                <span style={{ fontSize: "1.2rem" }}>▶️</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "0.78rem", fontWeight: "800", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {formData.featuredVideoTitle || "Ashram Featured Video"}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Ready for iOS &amp; Android playback</div>
-                </div>
               </div>
             )}
 
