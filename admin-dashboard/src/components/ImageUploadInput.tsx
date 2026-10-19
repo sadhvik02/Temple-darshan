@@ -23,14 +23,73 @@ interface ImageUploadInputProps {
  * Compresses an image in-memory using an HTML5 canvas in ~50ms.
  * Produces a crisp, lightweight JPEG (~30KB-60KB) that saves instantly into Firestore
  * and renders with zero lag on both Web and Flutter mobile app.
+ * If uploading for banners and the image is vertical/portrait, auto-formats it into a
+ * standard 1200x630 banner with ambient blurred wings so the subject is 100% visible and centered!
  */
-function compressImage(file: File, maxWidth = 800, quality = 0.78): Promise<string> {
+function compressImage(
+  file: File,
+  maxWidth = 800,
+  quality = 0.78,
+  isBanner = false
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
         let { width, height } = img;
+
+        if (isBanner) {
+          const targetW = 1200;
+          const targetH = 630;
+          const imgAspect = width / height;
+
+          // If the image is vertical or square (aspect ratio significantly less than wide banner)
+          if (imgAspect < 1.45) {
+            const canvas = document.createElement("canvas");
+            canvas.width = targetW;
+            canvas.height = targetH;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              resolve(e.target?.result as string);
+              return;
+            }
+
+            // 1. Draw blurred ambient cover background
+            const coverScale = Math.max(targetW / width, targetH / height);
+            const coverW = width * coverScale;
+            const coverH = height * coverScale;
+            const coverX = (targetW - coverW) / 2;
+            const coverY = (targetH - coverH) / 2;
+
+            ctx.save();
+            ctx.filter = "blur(24px) brightness(0.65)";
+            ctx.drawImage(img, coverX - 30, coverY - 30, coverW + 60, coverH + 60);
+            ctx.restore();
+
+            // 2. Soft dark overlay
+            ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+            ctx.fillRect(0, 0, targetW, targetH);
+
+            // 3. Draw foreground image centered and contained
+            const containScale = Math.min(targetW / width, targetH / height);
+            const containW = width * containScale;
+            const containH = height * containScale;
+            const containX = (targetW - containW) / 2;
+            const containY = (targetH - containH) / 2;
+
+            ctx.save();
+            ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
+            ctx.shadowBlur = 16;
+            ctx.drawImage(img, containX, containY, containW, containH);
+            ctx.restore();
+
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+            resolve(dataUrl);
+            return;
+          }
+        }
+
         if (width > maxWidth) {
           height = Math.round((height * maxWidth) / width);
           width = maxWidth;
@@ -94,8 +153,13 @@ export default function ImageUploadInput({
     setUploadNotice(null);
 
     try {
-      // 1. Instantly compress image in browser (<100ms)
-      const compressedDataUrl = await compressImage(file);
+      // 1. Instantly compress image in browser (<100ms) - auto-formats vertical photos for banners
+      const compressedDataUrl = await compressImage(
+        file,
+        folder === "banners" ? 1200 : 800,
+        0.82,
+        folder === "banners"
+      );
 
       // Immediately set the image so user gets instant preview without waiting!
       onChange(compressedDataUrl);
