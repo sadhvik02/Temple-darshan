@@ -85,7 +85,8 @@ export interface TempleInfo {
     morning: string;
     evening: string;
   };
-  imageUrl?: string; // Optional in schema
+  imageUrl?: string; // Optional in schema (primary cover)
+  images?: string[]; // Multiple temple photos displayed as swipeable carousel on mobile app
   isDarshanEnabled?: boolean; // Master toggle for Darshan module across mobile app
   scrollingAnnouncement?: string; // Marquee announcement text scrolling across mobile app
   featuredVideos?: FeaturedVideo[]; // Multiple sacred videos sliding on mobile app

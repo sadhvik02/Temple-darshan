@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/models.dart';
@@ -15,6 +16,48 @@ class TempleInfoScreen extends StatefulWidget {
 }
 
 class _TempleInfoScreenState extends State<TempleInfoScreen> {
+  late final PageController _imagePageController;
+  int _currentImageIndex = 0;
+  Timer? _autoSlideTimer;
+  int _lastImageCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _imagePageController = PageController();
+  }
+
+  void _setupAutoSlide(int imageCount) {
+    if (imageCount <= 1) {
+      _autoSlideTimer?.cancel();
+      _autoSlideTimer = null;
+      return;
+    }
+    if (_autoSlideTimer != null && _lastImageCount == imageCount) {
+      return;
+    }
+    _lastImageCount = imageCount;
+    _autoSlideTimer?.cancel();
+    _autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (!mounted || !_imagePageController.hasClients) return;
+      int next = _currentImageIndex + 1;
+      if (next >= imageCount) {
+        next = 0;
+      }
+      _imagePageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoSlideTimer?.cancel();
+    _imagePageController.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -91,36 +134,81 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
     );
   }
 
-  // 1. Permanently Sticky Shiva Photo Hero Header
+  List<String> _getTempleGalleryImages(TempleInfoModel info) {
+    final List<String> list = [];
+    if (info.images.isNotEmpty) {
+      for (final img in info.images) {
+        if (img.trim().isNotEmpty && !list.contains(img.trim())) {
+          list.add(img.trim());
+        }
+      }
+    } else if (info.imageUrl != null && info.imageUrl!.trim().isNotEmpty) {
+      list.add(info.imageUrl!.trim());
+    }
+
+    const String defaultMandir = '/darshan_general.jpg';
+    const String defaultGuruji = 'https://temple-darshan-app-d1719.web.app/guruji.png';
+
+    if (list.isEmpty) {
+      list.add(defaultMandir);
+      list.add(defaultGuruji);
+    } else if (list.length == 1) {
+      if (!list.contains(defaultGuruji)) {
+        list.add(defaultGuruji);
+      } else {
+        list.add(defaultMandir);
+      }
+    }
+    return list;
+  }
+
+  // 1. Permanently Sticky Multi-Image Scrollable Hero Header
   Widget _buildStickyHeroHeader(TempleInfoModel info) {
+    final galleryImages = _getTempleGalleryImages(info);
+    _setupAutoSlide(galleryImages.length);
+
     return SizedBox(
-      height: 250,
+      height: 255,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          CustomImage(
-            imageUrl: info.imageUrl,
-            fit: BoxFit.cover,
-            fallbackIcon: Icons.temple_hindu,
+          // 1. Swipeable / Scrollable Horizontal PageView of Temple Photos
+          PageView.builder(
+            controller: _imagePageController,
+            itemCount: galleryImages.length,
+            onPageChanged: (idx) {
+              setState(() => _currentImageIndex = idx);
+            },
+            itemBuilder: (context, index) {
+              return CustomImage(
+                imageUrl: galleryImages[index],
+                fit: BoxFit.cover,
+                fallbackIcon: Icons.temple_hindu,
+              );
+            },
           ),
-          // Multi-stop devotional gradient
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.black.withValues(alpha: 0.5),
-                  Colors.transparent,
-                  Colors.black.withValues(alpha: 0.7),
-                  const Color(0xFF1E1005).withValues(alpha: 0.95),
-                ],
-                stops: const [0.0, 0.35, 0.7, 1.0],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+
+          // 2. Multi-stop Devotional Gradient (Ignored for gestures so user can swipe anywhere)
+          IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withValues(alpha: 0.55),
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.65),
+                    const Color(0xFF1E1005).withValues(alpha: 0.95),
+                  ],
+                  stops: const [0.0, 0.3, 0.65, 1.0],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
           ),
-          // Back Button
+
+          // 3. Back Button
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 12,
@@ -134,72 +222,133 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
               ),
             ),
           ),
-          // Title & Subtitle on Hero Image
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF6F00).withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.auto_awesome, color: Colors.white, size: 12),
-                      SizedBox(width: 4),
-                      Text(
-                        'Sacred Sanctum & Ashramam',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
-                  ),
+
+          // 4. Photo Count Pill Badge (e.g., 📸 1 / 3) in Top Right
+          if (galleryImages.length > 1)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 10,
+              right: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 1)),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  info.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.3,
-                    height: 1.2,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black87,
-                        blurRadius: 10,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 3),
-                const Row(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.self_improvement_rounded, color: Color(0xFFFFD54F), size: 15),
-                    SizedBox(width: 6),
+                    const Icon(Icons.photo_library_rounded, size: 12, color: Colors.white),
+                    const SizedBox(width: 5),
                     Text(
-                      'Guided by Kedarananda Maharaj',
-                      style: TextStyle(
-                        color: Color(0xFFFFE082),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                      '${_currentImageIndex + 1} / ${galleryImages.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ],
                 ),
-              ],
+              ),
+            ),
+
+          // 5. Title & Subtitle on Hero Image with Pagination Dots
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 16,
+            child: IgnorePointer(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF6F00).withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.auto_awesome, color: Colors.white, size: 12),
+                            SizedBox(width: 4),
+                            Text(
+                              'Sacred Sanctum & Ashramam',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Smooth Pagination Indicator Dots
+                      if (galleryImages.length > 1)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: List.generate(galleryImages.length, (idx) {
+                            final isSel = _currentImageIndex == idx;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                              width: isSel ? 18 : 6,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: isSel ? const Color(0xFFFFB300) : Colors.white.withValues(alpha: 0.45),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            );
+                          }),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    info.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.3,
+                      height: 1.2,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black87,
+                          blurRadius: 10,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  const Row(
+                    children: [
+                      Icon(Icons.self_improvement_rounded, color: Color(0xFFFFD54F), size: 15),
+                      SizedBox(width: 6),
+                      Text(
+                        'Guided by Kedarananda Maharaj',
+                        style: TextStyle(
+                          color: Color(0xFFFFE082),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],

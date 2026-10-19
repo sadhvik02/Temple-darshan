@@ -393,6 +393,7 @@ class TempleInfoModel {
   final String? featuredVideoUrl;
   final String? featuredVideoTitle;
   final List<FeaturedVideoItem> featuredVideos;
+  final List<String> images;
 
   TempleInfoModel({
     required this.name,
@@ -411,6 +412,7 @@ class TempleInfoModel {
     this.featuredVideoUrl,
     this.featuredVideoTitle,
     this.featuredVideos = const [],
+    this.images = const [],
   });
 
   factory TempleInfoModel.fromFirestore(DocumentSnapshot doc) {
@@ -438,6 +440,18 @@ class TempleInfoModel {
       );
     }
 
+    final List<String> parsedImages = [];
+    if (data['images'] is List) {
+      for (final img in (data['images'] as List)) {
+        if (img != null && img.toString().trim().isNotEmpty) {
+          parsedImages.add(img.toString().trim());
+        }
+      }
+    }
+    if (parsedImages.isEmpty && (data['imageUrl']?.toString().trim().isNotEmpty ?? false)) {
+      parsedImages.add(data['imageUrl'].toString().trim());
+    }
+
     return TempleInfoModel(
       name: data['name'] ?? '',
       description: data['description'] ?? '',
@@ -455,6 +469,7 @@ class TempleInfoModel {
       featuredVideoUrl: data['featuredVideoUrl'],
       featuredVideoTitle: data['featuredVideoTitle'],
       featuredVideos: parsedVideos,
+      images: parsedImages,
     );
   }
 
