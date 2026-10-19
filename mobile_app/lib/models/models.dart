@@ -51,12 +51,9 @@ class BannerModel {
     double vAlign = 0.0;
     if (data['verticalAlignment'] != null) {
       final num raw = data['verticalAlignment'] as num;
-      if (raw > 1.0 || raw < -1.0) {
-        // Percentage 0..100 -> map to -1.0..1.0 (0=top, 50=center, 100=bottom)
-        vAlign = ((raw.toDouble() - 50.0) / 50.0).clamp(-1.0, 1.0);
-      } else {
-        vAlign = raw.toDouble().clamp(-1.0, 1.0);
-      }
+      // Dashboard stores 0 (top) to 100 (bottom)
+      // Flutter Alignment Y: -1.0 (top) to 1.0 (bottom)
+      vAlign = ((raw.toDouble() - 50.0) / 50.0).clamp(-1.0, 1.0);
     }
 
     return BannerModel(
