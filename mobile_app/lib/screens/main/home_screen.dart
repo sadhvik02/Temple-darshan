@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/models.dart';
@@ -782,7 +781,7 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
     return Column(
       children: [
         Container(
-          height: 215,
+          height: 195,
           margin: const EdgeInsets.symmetric(horizontal: 16),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
@@ -804,30 +803,12 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // 1. Ambient blurred background filling the banner
-                      ImageFiltered(
-                        imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                        child: CustomImage(
-                          imageUrl: banner.imageUrl,
-                          fit: BoxFit.cover,
-                          alignment: Alignment.center,
-                          fallbackIcon: Icons.temple_hindu,
-                        ),
-                      ),
-
-                      // 2. Soft darkening overlay for contrast
-                      Container(
-                        color: Colors.black.withValues(alpha: 0.28),
-                      ),
-
-                      // 3. Foreground: The full photo, perfectly centered, showing Swamiji and the flag completely without cropping
-                      Center(
-                        child: CustomImage(
-                          imageUrl: banner.imageUrl,
-                          fit: BoxFit.contain,
-                          alignment: Alignment.center,
-                          fallbackIcon: Icons.temple_hindu,
-                        ),
+                      // Full horizontal view edge-to-edge cover, perfectly centered
+                      CustomImage(
+                        imageUrl: banner.imageUrl,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                        fallbackIcon: Icons.temple_hindu,
                       ),
 
                       // Gradient overlay for title readability (only at bottom)
