@@ -781,7 +781,7 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
     return Column(
       children: [
         Container(
-          height: 195,
+          height: 215,
           margin: const EdgeInsets.symmetric(horizontal: 16),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
@@ -807,6 +807,7 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
                       CustomImage(
                         imageUrl: banner.imageUrl,
                         fit: BoxFit.cover,
+                        alignment: Alignment.topCenter,
                         fallbackIcon: Icons.temple_hindu,
                       ),
 

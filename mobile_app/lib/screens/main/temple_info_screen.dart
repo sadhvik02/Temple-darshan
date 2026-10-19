@@ -139,12 +139,71 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
     return list;
   }
 
+  void _openFullscreenPhoto(BuildContext context, List<String> images, int initialIndex) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        barrierColor: Colors.black.withValues(alpha: 0.95),
+        pageBuilder: (context, animation, secondaryAnimation) {
+          final PageController modalCtrl = PageController(initialPage: initialIndex);
+          int modalIndex = initialIndex;
+          return StatefulBuilder(
+            builder: (context, setModalState) {
+              return Scaffold(
+                backgroundColor: Colors.transparent,
+                appBar: AppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  leading: IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  title: Text(
+                    '${modalIndex + 1} / ${images.length}',
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  centerTitle: true,
+                ),
+                body: PageView.builder(
+                  controller: modalCtrl,
+                  itemCount: images.length,
+                  physics: const BouncingScrollPhysics(),
+                  onPageChanged: (idx) {
+                    setModalState(() => modalIndex = idx);
+                    _currentImageNotifier.value = idx;
+                    if (_imagePageController.hasClients) {
+                      _imagePageController.jumpToPage(idx);
+                    }
+                  },
+                  itemBuilder: (context, idx) {
+                    return InteractiveViewer(
+                      minScale: 0.8,
+                      maxScale: 4.0,
+                      child: Center(
+                        child: CustomImage(
+                          imageUrl: images[idx],
+                          fit: BoxFit.contain,
+                          fallbackIcon: Icons.temple_hindu,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
   // 1. Permanently Sticky Multi-Image Scrollable Hero Header
   Widget _buildStickyHeroHeader(TempleInfoModel info) {
     final galleryImages = _getTempleGalleryImages(info);
 
     return SizedBox(
-      height: 255,
+      height: 315,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
@@ -158,10 +217,15 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
               _currentImageNotifier.value = idx;
             },
             itemBuilder: (context, index) {
-              return CustomImage(
-                imageUrl: galleryImages[index],
-                fit: BoxFit.cover,
-                fallbackIcon: Icons.temple_hindu,
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _openFullscreenPhoto(context, galleryImages, index),
+                child: CustomImage(
+                  imageUrl: galleryImages[index],
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                  fallbackIcon: Icons.temple_hindu,
+                ),
               );
             },
           ),
@@ -172,12 +236,12 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.black.withValues(alpha: 0.55),
+                    Colors.black.withValues(alpha: 0.35),
                     Colors.transparent,
-                    Colors.black.withValues(alpha: 0.65),
+                    Colors.black.withValues(alpha: 0.50),
                     const Color(0xFF1E1005).withValues(alpha: 0.95),
                   ],
-                  stops: const [0.0, 0.3, 0.65, 1.0],
+                  stops: const [0.0, 0.25, 0.70, 1.0],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
