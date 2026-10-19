@@ -99,6 +99,7 @@ export interface TempleInfo {
 export interface Banner {
   id?: string; // Document ID (added for client-side use)
   title: string;
+  description?: string; // Optional: detailed subtitle/description shown on banner
   imageUrl: string;
   videoUrl?: string; // Optional: direct MP4, MOV, or YouTube link
   isActive: boolean;

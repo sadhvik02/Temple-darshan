@@ -27,6 +27,7 @@ class UserModel {
 class BannerModel {
   final String id;
   final String title;
+  final String? description;
   final String imageUrl;
   final String? videoUrl;
   final String? actionUrl;
@@ -36,6 +37,7 @@ class BannerModel {
   BannerModel({
     required this.id,
     required this.title,
+    this.description,
     required this.imageUrl,
     this.videoUrl,
     this.actionUrl,
@@ -47,6 +49,7 @@ class BannerModel {
     final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
     final String img = data['imageUrl'] ?? '';
     final String? vid = data['videoUrl'];
+    final rawDesc = data['description']?.toString().trim();
 
     double vAlign = 0.0;
     if (data['verticalAlignment'] != null) {
@@ -59,6 +62,7 @@ class BannerModel {
     return BannerModel(
       id: doc.id,
       title: data['title'] ?? '',
+      description: (rawDesc != null && rawDesc.isNotEmpty) ? rawDesc : null,
       imageUrl: img,
       videoUrl: (vid != null && vid.isNotEmpty) ? vid : null,
       actionUrl: data['actionUrl'],

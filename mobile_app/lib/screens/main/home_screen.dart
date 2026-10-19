@@ -812,19 +812,19 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
                           fallbackIcon: Icons.temple_hindu,
                         ),
 
-                      // Gradient overlay for title readability (only at bottom)
+                      // Gradient overlay for title & description readability (only at bottom)
                       Positioned(
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        height: 70,
+                        height: (banner.description != null && banner.description!.isNotEmpty) ? 88 : 70,
                         child: IgnorePointer(
                           child: Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
                                   Colors.transparent,
-                                  Colors.black.withValues(alpha: 0.85),
+                                  Colors.black.withValues(alpha: 0.88),
                                 ],
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
@@ -834,24 +834,48 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
                         ),
                       ),
 
-                      if (banner.title.isNotEmpty)
+                      if (banner.title.isNotEmpty || (banner.description != null && banner.description!.isNotEmpty))
                         Positioned(
                           left: 18,
                           right: 18,
                           bottom: 12,
                           child: IgnorePointer(
-                            child: Text(
-                              banner.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                shadows: [
-                                  Shadow(color: Colors.black87, blurRadius: 6),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (banner.title.isNotEmpty)
+                                  Text(
+                                    banner.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      shadows: [
+                                        Shadow(color: Colors.black87, blurRadius: 6),
+                                      ],
+                                    ),
+                                  ),
+                                if (banner.description != null && banner.description!.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    banner.description!,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.92),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.25,
+                                      shadows: const [
+                                        Shadow(color: Colors.black87, blurRadius: 4),
+                                      ],
+                                    ),
+                                  ),
                                 ],
-                              ),
+                              ],
                             ),
                           ),
                         ),

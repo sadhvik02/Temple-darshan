@@ -21,6 +21,7 @@ export default function BannersPage() {
   // Form Data
   const [formData, setFormData] = useState({
     title: "",
+    description: "",
     imageUrl: "",
     videoUrl: "",
     isActive: true,
@@ -51,6 +52,7 @@ export default function BannersPage() {
       setEditingId(banner.id!);
       setFormData({
         title: banner.title,
+        description: banner.description || "",
         imageUrl: banner.imageUrl,
         videoUrl: banner.videoUrl || "",
         isActive: banner.isActive,
@@ -62,6 +64,7 @@ export default function BannersPage() {
       setEditingId(null);
       setFormData({
         title: "",
+        description: "",
         imageUrl: "",
         videoUrl: "",
         isActive: true,
@@ -296,21 +299,37 @@ export default function BannersPage() {
                   </span>
                 </div>
 
-                {/* Bottom Title */}
-                {banner.title && (
+                {/* Bottom Title & Description */}
+                {(banner.title || banner.description) && (
                   <div
                     style={{
                       position: "absolute",
-                      bottom: "12px",
+                      bottom: "10px",
                       left: "14px",
                       right: "14px",
                       color: "#fff",
-                      fontWeight: "800",
-                      fontSize: "1rem",
-                      textShadow: "0 2px 4px rgba(0,0,0,0.8)",
+                      textShadow: "0 2px 4px rgba(0,0,0,0.85)",
                     }}
                   >
-                    {banner.title}
+                    {banner.title && (
+                      <div style={{ fontWeight: "800", fontSize: "0.95rem", lineHeight: 1.25 }}>
+                        {banner.title}
+                      </div>
+                    )}
+                    {banner.description && (
+                      <div
+                        style={{
+                          fontSize: "0.78rem",
+                          color: "rgba(255,255,255,0.88)",
+                          marginTop: "3px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {banner.description}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -374,7 +393,14 @@ export default function BannersPage() {
                         <div className="table-img-placeholder">No Image</div>
                       )}
                     </td>
-                    <td style={{ fontWeight: "700", color: "#0f172a" }}>{banner.title || "Untitled Banner"}</td>
+                    <td>
+                      <div style={{ fontWeight: "700", color: "#0f172a" }}>{banner.title || "Untitled Banner"}</div>
+                      {banner.description && (
+                        <div style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", marginTop: "2px" }}>
+                          {banner.description}
+                        </div>
+                      )}
+                    </td>
                     <td>
                       <span className="ref-code">#{banner.displayOrder}</span>
                     </td>
@@ -421,6 +447,19 @@ export default function BannersPage() {
                     onChange={(e) => handleInputChange("title", e.target.value)}
                     placeholder="e.g., Annual Brahmotsavam 2026"
                   />
+                </div>
+
+                <div className="form-group">
+                  <label>Banner Description (Optional)</label>
+                  <input
+                    type="text"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange("description", e.target.value)}
+                    placeholder="e.g., Daily Special Darshans, Annadanam & Swamiji Blessings"
+                  />
+                  <small style={{ color: "var(--color-text-secondary)", fontSize: "0.82rem", marginTop: "4px", display: "block" }}>
+                    Devotees will see this subtitle displayed beneath the banner title on the app homepage.
+                  </small>
                 </div>
 
                 <ImageUploadInput
