@@ -291,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     !BannerVideoPlayer.isVideoUrl(img) &&
                     !img.toLowerCase().contains('youtube') &&
                     !img.toLowerCase().contains('youtu.be') &&
-                    (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('/'))) {
+                    (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('/') || img.startsWith('data:image'))) {
                   imageOnlyBanners.add(b);
                 }
               }
@@ -781,35 +781,36 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
     return Column(
       children: [
         Container(
-          height: 210,
           margin: const EdgeInsets.symmetric(horizontal: 16),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: widget.banners.length,
-              onPageChanged: (index) {
-                setState(() => _currentPage = index);
-              },
-              itemBuilder: (context, index) {
-                final banner = widget.banners[index];
-                final String? rawVideo = (banner.videoUrl != null && banner.videoUrl!.isNotEmpty)
-                    ? banner.videoUrl
-                    : (BannerVideoPlayer.isVideoUrl(banner.imageUrl) ? banner.imageUrl : null);
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: widget.banners.length,
+                onPageChanged: (index) {
+                  setState(() => _currentPage = index);
+                },
+                itemBuilder: (context, index) {
+                  final banner = widget.banners[index];
+                  final String? rawVideo = (banner.videoUrl != null && banner.videoUrl!.isNotEmpty)
+                      ? banner.videoUrl
+                      : (BannerVideoPlayer.isVideoUrl(banner.imageUrl) ? banner.imageUrl : null);
 
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _handleBannerTap(banner, rawVideo),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Full horizontal view edge-to-edge cover, perfectly centered
-                      CustomImage(
-                        imageUrl: banner.imageUrl,
-                        fit: BoxFit.cover,
-                        alignment: Alignment.center,
-                        fallbackIcon: Icons.temple_hindu,
-                      ),
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _handleBannerTap(banner, rawVideo),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Full horizontal view edge-to-edge cover, framed to banner's verticalAlignment
+                        CustomImage(
+                          imageUrl: banner.imageUrl,
+                          fit: BoxFit.cover,
+                          alignment: Alignment(0.0, banner.verticalAlignment),
+                          fallbackIcon: Icons.temple_hindu,
+                        ),
 
                       // Gradient overlay for title readability (only at bottom)
                       Positioned(
@@ -861,7 +862,8 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
             ),
           ),
         ),
-        if (widget.banners.length > 1) ...[
+      ),
+      if (widget.banners.length > 1) ...[
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

@@ -18,6 +18,9 @@ interface ImageUploadInputProps {
   placeholder?: string;
   presets?: PresetImage[];
   helperText?: string;
+  verticalAlignment?: number;
+  onFramingChange?: (offsetY: number) => void;
+  onSaveDirect?: (croppedUrl: string, offsetY: number) => Promise<void>;
 }
 
 /**
@@ -69,6 +72,9 @@ export default function ImageUploadInput({
   placeholder = "Paste direct image URL or /path.jpg",
   presets = [],
   helperText,
+  verticalAlignment = 50,
+  onFramingChange,
+  onSaveDirect,
 }: ImageUploadInputProps) {
   const [mode, setMode] = useState<"file" | "url">("file");
   const [isUploading, setIsUploading] = useState(false);
@@ -78,19 +84,37 @@ export default function ImageUploadInput({
   const [showCropModal, setShowCropModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleCroppedApply = async (croppedDataUrl: string) => {
+  const handleCroppedApply = async (croppedDataUrl: string, offsetY: number) => {
+    let finalUrl = croppedDataUrl;
+
+    if (onFramingChange) {
+      onFramingChange(offsetY);
+    }
+
     onChange(croppedDataUrl);
+
     try {
-      const storagePath = `${folder}/${Date.now()}_cropped_banner.jpg`;
-      const storageRef = ref(storage, storagePath);
-      const res = await fetch(croppedDataUrl);
-      const blob = await res.blob();
-      const uploadTask = uploadBytes(storageRef, blob, { contentType: "image/jpeg" });
-      const snap = await uploadTask;
-      const cloudUrl = await getDownloadURL(snap.ref);
-      onChange(cloudUrl);
+      if (croppedDataUrl.startsWith("data:")) {
+        const storagePath = `${folder}/${Date.now()}_framed_16_9.jpg`;
+        const storageRef = ref(storage, storagePath);
+        const res = await fetch(croppedDataUrl);
+        const blob = await res.blob();
+        const uploadTask = uploadBytes(storageRef, blob, { contentType: "image/jpeg" });
+        const snap = await uploadTask;
+        const cloudUrl = await getDownloadURL(snap.ref);
+        finalUrl = cloudUrl;
+        onChange(cloudUrl);
+      }
     } catch (err) {
-      console.warn("Storage upload for cropped image:", err);
+      console.warn("Storage upload for cropped image fallback to data URL:", err);
+    }
+
+    if (onSaveDirect) {
+      try {
+        await onSaveDirect(finalUrl, offsetY);
+      } catch (saveErr) {
+        console.error("Direct save after cropping failed:", saveErr);
+      }
     }
   };
 
@@ -541,6 +565,7 @@ export default function ImageUploadInput({
       <ImageCropModal
         isOpen={showCropModal}
         imageUrl={value}
+        initialOffsetY={verticalAlignment}
         aspectRatio={16 / 9}
         onApply={handleCroppedApply}
         onClose={() => setShowCropModal(false)}

@@ -26,6 +26,7 @@ export default function BannersPage() {
     isActive: true,
     displayOrder: 1,
     actionUrl: "",
+    verticalAlignment: 50,
   });
 
   const loadBanners = async () => {
@@ -55,6 +56,7 @@ export default function BannersPage() {
         isActive: banner.isActive,
         displayOrder: banner.displayOrder,
         actionUrl: banner.actionUrl || "",
+        verticalAlignment: banner.verticalAlignment ?? 50,
       });
     } else {
       setEditingId(null);
@@ -65,6 +67,7 @@ export default function BannersPage() {
         isActive: true,
         displayOrder: banners.length > 0 ? banners[banners.length - 1].displayOrder + 1 : 1,
         actionUrl: "",
+        verticalAlignment: 50,
       });
     }
     setIsModalOpen(true);
@@ -77,6 +80,29 @@ export default function BannersPage() {
 
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleDirectCropSave = async (croppedUrl: string, offsetY: number) => {
+    const updatedData = {
+      ...formData,
+      imageUrl: croppedUrl,
+      verticalAlignment: offsetY,
+    };
+    setFormData(updatedData);
+
+    // If editing an existing banner, persist to Firestore immediately!
+    if (editingId) {
+      setSaving(true);
+      try {
+        await updateBanner(editingId, updatedData);
+        await loadBanners();
+        handleCloseModal();
+      } catch (err) {
+        console.error("Error direct saving banner after cropping:", err);
+      } finally {
+        setSaving(false);
+      }
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -227,7 +253,7 @@ export default function BannersPage() {
                   position: "relative",
                   backgroundImage: `url(${banner.imageUrl})`,
                   backgroundSize: "cover",
-                  backgroundPosition: "center",
+                  backgroundPosition: `center ${banner.verticalAlignment ?? 50}%`,
                   backgroundColor: "#f1f5f9",
                 }}
               >
@@ -403,6 +429,9 @@ export default function BannersPage() {
                   folder="banners"
                   label="Banner Image *"
                   placeholder="https://... or choose from computer"
+                  verticalAlignment={formData.verticalAlignment}
+                  onFramingChange={(offset) => handleInputChange("verticalAlignment", offset)}
+                  onSaveDirect={handleDirectCropSave}
                   presets={[
                     { label: "🚩 Temple Hero", url: "/darshan_general.jpg" },
                     { label: "🪔 Sanctum Darshan", url: "/darshan_special.jpg" },

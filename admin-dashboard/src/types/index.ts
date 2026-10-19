@@ -104,6 +104,7 @@ export interface Banner {
   isActive: boolean;
   displayOrder: number;
   actionUrl?: string; // Optional in schema
+  verticalAlignment?: number; // 0 (top) to 100 (bottom) framing focus
   createdAt: any; // Firestore Timestamp
   updatedAt: any; // Firestore Timestamp
 }

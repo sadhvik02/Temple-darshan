@@ -3,90 +3,195 @@ import { useState, useEffect, useRef } from "react";
 interface ImageCropModalProps {
   isOpen: boolean;
   imageUrl: string;
-  onApply: (croppedDataUrl: string) => void;
+  initialOffsetY?: number;
+  initialZoom?: number;
+  onApply: (croppedDataUrl: string, offsetY: number) => Promise<void> | void;
   onClose: () => void;
   aspectRatio?: number; // width / height, defaults to 16 / 9
+}
+
+/**
+ * Loads an image into an HTMLImageElement in a way that allows canvas export
+ * without CORS tainted canvas security errors.
+ */
+async function loadImageForCanvas(src: string): Promise<{ img: HTMLImageElement; cleanup: () => void }> {
+  // If it's already a local data URL or blob URL, load directly
+  if (src.startsWith("data:") || src.startsWith("blob:")) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ img, cleanup: () => {} });
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+
+  // Strategy 1: Fetch as Blob with a unique cache-buster param to bypass non-CORS browser cache
+  try {
+    const bustUrl = src.includes("?")
+      ? `${src}&_cb=${Date.now()}`
+      : `${src}?_cb=${Date.now()}`;
+    const res = await fetch(bustUrl, { mode: "cors" });
+    if (res.ok) {
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve({ img, cleanup: () => URL.revokeObjectURL(blobUrl) });
+        img.onerror = (e) => {
+          URL.revokeObjectURL(blobUrl);
+          reject(e);
+        };
+        img.src = blobUrl;
+      });
+    }
+  } catch (err) {
+    console.warn("Direct blob fetch with CORS cache-bust failed, trying direct crossOrigin:", err);
+  }
+
+  // Strategy 2: Direct crossOrigin = "anonymous" with cache-buster
+  try {
+    const bustUrl = src.includes("?")
+      ? `${src}&_cb=${Date.now()}`
+      : `${src}?_cb=${Date.now()}`;
+    return await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve({ img, cleanup: () => {} });
+      img.onerror = reject;
+      img.src = bustUrl;
+    });
+  } catch (err) {
+    console.warn("Direct crossOrigin failed, trying CORS proxy fallback:", err);
+  }
+
+  // Strategy 3: Fast CORS proxy fallback
+  try {
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(src)}`;
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve({ img, cleanup: () => URL.revokeObjectURL(blobUrl) });
+        img.onerror = (e) => {
+          URL.revokeObjectURL(blobUrl);
+          reject(e);
+        };
+        img.src = blobUrl;
+      });
+    }
+  } catch (err) {
+    console.warn("Proxy fetch failed:", err);
+  }
+
+  // Final fallback: standard image load
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ img, cleanup: () => {} });
+    img.onerror = reject;
+    img.src = src;
+  });
 }
 
 export default function ImageCropModal({
   isOpen,
   imageUrl,
+  initialOffsetY = 50,
+  initialZoom = 1,
   onApply,
   onClose,
   aspectRatio = 16 / 9,
 }: ImageCropModalProps) {
-  const [offsetY, setOffsetY] = useState(50); // 0 = top, 50 = center, 100 = bottom
+  const [offsetY, setOffsetY] = useState(initialOffsetY); // 0 = top, 50 = center, 100 = bottom
   const [offsetX, setOffsetX] = useState(50);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(initialZoom);
   const [isApplying, setIsApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
     if (!isOpen || !imageUrl) return;
-    setOffsetY(50);
+    setOffsetY(initialOffsetY);
     setOffsetX(50);
-    setZoom(1);
-  }, [isOpen, imageUrl]);
+    setZoom(initialZoom);
+    setApplyError(null);
+  }, [isOpen, imageUrl, initialOffsetY, initialZoom]);
 
   if (!isOpen || !imageUrl) return null;
 
   const handleApply = async () => {
     setIsApplying(true);
+    setApplyError(null);
+    let cleanupFn: (() => void) | null = null;
+
     try {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        const W = img.naturalWidth;
-        const H = img.naturalHeight;
-        const imgAspect = W / H;
+      const { img, cleanup } = await loadImageForCanvas(imageUrl);
+      cleanupFn = cleanup;
 
-        const targetW = 1200;
-        const targetH = Math.round(targetW / aspectRatio); // 675 for 16:9
+      const W = img.naturalWidth || img.width;
+      const H = img.naturalHeight || img.height;
+      const imgAspect = W / H;
 
-        let sWidth: number;
-        let sHeight: number;
-        let sX = 0;
-        let sY = 0;
+      const targetW = 1200;
+      const targetH = Math.round(targetW / aspectRatio); // 675 for 16:9
 
-        if (imgAspect < aspectRatio) {
-          // Image is taller than 16:9 (portrait / 4:3)
-          sWidth = W / zoom;
-          sHeight = sWidth / aspectRatio;
-          const maxOffsetY = Math.max(0, H - sHeight);
-          sY = maxOffsetY * (offsetY / 100);
-          sX = (W - sWidth) * (offsetX / 100);
-        } else {
-          // Image is wider than 16:9
-          sHeight = H / zoom;
-          sWidth = sHeight * aspectRatio;
-          const maxOffsetX = Math.max(0, W - sWidth);
-          sX = maxOffsetX * (offsetX / 100);
-          sY = (H - sHeight) * (offsetY / 100);
-        }
+      let sWidth: number;
+      let sHeight: number;
+      let sX = 0;
+      let sY = 0;
 
-        const canvas = document.createElement("canvas");
-        canvas.width = targetW;
-        canvas.height = targetH;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          setIsApplying(false);
-          return;
-        }
+      if (imgAspect < aspectRatio) {
+        // Image is taller than 16:9 (portrait / 4:3)
+        sWidth = W / zoom;
+        sHeight = sWidth / aspectRatio;
+        const maxOffsetY = Math.max(0, H - sHeight);
+        sY = maxOffsetY * (offsetY / 100);
+        sX = (W - sWidth) * (offsetX / 100);
+      } else {
+        // Image is wider than 16:9
+        sHeight = H / zoom;
+        sWidth = sHeight * aspectRatio;
+        const maxOffsetX = Math.max(0, W - sWidth);
+        sX = maxOffsetX * (offsetX / 100);
+        sY = (H - sHeight) * (offsetY / 100);
+      }
 
-        // Draw cropped slice
-        ctx.drawImage(img, sX, sY, sWidth, sHeight, 0, 0, targetW, targetH);
-        const croppedDataUrl = canvas.toDataURL("image/jpeg", 0.9);
-        onApply(croppedDataUrl);
+      const canvas = document.createElement("canvas");
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("Could not initialize 2D canvas context");
+      }
+
+      // Draw cropped slice
+      ctx.drawImage(img, sX, sY, sWidth, sHeight, 0, 0, targetW, targetH);
+
+      let croppedDataUrl = imageUrl;
+      try {
+        croppedDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      } catch (taintErr) {
+        console.warn("Canvas export tainted, using original image with focal alignment:", taintErr);
+      }
+
+      // Apply crop and framing
+      await onApply(croppedDataUrl, offsetY);
+      setIsApplying(false);
+      onClose();
+    } catch (e: any) {
+      console.error("Error cropping image:", e);
+      // Fallback: apply framing offset even if canvas fails completely
+      try {
+        await onApply(imageUrl, offsetY);
         setIsApplying(false);
         onClose();
-      };
-      img.onerror = () => {
+      } catch (fallbackErr: any) {
+        setApplyError("Could not save cropped image: " + (fallbackErr?.message || e?.message || "Unknown error"));
         setIsApplying(false);
-      };
-      img.src = imageUrl;
-    } catch (e) {
-      console.error("Error cropping image:", e);
-      setIsApplying(false);
+      }
+    } finally {
+      if (cleanupFn) cleanupFn();
     }
   };
 
@@ -339,6 +444,27 @@ export default function ImageCropModal({
           </div>
         </div>
 
+        {/* Error notice if cropping fails */}
+        {applyError && (
+          <div
+            style={{
+              margin: "0 20px 10px 20px",
+              padding: "10px 14px",
+              background: "#fee2e2",
+              border: "1px solid #f87171",
+              borderRadius: "8px",
+              color: "#991b1b",
+              fontSize: "0.82rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <span>⚠️</span>
+            <span>{applyError}</span>
+          </div>
+        )}
+
         {/* Footer Actions */}
         <div
           style={{
@@ -354,6 +480,7 @@ export default function ImageCropModal({
             type="button"
             onClick={onClose}
             className="btn btn-secondary"
+            disabled={isApplying}
             style={{ padding: "8px 18px", fontSize: "0.9rem" }}
           >
             Cancel
@@ -363,9 +490,15 @@ export default function ImageCropModal({
             onClick={handleApply}
             disabled={isApplying}
             className="btn btn-primary"
-            style={{ padding: "8px 22px", fontSize: "0.9rem", fontWeight: "800" }}
+            style={{
+              padding: "8px 22px",
+              fontSize: "0.9rem",
+              fontWeight: "800",
+              background: isApplying ? "#d97706" : "#f59e0b",
+              borderColor: "#d97706",
+            }}
           >
-            {isApplying ? "Applying..." : "✂️ Apply & Save 16:9 Banner"}
+            {isApplying ? "⏳ Applying & Saving..." : "✂️ Apply & Save 16:9 Banner"}
           </button>
         </div>
       </div>

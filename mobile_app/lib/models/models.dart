@@ -31,6 +31,7 @@ class BannerModel {
   final String? videoUrl;
   final String? actionUrl;
   final int displayOrder;
+  final double verticalAlignment;
 
   BannerModel({
     required this.id,
@@ -39,12 +40,25 @@ class BannerModel {
     this.videoUrl,
     this.actionUrl,
     this.displayOrder = 0,
+    this.verticalAlignment = 0.0,
   });
 
   factory BannerModel.fromFirestore(DocumentSnapshot doc) {
     final Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
     final String img = data['imageUrl'] ?? '';
     final String? vid = data['videoUrl'];
+
+    double vAlign = 0.0;
+    if (data['verticalAlignment'] != null) {
+      final num raw = data['verticalAlignment'] as num;
+      if (raw > 1.0 || raw < -1.0) {
+        // Percentage 0..100 -> map to -1.0..1.0 (0=top, 50=center, 100=bottom)
+        vAlign = ((raw.toDouble() - 50.0) / 50.0).clamp(-1.0, 1.0);
+      } else {
+        vAlign = raw.toDouble().clamp(-1.0, 1.0);
+      }
+    }
+
     return BannerModel(
       id: doc.id,
       title: data['title'] ?? '',
@@ -52,6 +66,7 @@ class BannerModel {
       videoUrl: (vid != null && vid.isNotEmpty) ? vid : null,
       actionUrl: data['actionUrl'],
       displayOrder: (data['displayOrder'] as num?)?.toInt() ?? 0,
+      verticalAlignment: vAlign,
     );
   }
 }
