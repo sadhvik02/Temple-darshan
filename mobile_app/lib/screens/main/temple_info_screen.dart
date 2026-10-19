@@ -17,53 +17,30 @@ class TempleInfoScreen extends StatefulWidget {
 
 class _TempleInfoScreenState extends State<TempleInfoScreen> {
   late final PageController _imagePageController;
-  int _currentImageIndex = 0;
-  Timer? _autoSlideTimer;
-  int _lastImageCount = 0;
+  late final ValueNotifier<int> _currentImageNotifier;
+  late final Stream<TempleInfoModel?> _templeInfoStream;
 
   @override
   void initState() {
     super.initState();
     _imagePageController = PageController();
-  }
-
-  void _setupAutoSlide(int imageCount) {
-    if (imageCount <= 1) {
-      _autoSlideTimer?.cancel();
-      _autoSlideTimer = null;
-      return;
-    }
-    if (_autoSlideTimer != null && _lastImageCount == imageCount) {
-      return;
-    }
-    _lastImageCount = imageCount;
-    _autoSlideTimer?.cancel();
-    _autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (!mounted || !_imagePageController.hasClients) return;
-      int next = _currentImageIndex + 1;
-      if (next >= imageCount) {
-        next = 0;
-      }
-      _imagePageController.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeInOut,
-      );
-    });
+    _currentImageNotifier = ValueNotifier<int>(0);
+    _templeInfoStream = DatabaseService().getTempleInfoStream();
   }
 
   @override
   void dispose() {
-    _autoSlideTimer?.cancel();
     _imagePageController.dispose();
+    _currentImageNotifier.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFBF9F5),
       body: StreamBuilder<TempleInfoModel?>(
-        stream: DatabaseService().getTempleInfoStream(),
+        stream: _templeInfoStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -165,7 +142,6 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
   // 1. Permanently Sticky Multi-Image Scrollable Hero Header
   Widget _buildStickyHeroHeader(TempleInfoModel info) {
     final galleryImages = _getTempleGalleryImages(info);
-    _setupAutoSlide(galleryImages.length);
 
     return SizedBox(
       height: 255,
@@ -177,8 +153,9 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
           PageView.builder(
             controller: _imagePageController,
             itemCount: galleryImages.length,
+            physics: const BouncingScrollPhysics(),
             onPageChanged: (idx) {
-              setState(() => _currentImageIndex = idx);
+              _currentImageNotifier.value = idx;
             },
             itemBuilder: (context, index) {
               return CustomImage(
@@ -228,32 +205,37 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
             Positioned(
               top: MediaQuery.of(context).padding.top + 10,
               right: 14,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 1)),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.photo_library_rounded, size: 12, color: Colors.white),
-                    const SizedBox(width: 5),
-                    Text(
-                      '${_currentImageIndex + 1} / ${galleryImages.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                      ),
+              child: ValueListenableBuilder<int>(
+                valueListenable: _currentImageNotifier,
+                builder: (context, currentIdx, _) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 1)),
+                      ],
                     ),
-                  ],
-                ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.photo_library_rounded, size: 12, color: Colors.white),
+                        const SizedBox(width: 5),
+                        Text(
+                          '${currentIdx + 1} / ${galleryImages.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
 
@@ -262,60 +244,74 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
             left: 20,
             right: 20,
             bottom: 16,
-            child: IgnorePointer(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF6F00).withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.auto_awesome, color: Colors.white, size: 12),
-                            SizedBox(width: 4),
-                            Text(
-                              'Sacred Sanctum & Ashramam',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
-                        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6F00).withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      // Smooth Pagination Indicator Dots
-                      if (galleryImages.length > 1)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: List.generate(galleryImages.length, (idx) {
-                            final isSel = _currentImageIndex == idx;
-                            return AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                              width: isSel ? 18 : 6,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: isSel ? const Color(0xFFFFB300) : Colors.white.withValues(alpha: 0.45),
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                            );
-                          }),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.auto_awesome, color: Colors.white, size: 12),
+                          SizedBox(width: 4),
+                          Text(
+                            'Sacred Sanctum & Ashramam',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Smooth Pagination Indicator Dots
+                    if (galleryImages.length > 1)
+                      ValueListenableBuilder<int>(
+                        valueListenable: _currentImageNotifier,
+                        builder: (context, currentIdx, _) {
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(galleryImages.length, (idx) {
+                              final isSel = currentIdx == idx;
+                              return GestureDetector(
+                                onTap: () {
+                                  _imagePageController.animateToPage(
+                                    idx,
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  );
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                                  width: isSel ? 18 : 6,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: isSel ? const Color(0xFFFFB300) : Colors.white.withValues(alpha: 0.45),
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                ),
+                              );
+                            }),
+                          );
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                IgnorePointer(
+                  child: Text(
                     info.name,
                     style: const TextStyle(
                       color: Colors.white,
@@ -332,8 +328,10 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  const Row(
+                ),
+                const SizedBox(height: 3),
+                const IgnorePointer(
+                  child: Row(
                     children: [
                       Icon(Icons.self_improvement_rounded, color: Color(0xFFFFD54F), size: 15),
                       SizedBox(width: 6),
@@ -347,8 +345,8 @@ class _TempleInfoScreenState extends State<TempleInfoScreen> {
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
