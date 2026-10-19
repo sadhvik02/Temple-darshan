@@ -1,6 +1,7 @@
 import { useState, useRef, type ChangeEvent, type DragEvent } from "react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../lib/firebase";
+import ImageCropModal from "./ImageCropModal";
 
 export interface PresetImage {
   label: string;
@@ -74,7 +75,24 @@ export default function ImageUploadInput({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleCroppedApply = async (croppedDataUrl: string) => {
+    onChange(croppedDataUrl);
+    try {
+      const storagePath = `${folder}/${Date.now()}_cropped_banner.jpg`;
+      const storageRef = ref(storage, storagePath);
+      const res = await fetch(croppedDataUrl);
+      const blob = await res.blob();
+      const uploadTask = uploadBytes(storageRef, blob, { contentType: "image/jpeg" });
+      const snap = await uploadTask;
+      const cloudUrl = await getDownloadURL(snap.ref);
+      onChange(cloudUrl);
+    } catch (err) {
+      console.warn("Storage upload for cropped image:", err);
+    }
+  };
 
   const isWebPageLink =
     value &&
@@ -99,6 +117,11 @@ export default function ImageUploadInput({
 
       // Immediately set the image so user gets instant preview without waiting!
       onChange(compressedDataUrl);
+
+      // If uploading for a banner, open the 16:9 crop framing modal so admin can frame it perfectly!
+      if (folder === "banners") {
+        setShowCropModal(true);
+      }
 
       // 2. Cloud storage upload attempt
       try {
@@ -457,6 +480,31 @@ export default function ImageUploadInput({
           >
             ✕
           </button>
+          {/* Crop & Frame Button */}
+          <button
+            type="button"
+            onClick={() => setShowCropModal(true)}
+            title="Adjust 16:9 framing / crop"
+            style={{
+              position: "absolute",
+              top: "8px",
+              right: "42px",
+              background: "rgba(245, 158, 11, 0.95)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "6px",
+              padding: "5px 11px",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              cursor: "pointer",
+              fontSize: "0.78rem",
+              fontWeight: 700,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
+            }}
+          >
+            ✂️ Crop &amp; Frame (16:9)
+          </button>
           <div
             style={{
               position: "absolute",
@@ -488,6 +536,15 @@ export default function ImageUploadInput({
           </div>
         </div>
       )}
+
+      {/* 16:9 Banner Crop & Framing Modal */}
+      <ImageCropModal
+        isOpen={showCropModal}
+        imageUrl={value}
+        aspectRatio={16 / 9}
+        onApply={handleCroppedApply}
+        onClose={() => setShowCropModal(false)}
+      />
     </div>
   );
 }

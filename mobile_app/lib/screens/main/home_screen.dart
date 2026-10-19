@@ -781,7 +781,7 @@ class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
     return Column(
       children: [
         Container(
-          height: 195,
+          height: 210,
           margin: const EdgeInsets.symmetric(horizontal: 16),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
