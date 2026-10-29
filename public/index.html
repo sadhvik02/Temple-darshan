@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Palgutta Ashramam | Sri Kedareshwara Ashramam - Official Support & Portal</title>
+    <meta name="description" content="Official website and support portal for Palgutta Ashramam (Sri Kedareshwara Ashramam) mobile application. View Darshan timings, book Sevas, support Annadanam, and contact support.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #c25e1a;
+            --primary-dark: #8e3f08;
+            --primary-light: #fef4ec;
+            --gold: #d4a34b;
+            --text-main: #231f1d;
+            --text-muted: #6e645e;
+            --bg-light: #faf7f2;
+            --card-bg: #ffffff;
+            --border: #f0e6dc;
+            --shadow: 0 10px 30px rgba(194, 94, 26, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2b1d14 0%, #4a2916 100%);
+            color: #ffffff;
+            padding: 50px 20px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            border-bottom: 4px solid var(--gold);
+        }
+
+        .header-content {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .swamiji-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid var(--gold);
+            object-fit: cover;
+            margin: 0 auto 18px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            display: block;
+            background: #ffffff;
+        }
+
+        .om-symbol {
+            color: var(--gold);
+            font-size: 24px;
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+            display: block;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.4rem;
+            color: #ffffff;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: #f7d8a6;
+            font-weight: 400;
+            margin-bottom: 12px;
+        }
+
+        .location-tag {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(8px);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #f2e9e1;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: -30px auto 60px;
+            padding: 0 20px;
+            position: relative;
+            z-index: 3;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 34px rgba(194, 94, 26, 0.12);
+        }
+
+        .card h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.45rem;
+            color: var(--primary);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            font-size: 0.98rem;
+        }
+
+        .support-box {
+            background: var(--primary-light);
+            border-radius: 12px;
+            padding: 18px;
+            border-left: 4px solid var(--primary);
+            margin-top: 15px;
+        }
+
+        .support-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+
+        .support-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .support-item strong {
+            color: var(--primary-dark);
+            min-width: 80px;
+        }
+
+        .support-item a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .support-item a:hover {
+            text-decoration: underline;
+        }
+
+        .badge-list {
+            list-style: none;
+            margin: 15px 0 0;
+            padding: 0;
+        }
+
+        .badge-list li {
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border);
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.95rem;
+        }
+
+        .badge-list li:last-child {
+            border-bottom: none;
+        }
+
+        .timing-time {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .faq-item {
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .faq-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .faq-q {
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .faq-a {
+            color: var(--text-muted);
+            font-size: 0.93rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: 500;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            color: #ffffff;
+        }
+
+        .btn-outline {
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            background: #ffffff;
+        }
+
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            background: #ffffff;
+        }
+
+        .footer-links {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a {
+            color: var(--primary);
+            text-decoration: none;
+            margin: 0 12px;
+            font-weight: 500;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 1.85rem; }
+            .subtitle { font-size: 1.05rem; }
+            .container { margin-top: -15px; }
+            .card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-content">
+            <img src="/guruji.png" alt="Sri Kedarananda Maharaj" class="swamiji-avatar">
+            <span class="om-symbol">॥ ॐ नमः शिवाय ॥</span>
+            <h1>Palgutta Ashramam</h1>
+            <div class="subtitle">Sri Kedareshwara Ashramam • Guided by Sri Kedarananda Maharaj</div>
+            <div class="location-tag">📍 Palgutta, Nandipet, Nizamabad, Telangana</div>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- App Support & Help Center (Primary for Apple Review) -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h2>📞 App Support & Contact Information</h2>
+            <p>Welcome to the official support portal for the <strong>Palgutta Ashramam</strong> mobile app on iOS and Android. If you have questions about Seva bookings, Darshan slots, Annadanam contributions, or need technical assistance with your devotee account, our team is here to assist you.</p>
+
+            <div class="support-box">
+                <div class="support-item">
+                    <strong>Email:</strong>
+                    <span><a href="mailto:rapellimanjunath@gmail.com">rapellimanjunath@gmail.com</a></span>
+                </div>
+                <div class="support-item">
+                    <strong>Phone / WhatsApp:</strong>
+                    <span><a href="tel:+919441050278">+91 94410 50278</a></span>
+                </div>
+                <div class="support-item">
+                    <strong>Ashram Hours:</strong>
+                    <span>Daily from 6:00 AM to 6:00 PM IST</span>
+                </div>
+                <div class="support-item">
+                    <strong>Location:</strong>
+                    <span>Sri Kedareshwara Ashramam, Palgutta, Nandipet, Nizamabad Dist, Telangana 503212</span>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <a href="mailto:rapellimanjunath@gmail.com?subject=Palgutta%20Ashramam%20App%20Support%20Request" class="btn btn-primary">✉️ Email Support</a>
+                <a href="/privacy.html" class="btn btn-outline">🔒 Privacy Policy</a>
+                <a href="/delete-account.html" class="btn btn-outline">🗑️ Account Deletion Request</a>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- Darshan Timings -->
+            <div class="card">
+                <h2>🛕 Daily Darshan Timings</h2>
+                <p>Devotees are welcome for sacred Darshan and Aarti at the sanctum daily:</p>
+                <ul class="badge-list">
+                    <li>
+                        <span>Sacred Sanctum Darshan</span>
+                        <span class="timing-time">6:00 AM – 6:00 PM IST</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Sacred Services -->
+            <div class="card">
+                <h2>🙏 Sacred Sevas & Annadanam</h2>
+                <p>Experience the divine energy through sacred ashram activities available on the app:</p>
+                <ul class="badge-list">
+                    <li>
+                        <span>Nitya Annadanam Seva</span>
+                        <span class="timing-time">Daily Sacred Meals</span>
+                    </li>
+                    <li>
+                        <span>Godhuli & Go-Samrakshana</span>
+                        <span class="timing-time">Cow Protection</span>
+                    </li>
+                    <li>
+                        <span>Banaligam Abhishekam</span>
+                        <span class="timing-time">Special Seva</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Frequently Asked Questions -->
+        <div class="card">
+            <h2>❓ Frequently Asked Questions (FAQ)</h2>
+            
+            <div class="faq-item">
+                <div class="faq-q">How do I sign in to the Palgutta Ashramam mobile app?</div>
+                <div class="faq-a">Devotees can quickly sign in using their registered Mobile Number with a secure one-time OTP verification, or continue with basic details.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">How can I book a Darshan or Seva slot?</div>
+                <div class="faq-a">In the app, navigate to the <em>Ashrama Seva</em> or <em>Darshan</em> tab, choose your preferred date and time slot, enter devotee details, and confirm your booking. Your digital pass will appear under <em>Bookings</em>.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Are online donations secure?</div>
+                <div class="faq-a">Yes. All donations for temple Annadanam and seva activities are processed securely through RBI-compliant, 256-bit encrypted payment gateways (UPI, Cards, NetBanking).</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">How can I delete my devotee account and data?</div>
+                <div class="faq-a">You can request immediate account and data deletion directly from the app's Devotee Profile tab, or visit our <a href="/delete-account.html" style="color: var(--primary);">Account Deletion Request Page</a>.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        <div class="footer-links">
+            <a href="/privacy.html">Privacy Policy</a>
+            <a href="/delete-account.html">Account Deletion</a>
+            <a href="mailto:rapellimanjunath@gmail.com">Contact Us</a>
+        </div>
+        <p>© 2026 Palgutta Ashramam (Sri Kedareshwara Ashramam). All rights reserved.</p>
+        <p style="font-size: 0.8rem; margin-top: 6px; color: #a3978f;">Developed for Palgutta Ashramam Devotees • Powered by Filmspace Innovations Private Limited</p>
+    </footer>
+
+</body>
+</html>
